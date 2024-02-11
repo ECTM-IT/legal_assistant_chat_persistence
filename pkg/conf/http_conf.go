@@ -15,7 +15,7 @@ type config struct {
 	notifications struct {
 		email string
 	}
-	smtp struct {
+	smtp struct { // to-do: implement mailing function
 		host     string
 		port     int
 		username string

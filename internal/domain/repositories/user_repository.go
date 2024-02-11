@@ -2,22 +2,26 @@ package mongo
 
 import (
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/daos"
-	"go.mongodb.org/mongo-driver/mongo"
+	dto "github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 )
 
-type UserRepository struct {
-	db *mongo.Collection
+type UserRepository interface {
+	FindUserById(userId string) (*dto.UserResponse, error)
+	FindUserByCasesId(casesId string) (*dto.UserResponse, error)
+	TotalUsers() (int64, error)
+	DeleteUser(userid string) error
+	SaveUser(user *dto.CreateUserRequest) error
 }
 
-func NewUserRepository(client *mongo.Client, dbName, collectionName string) *UserRepository {
-	return &UserRepository{
-		db: client.Database(dbName).Collection(collectionName),
-	}
+type UserRepositoryImpl struct {
+	userDao daos.UserDao
 }
 
-// Example of a method that uses the MongoDB connection
-func (r *UserRepository) CreateUser(user *daos.UserDao) error {
-	// _, err := r.db.InsertOne(context.Background(), user)
-	err := user.SaveUser(user.SaveUser())
-	return err
+func NewUserRepository(userDao daos.UserDao) *UserRepositoryImpl {
+	return &UserRepositoryImpl{userDao: userDao}
+}
+
+func (r *UserRepositoryImpl) CreateUser(user *models.User) error {
+	return r.userDao.SaveUser(user)
 }

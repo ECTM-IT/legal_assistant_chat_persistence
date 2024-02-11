@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"firebase.google.com/go/v4/auth"
-	http_errors "github.com/ECTM-IT/legal_assistant_chat_persistence/internal/http"
-	commonerrors "github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/errors"
+
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/errors"
 )
 
 type FirebaseHttpMiddleware struct {
@@ -20,13 +20,13 @@ func (a FirebaseHttpMiddleware) Middleware(next http.Handler) http.Handler {
 
 		bearerToken := a.tokenFromHeader(r)
 		if bearerToken == "" {
-			http_errors.Unauthorised("empty-bearer-token", nil, w, r)
+			errors.NewAuthorizationError("empty-bearer-token", "auth error")
 			return
 		}
 
 		token, err := a.AuthClient.VerifyIDToken(ctx, bearerToken)
 		if err != nil {
-			http_errors.Unauthorised("unable-to-verify-jwt", err, w, r)
+			errors.NewAuthorizationError("unable-to-verify-jwt", "unable to verify your token")
 			return
 		}
 
@@ -69,9 +69,7 @@ const (
 )
 
 var (
-	// if we expect that the user of the function may be interested with concrete error,
-	// it's a good idea to provide variable with this error
-	NoUserInContextError = commonerrors.NewAuthorizationError("no user in context", "no-user-found")
+	NoUserInContextError = errors.NewAuthorizationError("no user in context", "no-user-found")
 )
 
 func UserFromCtx(ctx context.Context) (User, error) {

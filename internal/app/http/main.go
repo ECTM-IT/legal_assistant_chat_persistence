@@ -4,12 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"go.uber.org/zap"
+
+	handler "github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/handlers"
+	// Adjust the import path as necessary
 )
 
 const (
@@ -22,8 +26,7 @@ const (
 func (app *application) serveHTTP() error {
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", app.config.httpPort),
-		Handler:      app.routes(router),
-		ErrorLog:     slog.NewLogLogger(app.logger.Handler(), slog.LevelWarn),
+		Handler:      handler.Routes(), // Ensure your router is adapted to use zap.Logger
 		IdleTimeout:  defaultIdleTimeout,
 		ReadTimeout:  defaultReadTimeout,
 		WriteTimeout: defaultWriteTimeout,
@@ -39,22 +42,25 @@ func (app *application) serveHTTP() error {
 		ctx, cancel := context.WithTimeout(context.Background(), defaultShutdownPeriod)
 		defer cancel()
 
+		app.logger.Info("Shutting down server", zap.String("addr", srv.Addr))
 		shutdownErrorChan <- srv.Shutdown(ctx)
 	}()
 
-	app.logger.Info("starting server", slog.Group("server", "addr", srv.Addr))
+	app.logger.Info("Starting server", zap.String("addr", srv.Addr))
 
 	err := srv.ListenAndServe()
 	if !errors.Is(err, http.ErrServerClosed) {
+		app.logger.Error("Server error", err)
 		return err
 	}
 
 	err = <-shutdownErrorChan
 	if err != nil {
+		app.logger.Error("Shutdown error", err)
 		return err
 	}
 
-	app.logger.Info("stopped server", slog.Group("server", "addr", srv.Addr))
+	app.logger.Info("Stopped server", zap.String("addr", srv.Addr))
 
 	app.wg.Wait()
 	return nil

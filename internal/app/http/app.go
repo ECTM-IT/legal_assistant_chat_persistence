@@ -1,21 +1,24 @@
 package main
 
 import (
-	"log/slog"
 	"os"
 	"runtime/debug"
 	"sync"
 
+	"go.uber.org/zap"
+
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/logs" // Update this import path to where your logger.go is located
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/utils/env"
 )
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	// Initialize your ZapLogger
+	logger := logs.Init() // Assuming Init() returns an instance of your ZapLogger which implements the Logger interface
 
 	err := run(logger)
 	if err != nil {
 		trace := string(debug.Stack())
-		logger.Error(err.Error(), "trace", trace)
+		logger.Error("Application failed", err, zap.String("trace", trace))
 		os.Exit(1)
 	}
 }
@@ -40,11 +43,11 @@ type config struct {
 
 type application struct {
 	config config
-	logger *slog.Logger
+	logger logs.Logger // Use your Logger interface here
 	wg     sync.WaitGroup
 }
 
-func run(logger *slog.Logger) error {
+func run(logger logs.Logger) error {
 	var cfg config
 
 	cfg.baseURL = env.GetString("BASE_URL", "http://localhost:4444")

@@ -3,7 +3,7 @@ package inflector_test
 import (
 	"testing"
 
-	"github.com/ECTM-IT/legal_assistant_chat_persistence/pkg/utils/inflector"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/utils/inflector"
 )
 
 func TestUcFirst(t *testing.T) {

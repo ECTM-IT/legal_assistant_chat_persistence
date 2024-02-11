@@ -5,14 +5,15 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
 type contextKey string
 
 const logEntryCtxKey = contextKey("logEntry")
 
-func NewHttpLogger(logger *logrus.Logger) func(next http.Handler) http.Handler {
+// NewHttpLogger creates a middleware using the Zap logger
+func NewHttpLogger(logger *ZapLogger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
@@ -20,25 +21,38 @@ func NewHttpLogger(logger *logrus.Logger) func(next http.Handler) http.Handler {
 			// Create a response writer wrapper to capture the status code
 			wrappedWriter := newResponseWriter(w)
 
-			// Logging logic
-			entry := logger.WithFields(logrus.Fields{
-				"status":      wrappedWriter.status,
-				"method":      r.Method,
-				"uri":         r.RequestURI,
-				"remote_addr": r.RemoteAddr,
-				"duration":    time.Since(start),
-				// "req_id":       can be added if you have a request ID
-			})
+			// Initialize fields for structured logging (reused later)
+			fields := []zap.Field{
+				zap.String("method", r.Method),
+				zap.String("uri", r.RequestURI),
+				zap.String("remote_addr", r.RemoteAddr),
+			}
 
-			ctx := context.WithValue(r.Context(), logEntryCtxKey, entry)
+			// Store the logger with initial fields in the request context
+			ctx := context.WithValue(r.Context(), logEntryCtxKey, logger.With(fields...))
 			r = r.WithContext(ctx)
 
 			// Process the request
 			next.ServeHTTP(wrappedWriter, r)
 
-			entry.Info("Completed handling request")
+			// Update final status and duration before logging
+			fields = append(fields,
+				zap.Int("status", wrappedWriter.status),
+				zap.Duration("duration", time.Since(start)))
+
+			// Retrieve the logger from the context and log
+			GetLogEntry(r).Info("Completed handling request", fields...)
 		})
 	}
+}
+
+// GetLogEntry extracts the Zap logger from the request context
+func GetLogEntry(r *http.Request) *zap.Logger {
+	entry, ok := r.Context().Value(logEntryCtxKey).(*zap.Logger)
+	if !ok {
+		return zap.NewNop() // Consider proper error handling or flexibility here
+	}
+	return entry
 }
 
 type responseWriter struct {
@@ -53,13 +67,4 @@ func newResponseWriter(w http.ResponseWriter) *responseWriter {
 func (rw *responseWriter) WriteHeader(code int) {
 	rw.status = code
 	rw.ResponseWriter.WriteHeader(code)
-}
-
-func GetLogEntry(r *http.Request) logrus.FieldLogger {
-	entry, ok := r.Context().Value(logEntryCtxKey).(logrus.FieldLogger)
-	if !ok {
-		// Log entry not found in context, return a new one
-		return logrus.NewEntry(logrus.StandardLogger())
-	}
-	return entry
 }

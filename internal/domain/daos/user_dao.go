@@ -4,26 +4,34 @@ import (
 	"context"
 	"time"
 
-	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/domain/models"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type UserDao struct {
+type MongoUserDao struct {
 	db *mongo.Database
 }
 
-func NewUserDao(db *mongo.Database) *UserDao {
-	return &UserDao{db: db}
+func NewMongoUserDao(db *mongo.Database) *MongoUserDao {
+	return &MongoUserDao{db: db}
 }
 
-func (dao *UserDao) collection() *mongo.Collection {
+type UserDao interface {
+	FindUserById(userId string) (*models.User, error)
+	FindUserByCasesId(casesId string) (*models.User, error)
+	TotalUsers() (int64, error)
+	DeleteUser(user *models.User) error
+	SaveUser(user *models.User) error
+}
+
+func (dao *MongoUserDao) collection() *mongo.Collection {
 	return dao.db.Collection("users")
 }
 
 // FindUserById finds the user with the provided user_id.
-func (dao *UserDao) FindUserById(userId string) (*models.User, error) {
+func (dao *MongoUserDao) FindUserById(userId string) (*models.User, error) {
 	var user models.User
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -37,7 +45,7 @@ func (dao *UserDao) FindUserById(userId string) (*models.User, error) {
 }
 
 // FindUserByCasesId finds the user with the provided cases_id.
-func (dao *UserDao) FindUserByCasesId(casesId string) (*models.User, error) {
+func (dao *MongoUserDao) FindUserByCasesId(casesId string) (*models.User, error) {
 	var user models.User
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -51,7 +59,7 @@ func (dao *UserDao) FindUserByCasesId(casesId string) (*models.User, error) {
 }
 
 // TotalUsers returns the number of existing user records.
-func (dao *UserDao) TotalUsers() (int64, error) {
+func (dao *MongoUserDao) TotalUsers() (int64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -60,16 +68,16 @@ func (dao *UserDao) TotalUsers() (int64, error) {
 }
 
 // DeleteUser deletes the provided User model.
-func (dao *UserDao) DeleteUser(user *models.User) error {
+func (dao *MongoUserDao) DeleteUser(userid string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	_, err := dao.collection().DeleteOne(ctx, bson.M{"_id": user.ID})
+	_, err := dao.collection().DeleteOne(ctx, bson.M{"_id": userid})
 	return err
 }
 
 // SaveUser upserts the provided User model.
-func (dao *UserDao) SaveUser(user *models.User) error {
+func (dao *MongoUserDao) SaveUser(user *models.User) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
