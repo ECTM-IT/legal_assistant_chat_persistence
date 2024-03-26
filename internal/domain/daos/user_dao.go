@@ -1,87 +1,87 @@
+// dao/user.go
 package daos
 
 import (
 	"context"
 	"time"
 
-	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 )
 
-type MongoUserDao struct {
-	db *mongo.Database
+type UserDAO struct {
+	collection *mongo.Collection
 }
 
-func NewMongoUserDao(db *mongo.Database) *MongoUserDao {
-	return &MongoUserDao{db: db}
+func NewUserDAO(db *mongo.Database) *UserDAO {
+	return &UserDAO{
+		collection: db.Collection("users"),
+	}
 }
 
-type UserDao interface {
-	FindUserById(userId string) (*models.User, error)
-	FindUserByCasesId(casesId string) (*models.User, error)
-	TotalUsers() (int64, error)
-	DeleteUser(user *models.User) error
-	SaveUser(user *models.User) error
-}
+func (dao *UserDAO) GetUserByID(ctx context.Context, id primitive.ObjectID) (*models.User, error) {
 
-func (dao *MongoUserDao) collection() *mongo.Collection {
-	return dao.db.Collection("users")
-}
-
-// FindUserById finds the user with the provided user_id.
-func (dao *MongoUserDao) FindUserById(userId string) (*models.User, error) {
 	var user models.User
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	err := dao.collection().FindOne(ctx, bson.M{"user_id": userId}).Decode(&user)
+	err := dao.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&user)
 	if err != nil {
 		return nil, err
 	}
-
 	return &user, nil
 }
 
-// FindUserByCasesId finds the user with the provided cases_id.
-func (dao *MongoUserDao) FindUserByCasesId(casesId string) (*models.User, error) {
+func (dao *UserDAO) GetUserByCaseID(ctx context.Context, caseID primitive.ObjectID) (*models.User, error) {
 	var user models.User
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	err := dao.collection().FindOne(ctx, bson.M{"cases_id": casesId}).Decode(&user)
+	err := dao.collection.FindOne(ctx, bson.M{"cases": caseID}).Decode(&user)
 	if err != nil {
 		return nil, err
 	}
-
 	return &user, nil
 }
 
-// TotalUsers returns the number of existing user records.
-func (dao *MongoUserDao) TotalUsers() (int64, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	total, err := dao.collection().CountDocuments(ctx, bson.M{})
-	return total, err
+func (dao *UserDAO) CreateUser(ctx context.Context, user *models.User) (*models.User, error) {
+	_, err := dao.collection.InsertOne(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
-// DeleteUser deletes the provided User model.
-func (dao *MongoUserDao) DeleteUser(userid string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	_, err := dao.collection().DeleteOne(ctx, bson.M{"_id": userid})
+func (dao *UserDAO) UpdateUser(ctx context.Context, id primitive.ObjectID, user *models.User) error {
+	_, err := dao.collection.ReplaceOne(ctx, bson.M{"_id": id}, user)
 	return err
 }
 
-// SaveUser upserts the provided User model.
-func (dao *MongoUserDao) SaveUser(user *models.User) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+func (dao *UserDAO) DeleteUser(ctx context.Context, id primitive.ObjectID) error {
+
+	_, err := dao.collection.DeleteOne(ctx, bson.M{"_id": id})
+	return err
+}
+
+func (dao *UserDAO) GetAllUsers(ctx context.Context) ([]*models.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	opts := options.Update().SetUpsert(true)
-	_, err := dao.collection().UpdateOne(ctx, bson.M{"_id": user.ID}, bson.M{"$set": user}, opts)
-	return err
+	cursor, err := dao.collection.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var users []*models.User
+	for cursor.Next(ctx) {
+		var user models.User
+		if err := cursor.Decode(&user); err != nil {
+			return nil, err
+		}
+		users = append(users, &user)
+	}
+
+	if err := cursor.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }

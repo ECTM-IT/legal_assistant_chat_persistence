@@ -1,19 +1,20 @@
-package service
+package services
 
 import (
 	"context"
 
 	dto "github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	repository "github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/repositories"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // UserService defines the operations available on a user
 type UserService interface {
-	GetUserByUserID(ctx context.Context, userID string) (*dto.UserResponse, error)
+	GetUserByID(ctx context.Context, userID string) (*dto.UserResponse, error)
 	GetUserByCaseID(ctx context.Context, caseID string) (*dto.UserResponse, error)
 	DeleteUserByID(ctx context.Context, userID string) error
 	CreateUser(ctx context.Context, user *dto.CreateUserRequest) (*dto.UserResponse, error)
-	// ... potentially more service methods (e.g., for updates)
+	UpdateUser(ctx context.Context, userID string, user *dto.UpdateUserRequest) error
 }
 
 // UserServiceImpl implements the UserService interface
@@ -26,9 +27,9 @@ func NewUserService(repo repository.UserRepository) *UserServiceImpl {
 	return &UserServiceImpl{userRepo: repo}
 }
 
-// GetUserDetails retrieves details of a user
-func (s *UserServiceImpl) GetUserDetails(ctx context.Context, userID string) (*dto.UserResponse, error) {
-	user, err := s.userRepo.FindUserById(userID)
+// GetUserByID retrieves details of a user by ID
+func (s *UserServiceImpl) GetUserByID(ctx context.Context, userID primitive.ObjectID) (*dto.UserResponse, error) {
+	user, err := s.userRepo.FindUserByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +38,7 @@ func (s *UserServiceImpl) GetUserDetails(ctx context.Context, userID string) (*d
 
 // GetUserByCaseID retrieves a user associated with a given case ID
 func (s *UserServiceImpl) GetUserByCaseID(ctx context.Context, caseID string) (*dto.UserResponse, error) {
-	user, err := s.userRepo.FindUserByCasesId(caseID)
+	user, err := s.userRepo.FindUserByCasesID(ctx, caseID)
 	if err != nil {
 		return nil, err
 	}
@@ -46,19 +47,24 @@ func (s *UserServiceImpl) GetUserByCaseID(ctx context.Context, caseID string) (*
 
 // CreateUser creates a new user
 func (s *UserServiceImpl) CreateUser(ctx context.Context, user *dto.CreateUserRequest) (*dto.UserResponse, error) {
-	err := s.userRepo.SaveUser(user)
+	createdUser, err := s.userRepo.CreateUser(ctx, user)
 	if err != nil {
 		return nil, err
 	}
-
-	createdUser, err := s.userRepo.FindUserById(user.Firebase_id)
+	// Retrieve the created user
+	newUser, err := s.userRepo.FindUserByID(ctx, createdUser.ID)
 	if err != nil {
 		return nil, err // Handle error during new user retrieval
 	}
-	return createdUser, nil
+	return newUser, nil
+}
+
+// UpdateUser updates an existing user
+func (s *UserServiceImpl) UpdateUser(ctx context.Context, userID string, user *dto.UpdateUserRequest) error {
+	return s.userRepo.UpdateUser(ctx, userID, user)
 }
 
 // DeleteUserByID deletes an existing user by identifier
 func (s *UserServiceImpl) DeleteUserByID(ctx context.Context, userID string) error {
-	return s.userRepo.DeleteUser(userID)
+	return s.userRepo.DeleteUser(ctx, userID)
 }

@@ -41,7 +41,7 @@ func (responder *DefaultErrorResponder) internalServerError(ctx context.Context,
 	responder.httpRespondWithError(ctx, err, slug, w, r, "Internal server error", http.StatusInternalServerError)
 }
 
-func (responder *DefaultErrorResponder) httpRespondWithError(ctx context.Context, err error, slug string, w http.ResponseWriter, r *http.Request, logMsg string, status int) {
+func (responder *DefaultErrorResponder) httpRespondWithError(_ context.Context, err error, slug string, w http.ResponseWriter, _ *http.Request, logMsg string, status int) {
 	logger := responder.Logger // Using the embedded ZapLogger
 	if logger != nil {
 		logger.Error(logMsg, err, zap.String("error-slug", slug))

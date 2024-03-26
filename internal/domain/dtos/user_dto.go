@@ -1,21 +1,44 @@
-package dto
+package dtos
+
+import "go.mongodb.org/mongo-driver/bson/primitive"
 
 type CreateUserRequest struct {
-	Firebase_id string `json:"firebase_id"`
-	Cases       string `json:"cases"`
+	Image          string               `json:"image"`
+	Email          string               `json:"email"`
+	FirstName      string               `json:"first_name"`
+	LastName       string               `json:"last_name"`
+	Phone          string               `json:"phone"`
+	CaseIDs        []primitive.ObjectID `json:"case_ids"`
+	TeamID         primitive.ObjectID   `json:"team_id"`
+	AgentIDs       []primitive.ObjectID `json:"agent_ids"`
+	SubscriptionID primitive.ObjectID   `json:"subscription_id"`
 }
 
 type UserResponse struct {
-	Mongo_id    string `json:"_id"`
-	Firebase_id string `json:"firebase_id"`
-	Cases       string `json:"cases"`
+	ID             primitive.ObjectID   `json:"id"`
+	Image          string               `json:"image"`
+	Email          string               `json:"email"`
+	FirstName      string               `json:"first_name"`
+	LastName       string               `json:"last_name"`
+	Phone          string               `json:"phone"`
+	CaseIDs        []primitive.ObjectID `json:"case_ids"`
+	TeamID         primitive.ObjectID   `json:"team_id"`
+	AgentIDs       []primitive.ObjectID `json:"agent_ids"`
+	SubscriptionID primitive.ObjectID   `json:"subscription_id"`
 }
 
 type UpdateUserRequest struct {
-	Firebase_id string `json:"firebase_id"`
-	Cases       string `json:"cases"`
+	Image          *string  `json:"image"`
+	Email          *string  `json:"email"`
+	FirstName      *string  `json:"first_name"`
+	LastName       *string  `json:"last_name"`
+	Phone          *string  `json:"phone"`
+	CaseIDs        []string `json:"case_ids"`
+	TeamID         *string  `json:"team_id"`
+	AgentIDs       []string `json:"agent_ids"`
+	SubscriptionID *string  `json:"subscription_id"`
 }
 
 type DeleteUserRequest struct {
-	Firebase_id string `json:"firebase_id"`
+	ID primitive.ObjectID `json:"id"`
 }

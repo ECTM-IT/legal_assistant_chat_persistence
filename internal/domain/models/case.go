@@ -3,19 +3,25 @@ package models
 import (
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Case struct {
-	ID          primitive.ObjectID  `bson:"_id,omitempty"`
-	Messages    bson.D              `bson:"messages"`
-	Type        string              `bson:"type"`
-	Title       string              `bson:"title"`
-	Description string              `bson:"description"`
-	CreatedAt   time.Time           `bson:"created_at"`
-	LastUpdate  primitive.Timestamp `bson:"last_updated"`
+	ID              primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
+	Name            string               `json:"name" bson:"name"`
+	CreatorID       primitive.ObjectID   `json:"creator_id" bson:"creator_id"`
+	Messages        []Message            `json:"messages" bson:"messages"`
+	CollaboratorIDs []primitive.ObjectID `json:"collaborator_ids" bson:"collaborator_ids"`
+	Action          string               `json:"action" bson:"action"`
+	Skill           string               `json:"skill" bson:"skill"`
+	AgentID         primitive.ObjectID   `json:"agent_id" bson:"agent_id"`
+	LastEdit        time.Time            `json:"last_edit" bson:"last_edit"`
+	Share           bool                 `json:"share" bson:"share"`
+	IsArchived      bool                 `json:"is_archived" bson:"is_archived"`
 }
 
-// "lastUpdate": primitive.Timestamp{T:uint32(time.Now().Unix())}
-// or primitive.NewDateTimeFromTime
+type Message struct {
+	Content   string             `json:"content" bson:"content"`
+	SenderID  primitive.ObjectID `json:"sender_id" bson:"sender_id"`
+	Recipient string             `json:"recipient" bson:"recipient"`
+}

@@ -8,7 +8,7 @@ import (
 	"github.com/gorilla/mux"
 
 	dto "github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
-	services "github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
 )
 
 // User - A simplified user representation
@@ -33,7 +33,7 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request, ctx contex
 	vars := mux.Vars(r)
 	userID := vars["userID"]
 
-	user, err := h.userService.GetUserByUserID(ctx, userID)
+	user, err := h.userService.GetUserByID(ctx, userID)
 	if err != nil {
 		// Handle error appropriately (e.g., write specific error responses)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

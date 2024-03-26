@@ -13,7 +13,6 @@ import (
 	"go.uber.org/zap"
 
 	handler "github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/handlers"
-	// Adjust the import path as necessary
 )
 
 const (
@@ -26,7 +25,7 @@ const (
 func (app *application) serveHTTP() error {
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", app.config.httpPort),
-		Handler:      handler.Routes(), // Ensure your router is adapted to use zap.Logger
+		Handler:      handler.Routes(),
 		IdleTimeout:  defaultIdleTimeout,
 		ReadTimeout:  defaultReadTimeout,
 		WriteTimeout: defaultWriteTimeout,
