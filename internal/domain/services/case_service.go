@@ -1,23 +1,23 @@
 package services
 
 import (
-	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/daos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/repositories"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type CaseService struct {
-	caseDAO daos.CaseDAO
+	caseRepo *repositories.CaseRepository
 }
 
-func NewCaseService(caseDAO daos.CaseDAO) *CaseService {
+func NewCaseService(caseRepo *repositories.CaseRepository) *CaseService {
 	return &CaseService{
-		caseDAO: caseDAO,
+		caseRepo: caseRepo,
 	}
 }
 
 func (s *CaseService) GetAllCases() ([]dtos.CaseResponse, error) {
-	return s.caseDAO.FindAll()
+	return s.caseRepo.GetAllCases()
 }
 
 func (s *CaseService) GetCaseByID(id string) (dtos.CaseResponse, error) {
@@ -25,27 +25,19 @@ func (s *CaseService) GetCaseByID(id string) (dtos.CaseResponse, error) {
 	if err != nil {
 		return dtos.CaseResponse{}, err
 	}
-	return s.caseDAO.FindByID(objectID)
+	return s.caseRepo.GetCaseByID(objectID)
 }
 
 func (s *CaseService) GetCasesByCreatorID(creatorID string) ([]dtos.CaseResponse, error) {
-	objectID, err := primitive.ObjectIDFromHex(creatorID)
-	if err != nil {
-		return nil, err
-	}
-	return s.caseDAO.FindByCreatorID(objectID)
+	return s.caseRepo.GetCasesByCreatorID(creatorID)
 }
 
 func (s *CaseService) CreateCase(caseRequest dtos.CreateCaseRequest) error {
-	return s.caseDAO.Create(caseRequest)
+	return s.caseRepo.CreateCase(caseRequest)
 }
 
-func (s *CaseService) UpdateCase(id string, updates dtos.UpdateCaseRequest) error {
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return err
-	}
-	return s.caseDAO.Update(objectID, updates)
+func (s *CaseService) UpdateCase(id primitive.ObjectID, updates dtos.UpdateCaseRequest) error {
+	return s.caseRepo.UpdateCase(id, updates)
 }
 
 func (s *CaseService) DeleteCase(id string) error {
@@ -53,7 +45,7 @@ func (s *CaseService) DeleteCase(id string) error {
 	if err != nil {
 		return err
 	}
-	return s.caseDAO.Delete(objectID)
+	return s.caseRepo.DeleteCase(objectID)
 }
 
 func (s *CaseService) AddCollaboratorToCase(id, collaboratorID string) error {
@@ -65,7 +57,7 @@ func (s *CaseService) AddCollaboratorToCase(id, collaboratorID string) error {
 	if err != nil {
 		return err
 	}
-	return s.caseDAO.AddCollaborator(caseID, collaboratorObjectID)
+	return s.caseRepo.AddCollaboratorToCase(caseID, collaboratorObjectID)
 }
 
 func (s *CaseService) RemoveCollaboratorFromCase(id, collaboratorID string) error {
@@ -77,5 +69,5 @@ func (s *CaseService) RemoveCollaboratorFromCase(id, collaboratorID string) erro
 	if err != nil {
 		return err
 	}
-	return s.caseDAO.RemoveCollaborator(caseID, collaboratorObjectID)
+	return s.caseRepo.RemoveCollaboratorFromCase(caseID, collaboratorObjectID)
 }

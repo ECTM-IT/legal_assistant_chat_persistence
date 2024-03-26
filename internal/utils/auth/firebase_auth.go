@@ -30,8 +30,6 @@ func (a FirebaseHttpMiddleware) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// it's always a good idea to use custom type as context value (in this case ctxKey)
-		// because nobody from the outside of the package will be able to override/read this value
 		ctx = context.WithValue(ctx, userContextKey, User{
 			UUID:        token.UID,
 			Email:       token.Claims["email"].(string),

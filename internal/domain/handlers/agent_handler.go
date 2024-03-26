@@ -46,6 +46,10 @@ func (h *AgentHandler) GetAgentByID(w http.ResponseWriter, r *http.Request) {
 func (h *AgentHandler) GetAgentsByUser(w http.ResponseWriter, r *http.Request) {
 	userID, err := primitive.ObjectIDFromHex(r.Context().Value("userID").(string))
 
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
 	agents, err := h.agentService.GetAgentsByUserID(r.Context(), userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -58,7 +62,13 @@ func (h *AgentHandler) GetAgentsByUser(w http.ResponseWriter, r *http.Request) {
 
 func (h *AgentHandler) PurchaseAgent(w http.ResponseWriter, r *http.Request) {
 	userID, err := primitive.ObjectIDFromHex(r.Context().Value("userID").(string))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 	agentID, err := primitive.ObjectIDFromHex(mux.Vars(r)["id"])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 
 	user, err := h.agentService.PurchaseAgent(r.Context(), userID, agentID)
 	if err != nil {

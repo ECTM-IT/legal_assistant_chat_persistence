@@ -9,31 +9,52 @@ import (
 )
 
 // Connect establishes a connection to the MongoDB database.
-func Connect(uri string) (*mongo.Client, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+func Connect(uri string, timeout time.Duration) (*mongo.Client, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	// Use the uri parameter to connect to MongoDB
 	clientOptions := options.Client().ApplyURI(uri)
-
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
-		return nil, err // return here if connection fails
-	}
-
-	// Check the connection
-	err = client.Ping(ctx, nil)
-	if err != nil {
-		client.Disconnect(ctx) // Attempt to disconnect if ping fails
 		return nil, err
 	}
-	// Return the client to be used elsewhere, don't disconnect here
-	return client, err
+
+	err = pingDatabase(ctx, client)
+	if err != nil {
+		return disconnectClient(ctx, client)
+	}
+
+	return client, nil
 }
 
-func StartSession(uri string) (mongo.Session, error) {
-	client, err := Connect(uri)
+func pingDatabase(ctx context.Context, client *mongo.Client) error {
+	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
+	err := client.Ping(pingCtx, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func CreateDB(client *mongo.Client) *mongo.Database {
+	return client.Database("laDB")
+}
+
+func disconnectClient(ctx context.Context, client *mongo.Client) (*mongo.Client, error) {
+	disconnectCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	if err := client.Disconnect(disconnectCtx); err != nil {
+		return nil, err
+	}
+	return client, nil
+}
+
+func StartSession(uri string, timeout time.Duration) (mongo.Session, error) {
+	client, err := Connect(uri, timeout)
 	if err != nil {
 		return nil, err
 	}

@@ -1,4 +1,4 @@
-package main
+package http
 
 import (
 	"context"
@@ -10,9 +10,13 @@ import (
 	"syscall"
 	"time"
 
-	"go.uber.org/zap"
-
 	handler "github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/handlers"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/db"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/daos"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/repositories"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.uber.org/zap"
 )
 
 const (
@@ -22,10 +26,44 @@ const (
 	defaultShutdownPeriod = 30 * time.Second
 )
 
-func (app *application) serveHTTP() error {
+func bootstrapApplication(db *mongo.Database) (*services.AgentService, *services.CaseService, *services.TeamService, *services.UserServiceImpl) {
+
+	// Initialize DAOs
+	agentDAO := daos.NewAgentDAO(db)
+	caseDAO := daos.NewCaseDAO(db)
+	teamDAO := daos.NewTeamDAO(db)
+	userDAO := daos.NewUserDAO(db)
+
+	// Initialize repositories
+	agentRepo := repositories.NewAgentRepository(agentDAO, userDAO)
+	caseRepo := repositories.NewCaseRepository(caseDAO)
+	teamRepo := repositories.NewTeamRepository(teamDAO, userDAO)
+	userRepo := repositories.NewUserRepository(userDAO)
+
+	// Initialize services
+	agentService := services.NewAgentService(agentRepo)
+	caseService := services.NewCaseService(caseRepo)
+	teamService := services.NewTeamService(teamRepo)
+	userService := services.NewUserService(userRepo)
+
+	return agentService, caseService, teamService, userService
+}
+
+func (app *Application) serveHTTP() error {
+	uri := "mongodb://localhost:27017/"
+	client, err := db.Connect(uri, 60)
+
+	if err != nil {
+		return err
+	}
+
+	laDatabase := db.CreateDB(client)
+
+	agentService, caseService, teamService, userService := bootstrapApplication(laDatabase)
+
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", app.config.httpPort),
-		Handler:      handler.Routes(),
+		Handler:      handler.Routes(agentService, caseService, teamService, userService),
 		IdleTimeout:  defaultIdleTimeout,
 		ReadTimeout:  defaultReadTimeout,
 		WriteTimeout: defaultWriteTimeout,
@@ -46,8 +84,7 @@ func (app *application) serveHTTP() error {
 	}()
 
 	app.logger.Info("Starting server", zap.String("addr", srv.Addr))
-
-	err := srv.ListenAndServe()
+	err = srv.ListenAndServe()
 	if !errors.Is(err, http.ErrServerClosed) {
 		app.logger.Error("Server error", err)
 		return err
@@ -60,7 +97,7 @@ func (app *application) serveHTTP() error {
 	}
 
 	app.logger.Info("Stopped server", zap.String("addr", srv.Addr))
-
 	app.wg.Wait()
+
 	return nil
 }

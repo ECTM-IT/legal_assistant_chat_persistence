@@ -1,4 +1,4 @@
-package main
+package http
 
 import (
 	"os"
@@ -7,11 +7,11 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/logs" // Update this import path to where your logger.go is located
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/logs"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/utils/env"
 )
 
-func main() {
+func Main() {
 	// Initialize your ZapLogger
 	logger := logs.Init() // Assuming Init() returns an instance of your ZapLogger which implements the Logger interface
 
@@ -29,19 +29,19 @@ type config struct {
 	cookie   struct {
 		secretKey string
 	}
-	notifications struct {
-		email string
-	}
-	smtp struct {
-		host     string
-		port     int
-		username string
-		password string
-		from     string
-	}
+	// notifications struct { mailing service WIP
+	// 	email string
+	// }
+	// smtp struct {
+	// 	host     string
+	// 	port     int
+	// 	username string
+	// 	password string
+	// 	from     string
+	// }
 }
 
-type application struct {
+type Application struct {
 	config config
 	logger logs.Logger // Use your Logger interface here
 	wg     sync.WaitGroup
@@ -54,7 +54,7 @@ func run(logger logs.Logger) error {
 	cfg.httpPort = env.GetInt("HTTP_PORT", 4444)
 	cfg.cookie.secretKey = env.GetString("COOKIE_SECRET_KEY", "3iepwbkq5chsrusjoha26mnsjt233ujq")
 
-	app := &application{
+	app := &Application{
 		config: cfg,
 		logger: logger,
 	}

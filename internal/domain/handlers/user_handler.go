@@ -1,39 +1,39 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
-	dto "github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
 )
 
-// User - A simplified user representation
-type User struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
-}
-
 // UserHandler - Handles user-related HTTP requests
 type UserHandler struct {
-	userService services.UserService
+	userService *services.UserServiceImpl
 }
 
 // NewUserHandler - Creates a new UserHandler
-func NewUserHandler(userService services.UserService) *UserHandler {
-	return &UserHandler{userService: userService}
+func NewUserHandler(userService *services.UserServiceImpl) *UserHandler {
+	return &UserHandler{
+		userService: userService,
+	}
 }
 
 // GetUser - Handles GET requests for a specific user
-func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request, ctx context.Context) {
+func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	userID := vars["userID"]
+	userID, err := primitive.ObjectIDFromHex(vars["userID"])
+	if err != nil {
+		// Handle error appropriately (e.g., write specific error responses)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	user, err := h.userService.GetUserByID(ctx, userID)
+	user, err := h.userService.GetUserByID(userID)
 	if err != nil {
 		// Handle error appropriately (e.g., write specific error responses)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -45,14 +45,15 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request, ctx contex
 }
 
 // CreateUser - Handles POST requests to create a new user
-func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request, user *dto.CreateUserRequest) {
-	err := json.NewDecoder(r.Body).Decode(user)
+func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
+	var userRequest dtos.CreateUserRequest
+	err := json.NewDecoder(r.Body).Decode(&userRequest)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	createdUser, err := h.userService.CreateUser(r.Context(), user)
+	createdUser, err := h.userService.CreateUser(&userRequest)
 	if err != nil {
 		// Handle error appropriately
 		http.Error(w, err.Error(), http.StatusInternalServerError)

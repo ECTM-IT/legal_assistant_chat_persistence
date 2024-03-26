@@ -21,7 +21,7 @@ type Case struct {
 }
 
 type Message struct {
-	Content   string             `json:"content" bson:"content"`
-	SenderID  primitive.ObjectID `json:"sender_id" bson:"sender_id"`
-	Recipient string             `json:"recipient" bson:"recipient"`
+	Content     string             `json:"content" bson:"content"`
+	SenderID    primitive.ObjectID `json:"sender_id" bson:"sender_id"`
+	RecipientID primitive.ObjectID `json:"recipient_id" bson:"recipient_id"`
 }

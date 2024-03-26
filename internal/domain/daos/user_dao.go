@@ -3,13 +3,11 @@ package daos
 
 import (
 	"context"
-	"time"
 
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-
-	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 )
 
 type UserDAO struct {
@@ -22,7 +20,8 @@ func NewUserDAO(db *mongo.Database) *UserDAO {
 	}
 }
 
-func (dao *UserDAO) GetUserByID(ctx context.Context, id primitive.ObjectID) (*models.User, error) {
+func (dao *UserDAO) GetUserByID(id primitive.ObjectID) (*models.User, error) {
+	ctx := context.Background()
 
 	var user models.User
 	err := dao.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&user)
@@ -32,7 +31,20 @@ func (dao *UserDAO) GetUserByID(ctx context.Context, id primitive.ObjectID) (*mo
 	return &user, nil
 }
 
-func (dao *UserDAO) GetUserByCaseID(ctx context.Context, caseID primitive.ObjectID) (*models.User, error) {
+func (dao *UserDAO) GetUserByEmail(email string) (*models.User, error) {
+	ctx := context.Background()
+
+	var user models.User
+	err := dao.collection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (dao *UserDAO) GetUserByCaseID(caseID primitive.ObjectID) (*models.User, error) {
+	ctx := context.Background()
+
 	var user models.User
 	err := dao.collection.FindOne(ctx, bson.M{"cases": caseID}).Decode(&user)
 	if err != nil {
@@ -41,7 +53,9 @@ func (dao *UserDAO) GetUserByCaseID(ctx context.Context, caseID primitive.Object
 	return &user, nil
 }
 
-func (dao *UserDAO) CreateUser(ctx context.Context, user *models.User) (*models.User, error) {
+func (dao *UserDAO) CreateUser(user *models.User) (*models.User, error) {
+	ctx := context.Background()
+
 	_, err := dao.collection.InsertOne(ctx, user)
 	if err != nil {
 		return nil, err
@@ -49,20 +63,22 @@ func (dao *UserDAO) CreateUser(ctx context.Context, user *models.User) (*models.
 	return user, nil
 }
 
-func (dao *UserDAO) UpdateUser(ctx context.Context, id primitive.ObjectID, user *models.User) error {
+func (dao *UserDAO) UpdateUser(id primitive.ObjectID, user *models.User) error {
+	ctx := context.Background()
+
 	_, err := dao.collection.ReplaceOne(ctx, bson.M{"_id": id}, user)
 	return err
 }
 
-func (dao *UserDAO) DeleteUser(ctx context.Context, id primitive.ObjectID) error {
+func (dao *UserDAO) DeleteUser(id primitive.ObjectID) error {
+	ctx := context.Background()
 
 	_, err := dao.collection.DeleteOne(ctx, bson.M{"_id": id})
 	return err
 }
 
-func (dao *UserDAO) GetAllUsers(ctx context.Context) ([]*models.User, error) {
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
+func (dao *UserDAO) GetAllUsers() ([]*models.User, error) {
+	ctx := context.Background()
 
 	cursor, err := dao.collection.Find(ctx, bson.M{})
 	if err != nil {

@@ -1,8 +1,6 @@
 package repositories
 
 import (
-	"context"
-
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/daos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
@@ -10,26 +8,26 @@ import (
 )
 
 type UserRepository interface {
-	FindUserByID(ctx context.Context, userID primitive.ObjectID) (*dtos.UserResponse, error)
-	FindUserByCasesID(ctx context.Context, casesID string) (*dtos.UserResponse, error)
-	TotalUsers(ctx context.Context) (int64, error)
-	DeleteUser(ctx context.Context, userID string) error
-	CreateUser(ctx context.Context, user *dtos.CreateUserRequest) (*models.User, error)
-	UpdateUser(ctx context.Context, userID string, user *dtos.UpdateUserRequest) error
+	FindUserByID(userID primitive.ObjectID) (*dtos.UserResponse, error)
+	FindUserByCasesID(casesID string) (*dtos.UserResponse, error)
+	TotalUsers() ([]*models.User, error)
+	DeleteUser(userID string) error
+	CreateUser(user *dtos.CreateUserRequest) (*models.User, error)
+	UpdateUser(userID string, user *dtos.UpdateUserRequest) error
 }
 
 type UserRepositoryImpl struct {
-	userDAO daos.UserDAO
+	userDAO *daos.UserDAO
 }
 
-func NewUserRepository(userDAO daos.UserDAO) *UserRepositoryImpl {
+func NewUserRepository(userDAO *daos.UserDAO) *UserRepositoryImpl {
 	return &UserRepositoryImpl{
 		userDAO: userDAO,
 	}
 }
 
-func (r *UserRepositoryImpl) FindUserByID(ctx context.Context, userID primitive.ObjectID) (*dtos.UserResponse, error) {
-	user, err := r.userDAO.GetUserByID(ctx, userID)
+func (r *UserRepositoryImpl) FindUserByID(userID primitive.ObjectID) (*dtos.UserResponse, error) {
+	user, err := r.userDAO.GetUserByID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -37,13 +35,13 @@ func (r *UserRepositoryImpl) FindUserByID(ctx context.Context, userID primitive.
 	return r.toUserResponse(user), nil
 }
 
-func (r *UserRepositoryImpl) FindUserByCasesID(ctx context.Context, casesID string) (*dtos.UserResponse, error) {
+func (r *UserRepositoryImpl) FindUserByCasesID(casesID string) (*dtos.UserResponse, error) {
 	objectID, err := primitive.ObjectIDFromHex(casesID)
 	if err != nil {
 		return nil, err
 	}
 
-	user, err := r.userDAO.GetUserByCaseID(ctx, objectID)
+	user, err := r.userDAO.GetUserByCaseID(objectID)
 	if err != nil {
 		return nil, err
 	}
@@ -51,20 +49,20 @@ func (r *UserRepositoryImpl) FindUserByCasesID(ctx context.Context, casesID stri
 	return r.toUserResponse(user), nil
 }
 
-func (r *UserRepositoryImpl) TotalUsers(ctx context.Context) ([]*models.User, error) {
-	return r.userDAO.GetAllUsers(ctx)
+func (r *UserRepositoryImpl) TotalUsers() ([]*models.User, error) {
+	return r.userDAO.GetAllUsers()
 }
 
-func (r *UserRepositoryImpl) DeleteUser(ctx context.Context, userID string) error {
+func (r *UserRepositoryImpl) DeleteUser(userID string) error {
 	objectID, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
 		return err
 	}
 
-	return r.userDAO.DeleteUser(ctx, objectID)
+	return r.userDAO.DeleteUser(objectID)
 }
 
-func (r *UserRepositoryImpl) CreateUser(ctx context.Context, user *dtos.CreateUserRequest) (*models.User, error) {
+func (r *UserRepositoryImpl) CreateUser(user *dtos.CreateUserRequest) (*models.User, error) {
 	userModel := &models.User{
 		ID:             primitive.NewObjectID(),
 		Image:          user.Image,
@@ -77,10 +75,10 @@ func (r *UserRepositoryImpl) CreateUser(ctx context.Context, user *dtos.CreateUs
 		AgentIDs:       user.AgentIDs,
 		SubscriptionID: user.SubscriptionID,
 	}
-	return r.userDAO.CreateUser(ctx, userModel)
+	return r.userDAO.CreateUser(userModel)
 }
 
-func (r *UserRepositoryImpl) UpdateUser(ctx context.Context, userID string, user *dtos.UpdateUserRequest) error {
+func (r *UserRepositoryImpl) UpdateUser(userID string, user *dtos.UpdateUserRequest) error {
 	objectID, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
 		return err
@@ -144,11 +142,10 @@ func (r *UserRepositoryImpl) UpdateUser(ctx context.Context, userID string, user
 		userModel.SubscriptionID = subscriptionID
 	}
 
-	return r.userDAO.UpdateUser(ctx, objectID, userModel)
+	return r.userDAO.UpdateUser(objectID, userModel)
 }
 
 func (r *UserRepositoryImpl) toUserResponse(user *models.User) *dtos.UserResponse {
-
 	return &dtos.UserResponse{
 		ID:             user.ID,
 		Image:          user.Image,

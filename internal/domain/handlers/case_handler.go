@@ -7,6 +7,7 @@ import (
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
 	"github.com/gorilla/mux"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type CaseHandler struct {
@@ -74,10 +75,15 @@ func (h *CaseHandler) CreateCase(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CaseHandler) UpdateCase(w http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
+	id, err := primitive.ObjectIDFromHex(mux.Vars(r)["id"])
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	var updateRequest dtos.UpdateCaseRequest
-	err := json.NewDecoder(r.Body).Decode(&updateRequest)
+	err = json.NewDecoder(r.Body).Decode(&updateRequest)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
