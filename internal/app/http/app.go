@@ -3,7 +3,6 @@ package http
 import (
 	"os"
 	"runtime/debug"
-	"sync"
 
 	"go.uber.org/zap"
 
@@ -13,46 +12,41 @@ import (
 
 func Main() {
 	// Initialize your ZapLogger
-	logger := logs.Init() // Assuming Init() returns an instance of your ZapLogger which implements the Logger interface
+	logger := logs.Init()
 
+	// Assuming Init() returns an instance of your ZapLogger which implements the Logger interface
 	err := run(logger)
 	if err != nil {
 		trace := string(debug.Stack())
-		logger.Error("Application failed", err, zap.String("trace", trace))
+		logger.Warn("Application failed", zap.String("error", err.Error()), zap.String("trace", trace))
 		os.Exit(1)
 	}
 }
 
-type config struct {
-	baseURL  string
-	httpPort int
-	cookie   struct {
-		secretKey string
+type Config struct {
+	BaseURL  string
+	HTTPPort int
+	Cookie   struct {
+		SecretKey string
 	}
-	// notifications struct { mailing service WIP
-	// 	email string
-	// }
-	// smtp struct {
-	// 	host     string
-	// 	port     int
-	// 	username string
-	// 	password string
-	// 	from     string
-	// }
+	MongoDB struct {
+		URI      string
+		Database string
+	}
 }
 
 type Application struct {
-	config config
-	logger logs.Logger // Use your Logger interface here
-	wg     sync.WaitGroup
+	config Config
+	logger logs.Logger
 }
 
 func run(logger logs.Logger) error {
-	var cfg config
-
-	cfg.baseURL = env.GetString("BASE_URL", "http://localhost:4444")
-	cfg.httpPort = env.GetInt("HTTP_PORT", 4444)
-	cfg.cookie.secretKey = env.GetString("COOKIE_SECRET_KEY", "3iepwbkq5chsrusjoha26mnsjt233ujq")
+	var cfg Config
+	cfg.BaseURL = env.GetString("BASE_URL", "http://0.0.0.0:4444")
+	cfg.HTTPPort = env.GetInt("HTTP_PORT", 4444)
+	cfg.Cookie.SecretKey = env.GetString("COOKIE_SECRET_KEY", "3iepwbkq5chsrusjoha26mnsjt233ujq")
+	cfg.MongoDB.URI = env.GetString("MONGODB_URI", "mongodb://0.0.0.0:27017/")
+	cfg.MongoDB.Database = env.GetString("MONGODB_DATABASE", "legal_assistant")
 
 	app := &Application{
 		config: cfg,

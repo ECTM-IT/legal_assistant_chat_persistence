@@ -11,18 +11,25 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
+    networks:
+      - backend
 
   go:
     build: .
     container_name: golang
     ports:
-      - "8080:8080"
+      - "4444:4444"
     depends_on:
       - mongodb
     environment:
       MONGO_USERNAME: mongoadmin
       MONGO_PASSWORD: secret
       MONGO_HOST: mongodb
+    networks:
+      - backend
 
 volumes:
   mongodb_data:
+
+networks:
+  backend:
