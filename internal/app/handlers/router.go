@@ -5,11 +5,16 @@ import (
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/handlers"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
+	handler "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
-func Routes(agentService *services.AgentService, caseService *services.CaseService, teamService *services.TeamService, userService *services.UserServiceImpl) *mux.Router {
+func Routes(agentService *services.AgentService, caseService *services.CaseService, teamService *services.TeamService, userService *services.UserServiceImpl) http.Handler {
 	router := mux.NewRouter()
+
+	headersOk := handler.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})
+	originsOk := handler.AllowedOrigins([]string{"*"})
+	methodsOk := handler.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 
 	agentHandler := handlers.NewAgentHandler(agentService)
 	caseHandler := handlers.NewCaseHandler(caseService)
@@ -42,11 +47,13 @@ func Routes(agentService *services.AgentService, caseService *services.CaseServi
 	// User routes
 	router.HandleFunc("/users/{id}", userHandler.GetUserByID).Methods(http.MethodGet)
 	router.HandleFunc("/users", userHandler.CreateUser).Methods(http.MethodPost)
-	// router.HandleFunc("/users/{id}", userHandler.UpdateUser).Methods(http.MethodPut)
-	// router.HandleFunc("/users/{id}", userHandler.DeleteUser).Methods(http.MethodDelete)
+	router.HandleFunc("/users/{id}", userHandler.UpdateUser).Methods(http.MethodPut)
+	router.HandleFunc("/users/{id}", userHandler.DeleteUser).Methods(http.MethodDelete)
 
 	router.NotFoundHandler = http.HandlerFunc(NotFoundHandler)
 	router.MethodNotAllowedHandler = http.HandlerFunc(MethodNotAllowedHandler)
 
-	return router
+	corsHandler := handler.CORS(originsOk, headersOk, methodsOk)(router)
+
+	return corsHandler
 }

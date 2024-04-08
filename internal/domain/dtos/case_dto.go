@@ -3,55 +3,56 @@ package dtos
 import (
 	"time"
 
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/pkg/helpers"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type CreateCaseRequest struct {
-	Name            string               `json:"name"`
-	Description     string               `json:"description"`
-	CreatorID       primitive.ObjectID   `json:"creator_id"`
-	AgentID         primitive.ObjectID   `json:"agent_id"`
-	CollaboratorIDs []primitive.ObjectID `json:"collaborator_ids"`
-	Action          string               `json:"action"`
-	Skill           string               `json:"skill"`
-	Share           bool                 `json:"share"`
-	IsArchived      bool                 `json:"is_archived"`
+	Name            helpers.Nullable[string]               `json:"name"`
+	Description     helpers.Nullable[string]               `json:"description"`
+	CreatorID       helpers.Nullable[primitive.ObjectID]   `json:"creator_id"`
+	AgentID         helpers.Nullable[primitive.ObjectID]   `json:"agent_id"`
+	CollaboratorIDs helpers.Nullable[[]primitive.ObjectID] `json:"collaborator_ids"`
+	Action          helpers.Nullable[string]               `json:"action"`
+	Skill           helpers.Nullable[string]               `json:"skill"`
+	Share           helpers.Nullable[bool]                 `json:"share"`
+	IsArchived      helpers.Nullable[bool]                 `json:"is_archived"`
 }
 
 type CaseResponse struct {
-	ID              primitive.ObjectID   `json:"id"`
-	Name            string               `json:"name"`
-	Description     string               `json:"description"`
-	CreatorID       primitive.ObjectID   `json:"creator_id"`
-	AgentID         primitive.ObjectID   `json:"agent_id"`
-	CollaboratorIDs []primitive.ObjectID `json:"collaborator_ids"`
-	Action          string               `json:"action"`
-	Skill           string               `json:"skill"`
-	Share           bool                 `json:"share"`
-	IsArchived      bool                 `json:"is_archived"`
-	Messages        []MessageResponse    `json:"messages"`
-	LastEdit        time.Time            `json:"last_edit"`
-	CreatedAt       time.Time            `json:"created_at"`
-	UpdatedAt       time.Time            `json:"updated_at"`
+	ID              helpers.Nullable[primitive.ObjectID]   `json:"id"`
+	Name            helpers.Nullable[string]               `json:"name"`
+	Description     helpers.Nullable[string]               `json:"description"`
+	CreatorID       helpers.Nullable[primitive.ObjectID]   `json:"creator_id"`
+	AgentID         helpers.Nullable[primitive.ObjectID]   `json:"agent_id"`
+	CollaboratorIDs helpers.Nullable[[]primitive.ObjectID] `json:"collaborator_ids"`
+	Action          helpers.Nullable[string]               `json:"action"`
+	Skill           helpers.Nullable[string]               `json:"skill"`
+	Share           helpers.Nullable[bool]                 `json:"share"`
+	IsArchived      helpers.Nullable[bool]                 `json:"is_archived"`
+	Messages        helpers.Nullable[[]MessageResponse]    `json:"messages"`
+	LastEdit        helpers.Nullable[time.Time]            `json:"last_edit"`
+	CreatedAt       helpers.Nullable[time.Time]            `json:"created_at"`
+	UpdatedAt       helpers.Nullable[time.Time]            `json:"updated_at"`
 }
 
 type UpdateCaseRequest struct {
-	Name            string               `json:"name"`
-	Description     string               `json:"description"`
-	AgentID         primitive.ObjectID   `json:"agent_id"`
-	CollaboratorIDs []primitive.ObjectID `json:"collaborator_ids"`
-	Action          string               `json:"action"`
-	Skill           string               `json:"skill"`
-	Share           bool                 `json:"share"`
-	IsArchived      bool                 `json:"is_archived"`
+	Name            helpers.Nullable[string]               `json:"name"`
+	Description     helpers.Nullable[string]               `json:"description"`
+	AgentID         helpers.Nullable[primitive.ObjectID]   `json:"agent_id"`
+	CollaboratorIDs helpers.Nullable[[]primitive.ObjectID] `json:"collaborator_ids"`
+	Action          helpers.Nullable[string]               `json:"action"`
+	Skill           helpers.Nullable[string]               `json:"skill"`
+	Share           helpers.Nullable[bool]                 `json:"share"`
+	IsArchived      helpers.Nullable[bool]                 `json:"is_archived"`
 }
 
 type DeleteCaseRequest struct {
-	ID primitive.ObjectID `json:"id"`
+	ID helpers.Nullable[primitive.ObjectID] `json:"id"`
 }
 
 type MessageResponse struct {
-	Content   string             `json:"content"`
-	SenderID  primitive.ObjectID `json:"sender_id"`
-	Recipient string             `json:"recipient"`
+	Content   helpers.Nullable[string]             `json:"content"`
+	SenderID  helpers.Nullable[primitive.ObjectID] `json:"sender_id"`
+	Recipient helpers.Nullable[string]             `json:"recipient"`
 }

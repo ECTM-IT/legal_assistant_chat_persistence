@@ -1,77 +1,39 @@
 package http
 
 import (
-	"context"
-	"fmt"
-	"net"
-	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
+	"runtime/debug"
 
-	handler "github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/handlers"
-	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/db"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/pkg/utils/env"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/logs"
 	"go.uber.org/zap"
 )
 
-const (
-	defaultIdleTimeout    = 24 * time.Hour
-	defaultReadTimeout    = 24 * time.Hour
-	defaultWriteTimeout   = 24 * time.Hour
-	defaultShutdownPeriod = 30 * time.Second
-)
+func Main() {
+	logger := logs.Init()
+	cfg := loadConfig()
 
-func (app *Application) serveHTTP() error {
-	uri := "mongodb://0.0.0.0:27017/"
-	client, err := db.Connect(uri, 60)
+	app, err := NewApplication(cfg, logger)
 	if err != nil {
-		return err
-	}
-	defer client.Disconnect(context.Background())
-
-	laDatabase := db.CreateDB(client)
-
-	services := db.InitializeServices(laDatabase)
-
-	srv := &http.Server{
-		Addr:         fmt.Sprintf("0.0.0.0:%d", app.config.HTTPPort),
-		Handler:      handler.Routes(services.AgentService, services.CaseService, services.TeamService, services.UserService),
-		IdleTimeout:  defaultIdleTimeout,
-		ReadTimeout:  defaultReadTimeout,
-		WriteTimeout: defaultWriteTimeout,
+		trace := string(debug.Stack())
+		app.logger.Warn("Failed to create application", zap.String("error", err.Error()), zap.String("trace", trace))
+		os.Exit(1)
 	}
 
-	shutdownErrorChan := make(chan error)
-	go func() {
-		quitChan := make(chan os.Signal, 1)
-		signal.Notify(quitChan, syscall.SIGINT, syscall.SIGTERM)
-		<-quitChan
-
-		ctx, cancel := context.WithTimeout(context.Background(), defaultShutdownPeriod)
-		defer cancel()
-
-		app.logger.Info("Shutting down server", zap.String("addr", srv.Addr))
-		shutdownErrorChan <- srv.Shutdown(ctx)
-	}()
-
-	app.logger.Info("Starting server", zap.String("addr", srv.Addr))
-	err = srv.ListenAndServe()
-	if err != nil && err != http.ErrServerClosed {
-		if opErr, ok := err.(*net.OpError); ok && opErr.Err.Error() == "read: connection reset by peer" {
-			app.logger.Warn("Connection reset by peer" + err.Error())
-		} else {
-			app.logger.Warn("Server error" + err.Error())
-			return err
-		}
-	}
-
-	err = <-shutdownErrorChan
+	err = app.Run()
 	if err != nil {
-		app.logger.Warn("Shutdown error" + err.Error())
-		return err
+		trace := string(debug.Stack())
+		app.logger.Warn("Application failed", zap.String("error", err.Error()), zap.String("trace", trace))
+		os.Exit(1)
 	}
+}
 
-	app.logger.Info("Stopped server", zap.String("addr", srv.Addr))
-	return nil
+func loadConfig() Config {
+	var cfg Config
+	cfg.BaseURL = env.GetString("BASE_URL", "http://0.0.0.0:4444")
+	cfg.HTTPPort = env.GetInt("HTTP_PORT", 4444)
+	cfg.Cookie.SecretKey = env.GetString("COOKIE_SECRET_KEY", "3iepwbkq5chsrusjoha26mnsjt233ujq")
+	cfg.MongoDB.URI = env.GetString("MONGODB_URI", "mongodb://0.0.0.0:27017/")
+	cfg.MongoDB.Database = env.GetString("MONGODB_DATABASE", "legal_assistant")
+	return cfg
 }

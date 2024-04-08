@@ -1,6 +1,9 @@
 package repositories
 
 import (
+	"context"
+
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/pkg/helpers"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/daos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
@@ -8,12 +11,12 @@ import (
 )
 
 type UserRepository interface {
-	FindUserByID(userID primitive.ObjectID) (*dtos.UserResponse, error)
-	FindUserByCasesID(casesID string) (*dtos.UserResponse, error)
-	TotalUsers() ([]*models.User, error)
-	DeleteUser(userID string) error
+	FindUserByID(userID helpers.Nullable[primitive.ObjectID]) (*dtos.UserResponse, error)
+	FindUserByCasesID(casesID helpers.Nullable[string]) (*dtos.UserResponse, error)
+	TotalUsers(ctx context.Context) ([]*models.User, error)
+	DeleteUser(userID helpers.Nullable[string]) error
 	CreateUser(user *dtos.CreateUserRequest) (*models.User, error)
-	UpdateUser(userID string, user *dtos.UpdateUserRequest) error
+	UpdateUser(userID helpers.Nullable[string], user *dtos.UpdateUserRequest) error
 }
 
 type UserRepositoryImpl struct {
@@ -65,15 +68,15 @@ func (r *UserRepositoryImpl) DeleteUser(userID string) error {
 func (r *UserRepositoryImpl) CreateUser(user *dtos.CreateUserRequest) (*models.User, error) {
 	userModel := &models.User{
 		ID:             primitive.NewObjectID(),
-		Image:          user.Image,
-		Email:          user.Email,
-		FirstName:      user.FirstName,
-		LastName:       user.LastName,
-		Phone:          user.Phone,
-		CaseIDs:        user.CaseIDs,
-		TeamID:         user.TeamID,
-		AgentIDs:       user.AgentIDs,
-		SubscriptionID: user.SubscriptionID,
+		Image:          user.Image.OrElse(""),
+		Email:          user.Email.OrElse(""),
+		FirstName:      user.FirstName.OrElse(""),
+		LastName:       user.LastName.OrElse(""),
+		Phone:          user.Phone.OrElse(""),
+		CaseIDs:        user.CaseIDs.OrElse([]primitive.ObjectID{}),
+		TeamID:         user.TeamID.Val,
+		AgentIDs:       user.AgentIDs.OrElse([]primitive.ObjectID{}),
+		SubscriptionID: user.SubscriptionID.Val,
 	}
 	return r.userDAO.CreateUser(userModel)
 }
@@ -86,25 +89,25 @@ func (r *UserRepositoryImpl) UpdateUser(userID string, user *dtos.UpdateUserRequ
 
 	userModel := &models.User{}
 
-	if user.Image != nil {
-		userModel.Image = *user.Image
+	if user.Image.Valid {
+		userModel.Image = user.Image.Val
 	}
-	if user.Email != nil {
-		userModel.Email = *user.Email
+	if user.Email.Valid {
+		userModel.Email = user.Email.Val
 	}
-	if user.FirstName != nil {
-		userModel.FirstName = *user.FirstName
+	if user.FirstName.Valid {
+		userModel.FirstName = user.FirstName.Val
 	}
-	if user.LastName != nil {
-		userModel.LastName = *user.LastName
+	if user.LastName.Valid {
+		userModel.LastName = user.LastName.Val
 	}
-	if user.Phone != nil {
-		userModel.Phone = *user.Phone
+	if user.Phone.Valid {
+		userModel.Phone = user.Phone.Val
 	}
 
-	if len(user.CaseIDs) > 0 {
-		caseIDs := make([]primitive.ObjectID, len(user.CaseIDs))
-		for i, caseID := range user.CaseIDs {
+	if user.CaseIDs.Valid {
+		caseIDs := make([]primitive.ObjectID, len(user.CaseIDs.Val))
+		for i, caseID := range user.CaseIDs.Val {
 			caseObjectID, err := primitive.ObjectIDFromHex(caseID)
 			if err != nil {
 				return err
@@ -114,17 +117,17 @@ func (r *UserRepositoryImpl) UpdateUser(userID string, user *dtos.UpdateUserRequ
 		userModel.CaseIDs = caseIDs
 	}
 
-	if user.TeamID != nil {
-		teamID, err := primitive.ObjectIDFromHex(*user.TeamID)
+	if user.TeamID.Valid {
+		teamID, err := primitive.ObjectIDFromHex(user.TeamID.Val)
 		if err != nil {
 			return err
 		}
 		userModel.TeamID = teamID
 	}
 
-	if len(user.AgentIDs) > 0 {
-		agentIDs := make([]primitive.ObjectID, len(user.AgentIDs))
-		for i, agentID := range user.AgentIDs {
+	if user.AgentIDs.Valid {
+		agentIDs := make([]primitive.ObjectID, len(user.AgentIDs.Val))
+		for i, agentID := range user.AgentIDs.Val {
 			agentObjectID, err := primitive.ObjectIDFromHex(agentID)
 			if err != nil {
 				return err
@@ -134,8 +137,8 @@ func (r *UserRepositoryImpl) UpdateUser(userID string, user *dtos.UpdateUserRequ
 		userModel.AgentIDs = agentIDs
 	}
 
-	if user.SubscriptionID != nil {
-		subscriptionID, err := primitive.ObjectIDFromHex(*user.SubscriptionID)
+	if user.SubscriptionID.Valid {
+		subscriptionID, err := primitive.ObjectIDFromHex(user.SubscriptionID.Val)
 		if err != nil {
 			return err
 		}
@@ -147,15 +150,15 @@ func (r *UserRepositoryImpl) UpdateUser(userID string, user *dtos.UpdateUserRequ
 
 func (r *UserRepositoryImpl) toUserResponse(user *models.User) *dtos.UserResponse {
 	return &dtos.UserResponse{
-		ID:             user.ID,
-		Image:          user.Image,
-		Email:          user.Email,
-		FirstName:      user.FirstName,
-		LastName:       user.LastName,
-		Phone:          user.Phone,
-		CaseIDs:        user.CaseIDs,
-		TeamID:         user.TeamID,
-		AgentIDs:       user.AgentIDs,
-		SubscriptionID: user.SubscriptionID,
+		ID:             helpers.NewNullable(user.ID),
+		Image:          helpers.NewNullable(user.Image),
+		Email:          helpers.NewNullable(user.Email),
+		FirstName:      helpers.NewNullable(user.FirstName),
+		LastName:       helpers.NewNullable(user.LastName),
+		Phone:          helpers.NewNullable(user.Phone),
+		CaseIDs:        helpers.NewNullable(user.CaseIDs),
+		TeamID:         helpers.NewNullable(user.TeamID),
+		AgentIDs:       helpers.NewNullable(user.AgentIDs),
+		SubscriptionID: helpers.NewNullable(user.SubscriptionID),
 	}
 }

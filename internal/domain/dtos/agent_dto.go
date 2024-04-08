@@ -1,38 +1,39 @@
 package dtos
 
 import (
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/pkg/helpers"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type CreateAgentRequest struct {
-	ProfileImage string   `json:"profile_image"`
-	Name         string   `json:"name"`
-	Description  string   `json:"description"`
-	Skills       []string `json:"skills"`
-	Price        float64  `json:"price"`
-	Code         string   `json:"code"`
+	ProfileImage helpers.Nullable[string]   `json:"profile_image"`
+	Name         helpers.Nullable[string]   `json:"name"`
+	Description  helpers.Nullable[string]   `json:"description"`
+	Skills       helpers.Nullable[[]string] `json:"skills"`
+	Price        helpers.Nullable[float64]  `json:"price"`
+	Code         helpers.Nullable[string]   `json:"code"`
 }
 
 type AgentResponse struct {
-	ID           primitive.ObjectID `json:"id"`
-	ProfileImage string             `json:"profile_image"`
-	Name         string             `json:"name"`
-	Description  string             `json:"description"`
-	Skills       []SkillResponse    `json:"skills"`
-	Price        float64            `json:"price"`
-	Code         string             `json:"code"`
+	ID           helpers.Nullable[primitive.ObjectID] `json:"id"`
+	ProfileImage helpers.Nullable[string]             `json:"profile_image"`
+	Name         helpers.Nullable[string]             `json:"name"`
+	Description  helpers.Nullable[string]             `json:"description"`
+	Skills       helpers.Nullable[[]SkillResponse]    `json:"skills"`
+	Price        helpers.Nullable[float64]            `json:"price"`
+	Code         helpers.Nullable[string]             `json:"code"`
 }
 
 type SkillResponse struct {
-	Name         string   `json:"name"`
-	Descriptions []string `json:"descriptions"`
+	Name         helpers.Nullable[string]   `json:"name"`
+	Descriptions helpers.Nullable[[]string] `json:"descriptions"`
 }
 
 type UpdateAgentRequest struct {
-	ProfileImage string   `json:"profile_image"`
-	Name         string   `json:"name"`
-	Description  string   `json:"description"`
-	Skills       []string `json:"skills"`
-	Price        float64  `json:"price"`
-	Code         string   `json:"code"`
+	ProfileImage helpers.Nullable[string]   `json:"profile_image"`
+	Name         helpers.Nullable[string]   `json:"name"`
+	Description  helpers.Nullable[string]   `json:"description"`
+	Skills       helpers.Nullable[[]string] `json:"skills"`
+	Price        helpers.Nullable[float64]  `json:"price"`
+	Code         helpers.Nullable[string]   `json:"code"`
 }

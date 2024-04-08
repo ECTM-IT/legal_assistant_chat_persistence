@@ -23,19 +23,17 @@ func NewUserHandler(userService *services.UserServiceImpl) *UserHandler {
 	}
 }
 
-// GetUser - Handles GET requests for a specific user
+// GetUserByID - Handles GET requests for a specific user
 func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID, err := primitive.ObjectIDFromHex(vars["userID"])
 	if err != nil {
-		// Handle error appropriately (e.g., write specific error responses)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	user, err := h.userService.GetUserByID(userID)
 	if err != nil {
-		// Handle error appropriately (e.g., write specific error responses)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -55,7 +53,6 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	createdUser, err := h.userService.CreateUser(&userRequest)
 	if err != nil {
-		// Handle error appropriately
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -63,4 +60,40 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(createdUser)
+}
+
+// UpdateUser - Handles PUT requests to update a user
+func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID := vars["userID"]
+
+	var userRequest dtos.UpdateUserRequest
+	err := json.NewDecoder(r.Body).Decode(&userRequest)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = h.userService.UpdateUser(userID, &userRequest)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode("user-updated")
+}
+
+// DeleteUser - Handles DELETE requests to delete a user
+func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID := vars["userID"]
+
+	err := h.userService.DeleteUserByID(userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
