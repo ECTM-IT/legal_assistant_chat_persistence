@@ -12,7 +12,7 @@ import (
 func Routes(agentService *services.AgentService, caseService *services.CaseService, teamService *services.TeamService, userService *services.UserServiceImpl) http.Handler {
 	router := mux.NewRouter()
 
-	headersOk := handler.AllowedHeaders([]string{"*"})
+	headersOk := handler.AllowedHeaders([]string{"Accept", "Accept-Language", "Content-Type", "Content-Language", "Origin"})
 	originsOk := handler.AllowedOrigins([]string{"*"})
 	methodsOk := handler.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
 
