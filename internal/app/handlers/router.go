@@ -5,16 +5,25 @@ import (
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/handlers"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
-	handler "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 )
 
 func Routes(agentService *services.AgentService, caseService *services.CaseService, teamService *services.TeamService, userService *services.UserServiceImpl) http.Handler {
 	router := mux.NewRouter()
 
-	headersOk := handler.AllowedHeaders([]string{"Accept", "Accept-Language", "Content-Type", "Content-Language", "Origin"})
-	originsOk := handler.AllowedOrigins([]string{"*"})
-	methodsOk := handler.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "OPTIONS"})
+	// Create a new CORS handler with the desired configuration
+	corsHandler := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{
+			http.MethodPost,
+			http.MethodGet,
+			http.MethodDelete,
+			http.MethodPut,
+		},
+		AllowedHeaders:   []string{"*"},
+		AllowCredentials: false,
+	})
 
 	agentHandler := handlers.NewAgentHandler(agentService)
 	caseHandler := handlers.NewCaseHandler(caseService)
@@ -53,7 +62,8 @@ func Routes(agentService *services.AgentService, caseService *services.CaseServi
 	router.NotFoundHandler = http.HandlerFunc(NotFoundHandler)
 	router.MethodNotAllowedHandler = http.HandlerFunc(MethodNotAllowedHandler)
 
-	corsHandler := handler.CORS(originsOk, headersOk, methodsOk)(router)
+	// Wrap the router with the CORS handler
+	handler := corsHandler.Handler(router)
 
-	return corsHandler
+	return handler
 }

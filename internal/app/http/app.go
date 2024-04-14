@@ -24,12 +24,12 @@ type Application struct {
 }
 
 func NewApplication(cfg Config, logger logs.Logger) (*Application, error) {
-	client, err := db.Connect(cfg.MongoDB.URI, 60)
+	client, err := db.Connect(cfg.MongoDB.URI, 60, logger)
 	if err != nil {
 		return nil, err
 	}
 
-	laDatabase := db.CreateDB(client)
+	laDatabase := db.CreateDB(client, logger)
 	services := db.InitializeServices(laDatabase)
 
 	return &Application{
