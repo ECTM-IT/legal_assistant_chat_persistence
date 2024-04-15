@@ -12,6 +12,7 @@ import (
 
 type UserRepository interface {
 	FindUserByID(userID helpers.Nullable[primitive.ObjectID]) (*dtos.UserResponse, error)
+	FindUserByEmail(email string) (*dtos.UserResponse, error)
 	FindUserByCasesID(casesID helpers.Nullable[string]) (*dtos.UserResponse, error)
 	TotalUsers(ctx context.Context) ([]*models.User, error)
 	DeleteUser(userID helpers.Nullable[string]) error
@@ -31,6 +32,16 @@ func NewUserRepository(userDAO *daos.UserDAO) *UserRepositoryImpl {
 
 func (r *UserRepositoryImpl) FindUserByID(userID primitive.ObjectID) (*dtos.UserResponse, error) {
 	user, err := r.userDAO.GetUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.toUserResponse(user), nil
+}
+
+func (r *UserRepositoryImpl) FindUserByEmail(email string) (*dtos.UserResponse, error) {
+	user, err := r.userDAO.GetUserByEmail(email)
+
 	if err != nil {
 		return nil, err
 	}

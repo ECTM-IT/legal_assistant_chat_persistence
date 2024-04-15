@@ -9,6 +9,7 @@ import (
 // UserService defines the operations available on a user
 type UserService interface {
 	GetUserByID(userID string) (*dto.UserResponse, error)
+	GetUserByEmail(email string) (*dto.UserResponse, error)
 	GetUserByCaseID(caseID string) (*dto.UserResponse, error)
 	DeleteUserByID(userID string) error
 	CreateUser(user *dto.CreateUserRequest) (*dto.UserResponse, error)
@@ -30,6 +31,14 @@ func NewUserService(repo *repositories.UserRepositoryImpl) *UserServiceImpl {
 // GetUserByID retrieves details of a user by ID
 func (s *UserServiceImpl) GetUserByID(userID primitive.ObjectID) (*dto.UserResponse, error) {
 	user, err := s.userRepo.FindUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (s *UserServiceImpl) GetUserByEmail(email string) (*dto.UserResponse, error) {
+	user, err := s.userRepo.FindUserByEmail(email)
 	if err != nil {
 		return nil, err
 	}

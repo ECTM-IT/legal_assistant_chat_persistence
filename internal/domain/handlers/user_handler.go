@@ -26,13 +26,33 @@ func NewUserHandler(userService *services.UserServiceImpl) *UserHandler {
 // GetUserByID - Handles GET requests for a specific user
 func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	userID, err := primitive.ObjectIDFromHex(vars["userID"])
+	userID, err := primitive.ObjectIDFromHex(vars["id"])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	user, err := h.userService.GetUserByID(userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
+}
+
+func (h *UserHandler) GetUserByEmail(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	email, err := primitive.ObjectIDFromHex(vars["id"])
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	user, err := h.userService.GetUserByEmail(email.String())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

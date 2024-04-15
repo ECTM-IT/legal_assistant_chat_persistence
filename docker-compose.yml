@@ -6,10 +6,6 @@ services:
     container_name: golang
     ports:
       - "4444:4444"
-    environment:
-      MONGO_USERNAME: mongoadmin
-      MONGO_PASSWORD: secret
-      MONGO_HOST: mongodb
     networks:
       - backend
       
