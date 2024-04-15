@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -27,6 +28,7 @@ func NewUserHandler(userService *services.UserServiceImpl) *UserHandler {
 func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID, err := primitive.ObjectIDFromHex(vars["id"])
+	fmt.Println(userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
