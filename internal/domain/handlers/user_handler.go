@@ -42,17 +42,19 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(user)
 }
 
+// GetUserByEmail - Handles POST requests to retrieve a user by email
 func (h *UserHandler) GetUserByEmail(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
+	var emailRequest struct {
+		Email string `json:"email"`
+	}
 
-	email, err := primitive.ObjectIDFromHex(vars["id"])
-
+	err := json.NewDecoder(r.Body).Decode(&emailRequest)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	user, err := h.userService.GetUserByEmail(email.String())
+	user, err := h.userService.GetUserByEmail(emailRequest.Email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
