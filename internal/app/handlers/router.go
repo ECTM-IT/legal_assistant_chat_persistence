@@ -55,7 +55,7 @@ func Routes(agentService *services.AgentService, caseService *services.CaseServi
 
 	// User routes
 	router.HandleFunc("/users/{id}", userHandler.GetUserByID).Methods(http.MethodGet)
-	router.HandleFunc("/users-email/", userHandler.GetUserByEmail).Methods(http.MethodGet)
+	router.HandleFunc("/users-email/", userHandler.GetUserByEmail).Methods(http.MethodPost)
 	router.HandleFunc("/users", userHandler.CreateUser).Methods(http.MethodPost)
 	router.HandleFunc("/users/{id}", userHandler.UpdateUser).Methods(http.MethodPut)
 	router.HandleFunc("/users/{id}", userHandler.DeleteUser).Methods(http.MethodDelete)
