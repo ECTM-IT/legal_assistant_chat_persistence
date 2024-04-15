@@ -45,7 +45,7 @@ func (h *CaseHandler) GetCaseByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CaseHandler) GetCasesByCreatorID(w http.ResponseWriter, r *http.Request) {
-	creatorID := mux.Vars(r)["creatorID"]
+	creatorID := r.Header.Get("Authorization")
 
 	cases, err := h.caseService.GetCasesByCreatorID(creatorID)
 	if err != nil {
