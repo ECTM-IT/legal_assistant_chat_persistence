@@ -24,7 +24,7 @@ spec:
       containers:
         - env:
             - name: MONGO_HOST
-              value: mongodb
+              value: mongodbhost
             - name: MONGO_PASSWORD
               value: secret
             - name: MONGO_USERNAME
