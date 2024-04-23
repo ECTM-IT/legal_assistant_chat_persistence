@@ -24,12 +24,12 @@ spec:
       containers:
         - env:
             - name: MONGO_HOST
-              value: mongodb
+              value: $(MONGO_HOST)
             - name: MONGO_PASSWORD
-              value: secret
+              value: $(MONGO_PASSWORD)
             - name: MONGO_USERNAME
-              value: mongoadmin
-          image: go
+              value: $(MONGO_USERNAME)
+          image: $(ACR-IMAGE)
           name: golang
           ports:
             - containerPort: 4444
