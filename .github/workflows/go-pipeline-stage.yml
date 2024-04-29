@@ -1,0 +1,20 @@
+name: Trigger Azure Pipeline
+
+on:
+  pull_request:
+    types: [opened, reopened]
+    branches:
+        - 'stage'
+  push:
+    branches:
+      - stage  # Trigger the workflow on pushes to the stage branch
+jobs:
+  trigger_pipeline_job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure Pipelines Action
+        uses: Azure/pipelines@v1.2
+        with:
+          azure-devops-project-url: 'https://dev.azure.com/ECTM/Legal%20Assist'
+          azure-pipeline-name: 'legal_assistant_chat_persistence_staging'
+          azure-devops-token: ${{ secrets.AZURE_DEVOPS_TOKEN }}
