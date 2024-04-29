@@ -25,6 +25,8 @@ jobs:
         id: wait-for-pipeline
         if: ${{ always() }}
         run: |
+          echo "${{ toJson(steps.trigger-pipeline) }}" 
+          echo "${{ toJson(steps.trigger-pipeline.outputs) }}" 
           pipeline_id=$(echo "${{ steps.trigger-pipeline.outputs.pipeline_id }}")
           while true; do
             pipeline_state=$(curl -s -X GET "https://dev.azure.com/ECTM/Legal%20Assist/_apis/pipelines/1/runs/$pipeline_id?api-version=6.0-preview.1" -H "Authorization: Bearer ${{ secrets.AZURE_DEVOPS_TOKEN }}" | jq -r '.state')
