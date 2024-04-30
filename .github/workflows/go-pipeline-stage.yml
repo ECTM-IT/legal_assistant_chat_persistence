@@ -1,4 +1,4 @@
-name: Trigger Azure Pipeline and Wait
+name: Trigger Stage Pipeline
 
 on:
   pull_request:
@@ -18,51 +18,5 @@ jobs:
         uses: Azure/pipelines@v1.2
         with:
           azure-devops-project-url: 'https://dev.azure.com/ECTM/Legal%20Assist'
-          azure-pipeline-name: 'legal_assistant_chat_persistence'
+          azure-pipeline-name: 'legal_assistant_chat_persistence_staging'
           azure-devops-token: ${{ secrets.AZURE_DEVOPS_TOKEN }}
-      
-      - name: Wait for Pipeline to complete
-        id: wait-for-pipeline
-        if: ${{ always() }}
-        run: |
-          echo "${{ toJson(steps.trigger-pipeline) }}" 
-          echo "${{ toJson(steps.trigger-pipeline.outputs) }}" 
-          pipeline_id=$(echo "${{ steps.trigger-pipeline.outputs.pipeline_id }}")
-          while true; do
-            pipeline_state=$(curl -s -X GET "https://dev.azure.com/ECTM/Legal%20Assist/_apis/pipelines/1/runs/$pipeline_id?api-version=6.0-preview.1" -H "Authorization: Bearer ${{ secrets.AZURE_DEVOPS_TOKEN }}" | jq -r '.state')
-            if [ "$pipeline_state" == "completed" ]; then
-              break
-            fi
-            sleep 10
-          done
-
-      - name: Check Azure Pipeline status
-        if: ${{ always() }}
-        run: |
-          pipeline_id=$(echo "${{ steps.trigger-pipeline.outputs.pipeline_id }}")
-          pipeline_state=$(curl -s -X GET "https://dev.azure.com/ECTM/Legal%20Assist/_apis/pipelines/1/runs/$pipeline_id?api-version=6.0-preview.1" -H "Authorization: Bearer ${{ secrets.AZURE_DEVOPS_TOKEN }}" | jq -r '.result')
-          if [ "$pipeline_state" == "succeeded" ]; then
-            echo "Azure Pipeline succeeded"
-          else
-            echo "Azure Pipeline failed"
-            exit 1
-          fi
-
-      - name: Update GitHub Commit Status
-        if: ${{ always() }}
-        uses: actions/github-script@v4
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const { context, GitHub } = require('@actions/github');
-            const { owner, repo } = context.repo;
-            const sha = context.sha;
-            const github = new GitHub(process.env.GITHUB_TOKEN);
-            await github.repos.createCommitStatus({
-              owner,
-              repo,
-              sha,
-              state: 'success',
-              context: 'Azure Pipeline CI',
-              description: 'CI checks passed',
-            });
