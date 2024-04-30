@@ -64,7 +64,7 @@ stages:
 
   - stage: Deploy
     dependsOn: Dockerize
-    condition: and(succeeded('Dockerize'), eq(variables['Build.Reason'], 'IndividualCI'))
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
     jobs:
       - job: Deployment
         displayName: 'Deploy to AKS'
