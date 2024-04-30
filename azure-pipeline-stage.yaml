@@ -89,7 +89,7 @@ stages:
   
   - stage: Rollback
     dependsOn: Deploy
-    condition: and(failed('Deploy'), eq(variables['Build.Reason'], 'IndividualCI'))
+    condition: and(failed(), eq(variables['Build.Reason'], 'IndividualCI'))
     jobs:
       - job: Rollback
         displayName: 'Rollback to Previous Successful Build'
