@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert
+    kompose.version: 1.32.0 (HEAD)
+  labels:
+    io.kompose.service: go
+  name: go-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: go
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert
+        kompose.version: 1.32.0 (HEAD)
+      labels:
+        io.kompose.network/legal-assistant-chat-persistence-backend: "true"
+        io.kompose.service: go
+    spec:
+      containers:
+        - env:
+            - name: MONGO_HOST
+              value: $(MONGO_HOST_STAGE)
+            - name: MONGO_PASSWORD
+              value: $(MONGO_PASSWORD_STAGE)
+            - name: MONGO_USERNAME
+              value: $(MONGO_USERNAME_STAGE)
+          image: $(ACR_IMAGE_STAGE):{{TAG}}
+          name: golang
+          ports:
+            - containerPort: 4444
+              hostPort: 4444
+              protocol: TCP
+      restartPolicy: Always
