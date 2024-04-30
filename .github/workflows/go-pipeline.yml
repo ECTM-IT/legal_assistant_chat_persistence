@@ -1,4 +1,4 @@
-name: Trigger Azure Pipeline and Wait
+name: Trigger Pipeline
 
 on:
   pull_request:
