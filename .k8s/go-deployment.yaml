@@ -29,7 +29,7 @@ spec:
               value: $(MONGO_PASSWORD)
             - name: MONGO_USERNAME
               value: $(MONGO_USERNAME)
-          image: $(ACR-IMAGE)
+          image: $(ACR-IMAGE):{{TAG}}
           name: golang
           ports:
             - containerPort: 4444
