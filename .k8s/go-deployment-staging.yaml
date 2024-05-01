@@ -37,7 +37,7 @@ spec:
             valueFrom:
               secretKeyRef:
                 name: legal-assist-secrets
-                key: MongoUsernameStage
+                key: MongoUsername
           image: {{IMAGENAME}}
           volumeMounts:
           - name: secrets-store01-inline
@@ -54,5 +54,5 @@ spec:
             driver: secrets-store.csi.k8s.io
             readOnly: true
             volumeAttributes:
-              secretProviderClass: "azure-kvname-system-msi"
+              secretProviderClass: "azure-kvname-system-stage-msi"
       restartPolicy: Always
