@@ -23,16 +23,36 @@ spec:
     spec:
       containers:
         - env:
-            - name: MONGO_HOST
-              value: $(MONGO_HOST_STAGE)
-            - name: MONGO_PASSWORD
-              value: $(MONGO_PASSWORD_STAGE)
-            - name: MONGO_USERNAME
-              value: $(MONGO_USERNAME_STAGE)
-          image: $(ACR_IMAGE_STAGE):{{TAG}}
+          - name: MONGO_HOST
+            valueFrom:
+              secretKeyRef:
+                name: legal-assist-secrets
+                key: MongoHostStage
+          - name: MONGO_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: legal-assist-secrets
+                key: MongoPasswordStage
+          - name: MONGO_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: legal-assist-secrets
+                key: MongoUsernameStage
+          image: {{IMAGENAME}}
+          volumeMounts:
+          - name: secrets-store01-inline
+            mountPath: "/mnt/secrets-store"
+            readOnly: true
           name: golang
           ports:
             - containerPort: 4444
               hostPort: 4444
               protocol: TCP
+      volumes:
+        - name: secrets-store01-inline
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "azure-kvname-system-msi"
       restartPolicy: Always
