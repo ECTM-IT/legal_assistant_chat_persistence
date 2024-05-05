@@ -1,0 +1,113 @@
+trigger:
+  - stage
+
+pool: Ubuntu2204-PrivatePool-02
+
+stages:
+  - stage: Compile
+    displayName: 'Compile and Publish'
+    jobs:
+      - job: Compile
+        displayName: 'Compile and Publish'
+        steps:
+          - checkout: self
+          - task: GoTool@0
+            inputs:
+              version: '1.22.2'
+              arguments: 'build -o $(Build.ArtifactStagingDirectory)/server'
+          - task: PublishBuildArtifacts@1
+            inputs:
+              pathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              artifactName: 'build'
+
+  - stage: Test
+    displayName: 'Test'
+    dependsOn: Compile
+    jobs:
+      - job: Test
+        displayName: 'Run Tests'
+        steps:
+          - checkout: self
+          - script: |
+              # Run your unit tests here
+              go test ./...
+            displayName: 'Run Unit Tests'
+
+  - stage: Dockerize
+    jobs:
+      - job: Containerize
+        displayName: 'Build Docker Image'
+        steps:
+          - checkout: self
+          - task: Docker@2
+            displayName: 'Build Docker image'
+            inputs:
+              containerRegistry: 'legalassistcr'
+              repository: 'legal_assist_chat_persistence_staging'
+              command: 'build'
+              Dockerfile: 'DockerFile'
+              tags: $(Build.BuildId)
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              ArtifactName: 'drop'
+              publishLocation: 'Container'
+              StoresAsTar: true    
+          - task: Docker@2
+            displayName: 'Push Docker image to registry'
+            condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
+            inputs:
+              containerRegistry: 'legalassistcr'
+              repository: 'legal_assist_chat_persistence_staging'
+              command: 'push'
+              tags: $(Build.BuildId)
+
+  - stage: Deploy
+    dependsOn: Dockerize
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
+    jobs:
+      - job: Deployment
+        displayName: 'Deploy to AKS'
+        steps:
+          - checkout: self
+          - task: KubectlInstaller@0
+            inputs:
+              kubectlVersion: 'latest'
+          - task: KubeloginInstaller@0
+            inputs:
+              kubeloginVersion: 'latest'
+          - task: AzureCLI@2
+            inputs: 
+              azureSubscription: 'ARM_legal_assist'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az aks get-credentials --resource-group legal_assist --name legal_assist_private_staging
+                sed -i 's/{{TAG}}/$(Build.BuildId)/g' $(Build.SourcesDirectory)/.k8s/go-deployment-staging.yaml
+                kubectl apply -f $(Build.SourcesDirectory)/.k8s/go-deployment-staging.yaml
+                kubectl apply -f $(Build.SourcesDirectory)/.k8s/go-service-staging.yaml
+  
+  - stage: Rollback
+    dependsOn: Deploy
+    condition: and(failed(), eq(variables['Build.Reason'], 'IndividualCI'))
+    jobs:
+      - job: Rollback
+        displayName: 'Rollback to Previous Successful Build'
+        steps:
+          - checkout: self
+          - task: AzureCLI@2
+            inputs: 
+              azureSubscription: 'ARM_legal_assist'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                org="https://dev.azure.com/ECTM/"
+                definitionId="9"
+                commitId=$(az pipelines runs list --org $org --branch main --project "Legal Assist" --pipeline-ids $definitionId --reason individualCI --result succeeded --status completed --query "[0].sourceVersion" -o tsv)
+                if [ -z "$commitId" ]; then
+                  echo "No successful build found."
+                  exit 1
+                fi
+                az pipelines build queue --definition-id $definitionId --commit-id $commitId
+            env:
+              AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)
