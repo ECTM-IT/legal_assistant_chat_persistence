@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
@@ -32,7 +33,7 @@ func (h *CaseHandler) GetAllCases(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CaseHandler) GetCaseByID(w http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
+	id := strings.TrimSpace(mux.Vars(r)["id"])
 
 	caseResponse, err := h.caseService.GetCaseByID(id)
 	if err != nil {
@@ -99,7 +100,7 @@ func (h *CaseHandler) UpdateCase(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CaseHandler) DeleteCase(w http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
+	id := strings.TrimSpace(mux.Vars(r)["id"])
 
 	err := h.caseService.DeleteCase(id)
 	if err != nil {
@@ -111,7 +112,7 @@ func (h *CaseHandler) DeleteCase(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CaseHandler) AddCollaboratorToCase(w http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
+	id := strings.TrimSpace(mux.Vars(r)["id"])
 	collaboratorID := mux.Vars(r)["collaboratorID"]
 
 	err := h.caseService.AddCollaboratorToCase(id, collaboratorID)
@@ -124,7 +125,7 @@ func (h *CaseHandler) AddCollaboratorToCase(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *CaseHandler) RemoveCollaboratorFromCase(w http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
+	id := strings.TrimSpace(mux.Vars(r)["id"])
 	collaboratorID := mux.Vars(r)["collaboratorID"]
 
 	err := h.caseService.RemoveCollaboratorFromCase(id, collaboratorID)
