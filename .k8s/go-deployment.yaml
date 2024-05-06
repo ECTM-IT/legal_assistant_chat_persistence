@@ -27,17 +27,17 @@ spec:
             valueFrom:
               secretKeyRef:
                 name: legal-assist-secrets
-                key: MongoHost
+                key: MongoHostProduction
           - name: MONGO_PASSWORD
             valueFrom:
               secretKeyRef:
                 name: legal-assist-secrets
-                key: MongoPassword
+                key: MongoPasswordProduction
           - name: MONGO_USERNAME
             valueFrom:
               secretKeyRef:
                 name: legal-assist-secrets
-                key: MongoUsername
+                key: MongoUsernameProduction
           image: {{IMAGENAME}}
           volumeMounts:
           - name: secrets-store01-inline
