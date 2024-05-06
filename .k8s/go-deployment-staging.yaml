@@ -42,7 +42,7 @@ spec:
             valueFrom:
               secretKeyRef:
                 name: legal-assist-secrets-stage
-                key: MongoUsernameStage                
+                key: MongoURIStage                
           image: {{IMAGENAME}}
           volumeMounts:
           - name: secrets-store01-inline
