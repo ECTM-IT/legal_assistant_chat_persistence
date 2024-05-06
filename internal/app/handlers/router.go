@@ -31,16 +31,16 @@ func Routes(agentService *services.AgentService, caseService *services.CaseServi
 	userHandler := handlers.NewUserHandler(userService)
 
 	// Agent routes
-	router.HandleFunc("/agents", agentHandler.GetAllAgents).Methods(http.MethodGet)
-	router.HandleFunc("/agents/{id}", agentHandler.GetAgentByID).Methods(http.MethodGet)
-	router.HandleFunc("/agents-user", agentHandler.GetAgentsByUser).Methods(http.MethodGet)
-	router.HandleFunc("/agent-purchase/{id}", agentHandler.PurchaseAgent).Methods(http.MethodGet)
+	router.HandleFunc("/agents/", agentHandler.GetAllAgents).Methods(http.MethodGet)
+	router.HandleFunc("/agents/{id}/", agentHandler.GetAgentByID).Methods(http.MethodGet)
+	router.HandleFunc("/agents-user/", agentHandler.GetAgentsByUser).Methods(http.MethodGet)
+	router.HandleFunc("/agent-purchase/{id}/", agentHandler.PurchaseAgent).Methods(http.MethodGet)
 
 	// Case routes
-	router.HandleFunc("/api-cases", caseHandler.GetAllCases).Methods(http.MethodGet)
-	router.HandleFunc("/cases-user", caseHandler.GetCasesByCreatorID).Methods(http.MethodGet)
+	router.HandleFunc("/api-cases/", caseHandler.GetAllCases).Methods(http.MethodGet)
+	router.HandleFunc("/cases-user/", caseHandler.GetCasesByCreatorID).Methods(http.MethodGet)
 	router.HandleFunc("/cases/{id}/", caseHandler.GetCaseByID).Methods(http.MethodGet)
-	router.HandleFunc("/cases-create", caseHandler.CreateCase).Methods(http.MethodPost)
+	router.HandleFunc("/cases-create/", caseHandler.CreateCase).Methods(http.MethodPost)
 	router.HandleFunc("/cases/{id}/", caseHandler.UpdateCase).Methods(http.MethodPut)
 	router.HandleFunc("/cases/{id}/", caseHandler.DeleteCase).Methods(http.MethodDelete)
 	router.HandleFunc("/case-add-user/{id}/", caseHandler.AddCollaboratorToCase).Methods(http.MethodPost)
@@ -56,7 +56,7 @@ func Routes(agentService *services.AgentService, caseService *services.CaseServi
 	// User routes
 	router.HandleFunc("/users/{id}/", userHandler.GetUserByID).Methods(http.MethodGet)
 	router.HandleFunc("/users-email/", userHandler.GetUserByEmail).Methods(http.MethodPost)
-	router.HandleFunc("/users", userHandler.CreateUser).Methods(http.MethodPost)
+	router.HandleFunc("/users/", userHandler.CreateUser).Methods(http.MethodPost)
 	router.HandleFunc("/users/{id}/", userHandler.UpdateUser).Methods(http.MethodPut)
 	router.HandleFunc("/users/{id}/", userHandler.DeleteUser).Methods(http.MethodDelete)
 
