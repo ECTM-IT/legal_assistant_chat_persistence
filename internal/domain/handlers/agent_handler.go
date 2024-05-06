@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
 	"github.com/gorilla/mux"
@@ -31,7 +32,7 @@ func (h *AgentHandler) GetAllAgents(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AgentHandler) GetAgentByID(w http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
+	id := strings.TrimSpace(mux.Vars(r)["id"])
 
 	agent, err := h.agentService.GetAgentByID(r.Context(), id)
 	if err != nil {
