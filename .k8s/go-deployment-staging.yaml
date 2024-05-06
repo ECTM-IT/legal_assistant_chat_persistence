@@ -42,7 +42,17 @@ spec:
             valueFrom:
               secretKeyRef:
                 name: legal-assist-secrets-stage
-                key: MongoURIStage                
+                key: MongoURIStage
+          - name: COOKIE_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: legal-assist-secrets-stage
+                key: CookieKeyStage  
+          - name: MONGODB_DATABASE
+            valueFrom:
+              secretKeyRef:
+                name: legal-assist-secrets-stage
+                key: MongoDBStage                 
           image: {{IMAGENAME}}
           volumeMounts:
           - name: secrets-store01-inline
