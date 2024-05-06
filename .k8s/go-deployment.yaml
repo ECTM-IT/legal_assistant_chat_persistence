@@ -38,6 +38,11 @@ spec:
               secretKeyRef:
                 name: legal-assist-secrets
                 key: MongoUsernameProduction
+          - name: MONGODB_URI
+            valueFrom:
+              secretKeyRef:
+                name: legal-assist-secrets
+                key: MongoURIProduction                  
           image: {{IMAGENAME}}
           volumeMounts:
           - name: secrets-store01-inline
