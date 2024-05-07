@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
@@ -20,7 +21,7 @@ func NewTeamHandler(teamService *services.TeamService) *TeamHandler {
 }
 
 func (h *TeamHandler) GetTeamByID(w http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
+	id := strings.TrimSpace(mux.Vars(r)["id"])
 
 	team, err := h.teamService.GetTeamByID(r.Context(), id)
 	if err != nil {
@@ -33,7 +34,7 @@ func (h *TeamHandler) GetTeamByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TeamHandler) GetTeamMember(w http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
+	id := strings.TrimSpace(mux.Vars(r)["id"])
 
 	member, err := h.teamService.GetTeamMember(r.Context(), id)
 	if err != nil {
@@ -46,7 +47,7 @@ func (h *TeamHandler) GetTeamMember(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TeamHandler) ChangeAdmin(w http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
+	id := strings.TrimSpace(mux.Vars(r)["id"])
 
 	var request dtos.ChangeAdminRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
@@ -66,7 +67,7 @@ func (h *TeamHandler) ChangeAdmin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TeamHandler) AddMember(w http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
+	id := strings.TrimSpace(mux.Vars(r)["id"])
 
 	var request dtos.AddMemberRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
@@ -86,7 +87,7 @@ func (h *TeamHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TeamHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
+	id := strings.TrimSpace(mux.Vars(r)["id"])
 	memberID := mux.Vars(r)["memberId"]
 
 	err := h.teamService.RemoveMember(r.Context(), id, memberID)

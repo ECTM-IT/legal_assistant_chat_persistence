@@ -26,18 +26,33 @@ spec:
           - name: MONGO_HOST
             valueFrom:
               secretKeyRef:
-                name: legal-assist-secrets
+                name: legal-assist-secrets-stage
                 key: MongoHostStage
           - name: MONGO_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: legal-assist-secrets
+                name: legal-assist-secrets-stage
                 key: MongoPasswordStage
           - name: MONGO_USERNAME
             valueFrom:
               secretKeyRef:
-                name: legal-assist-secrets
+                name: legal-assist-secrets-stage
                 key: MongoUsernameStage
+          - name: MONGODB_URI
+            valueFrom:
+              secretKeyRef:
+                name: legal-assist-secrets-stage
+                key: MongoURIStage
+          - name: COOKIE_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: legal-assist-secrets-stage
+                key: CookieKeyStage  
+          - name: MONGODB_DATABASE
+            valueFrom:
+              secretKeyRef:
+                name: legal-assist-secrets-stage
+                key: MongoDBStage                 
           image: {{IMAGENAME}}
           volumeMounts:
           - name: secrets-store01-inline
