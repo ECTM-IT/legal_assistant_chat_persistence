@@ -78,7 +78,7 @@ stages:
               scriptLocation: 'inlineScript'
               inlineScript: |
                 org=$(ORG)
-                definitionId=$(DEFID)
+                definitionId="15"
                 commitId=$(az pipelines runs list --org $org --branch main --project "Legal Assist" --pipeline-ids $definitionId --reason IndividualCI --result succeeded --status completed --query "[0].sourceVersion" -o tsv)
                 if [ -z "$commitId" ]; then
                   echo "No successful build found."
