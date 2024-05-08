@@ -4,7 +4,6 @@ trigger:
       - main
     exclude:
       - '*'
-
 pool: Ubuntu2204-PrivatePool-04
 
 stages:
