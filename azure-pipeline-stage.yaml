@@ -3,7 +3,7 @@ trigger:
     include:
       - stage
     exclude:
-      - '*'
+      - stage/*
       
 pool: Ubuntu2204-PrivatePool-04
 
