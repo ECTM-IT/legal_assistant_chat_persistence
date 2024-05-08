@@ -1,5 +1,10 @@
 trigger:
-  - stage
+  branches:
+    include:
+      - stage
+    exclude:
+      - '*'
+      
 pool: Ubuntu2204-PrivatePool-04
 
 stages:
