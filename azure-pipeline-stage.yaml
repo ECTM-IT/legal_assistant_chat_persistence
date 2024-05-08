@@ -1,6 +1,5 @@
 trigger:
-  - self
-
+  - stage
 pool: Ubuntu2204-PrivatePool-04
 
 stages:
@@ -11,7 +10,6 @@ stages:
         displayName: 'Checkout github repo'
         steps:
           - checkout: self
-          
           - task: GoTool@0
             displayName: 'Compile Go code'
             inputs:
