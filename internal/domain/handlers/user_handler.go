@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -26,8 +27,8 @@ func NewUserHandler(userService *services.UserServiceImpl) *UserHandler {
 
 // GetUserByID - Handles GET requests for a specific user
 func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userID, err := primitive.ObjectIDFromHex(vars["id"])
+	id := strings.TrimSpace(mux.Vars(r)["id"])
+	userID, err := primitive.ObjectIDFromHex(id)
 	fmt.Println(userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -88,8 +89,7 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 // UpdateUser - Handles PUT requests to update a user
 func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userID := vars["userID"]
+	id := strings.TrimSpace(mux.Vars(r)["id"])
 
 	var userRequest dtos.UpdateUserRequest
 	err := json.NewDecoder(r.Body).Decode(&userRequest)
@@ -98,7 +98,7 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.userService.UpdateUser(userID, &userRequest)
+	err = h.userService.UpdateUser(id, &userRequest)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -110,10 +110,9 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 // DeleteUser - Handles DELETE requests to delete a user
 func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userID := vars["userID"]
+	id := strings.TrimSpace(mux.Vars(r)["id"])
 
-	err := h.userService.DeleteUserByID(userID)
+	err := h.userService.DeleteUserByID(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

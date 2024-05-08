@@ -1,0 +1,94 @@
+trigger:
+  branches:
+    include:
+      - stage
+    exclude:
+      - '*'
+      
+pool: Ubuntu2204-PrivatePool-04
+
+stages:
+  - stage: RunCICD
+    displayName: 'Checkout github repo'
+    jobs:
+      - job: CheckoutRepository
+        displayName: 'Checkout github repo'
+        steps:
+          - checkout: self
+          - task: GoTool@0
+            displayName: 'Compile Go code'
+            inputs:
+              version: '1.22.2'
+              arguments: build ./cmd/server -o $(Build.ArtifactStagingDirectory)/server             
+
+          - script: |
+              # Run your unit tests here
+              go test ./...
+              echo "================="
+              echo $(Build.Reason)
+              echo "================="
+            displayName: 'Run Unit Tests'
+
+          - task: Docker@2
+            displayName: 'Build Docker image'
+            inputs:
+              containerRegistry: 'legalassistcr'
+              repository: 'legal_assist_chat_persistence_staging'
+              command: 'build'
+              Dockerfile: 'DockerFile'
+              tags: $(Build.BuildId)  
+
+          - task: Docker@2
+            displayName: 'Push Docker image to registry'
+            condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
+            inputs:
+              containerRegistry: 'legalassistcr'
+              repository: 'legal_assist_chat_persistence_staging'
+              command: 'push'
+              tags: $(Build.BuildId)
+
+          - task: KubectlInstaller@0
+            displayName: 'Install Kubectl'
+            condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
+            inputs:
+              kubectlVersion: 'latest'
+
+          - task: KubeloginInstaller@0
+            displayName: 'Login Kubectl'
+            condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
+            inputs:
+              kubeloginVersion: 'latest'
+
+          - task: AzureCLI@2
+            displayName: 'Deploy to AKS'
+            condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
+            inputs: 
+              azureSubscription: 'Legal Assist - SC'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az aks get-credentials --resource-group legal_assist --name legal_assist_staging
+                sed -i "s|{{IMAGENAME}}|$(IMAGENAME)|g" "$(Build.SourcesDirectory)/.k8s/go-deployment-staging.yaml"
+                sed -i 's/{{TID}}/$(TID)/g' $(Build.SourcesDirectory)/.k8s/secrets-provider-stage.yaml
+                kubectl apply -f .k8s/secrets-provider-stage.yaml --namespace staging
+                kubectl apply -f .k8s/go-deployment-staging.yaml --namespace staging
+                kubectl apply -f .k8s/go-service-staging.yaml --namespace staging
+
+          - task: AzureCLI@2
+            displayName: 'Rollback to previous stable build'
+            condition: and(failed(), eq(variables['Build.Reason'], 'IndividualCI'))
+            inputs: 
+              azureSubscription: 'Legal Assist - SC'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                org=$(ORG)
+                definitionId="15"
+                commitId=$(az pipelines runs list --org $org --branch main --project "Legal Assist" --pipeline-ids $definitionId --reason IndividualCI --result succeeded --status completed --query "[0].sourceVersion" -o tsv)
+                if [ -z "$commitId" ]; then
+                  echo "No successful build found."
+                  exit 1
+                fi
+                az pipelines build queue --org $org --project "Legal Assist" --definition-id $definitionId --commit-id $commitId
+            env:
+              AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)

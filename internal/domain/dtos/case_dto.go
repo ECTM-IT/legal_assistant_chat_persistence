@@ -7,14 +7,22 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type MessageResponse struct {
+	Content     helpers.Nullable[string]             `json:"content"`
+	SenderID    helpers.Nullable[primitive.ObjectID] `json:"sender_id"`
+	RecipientID helpers.Nullable[primitive.ObjectID] `json:"recipient_id"`
+	Skill       helpers.Nullable[string]             `json:"skill"`
+}
+
 type CreateCaseRequest struct {
 	Name            helpers.Nullable[string]               `json:"name"`
 	Description     helpers.Nullable[string]               `json:"description"`
 	CreatorID       helpers.Nullable[primitive.ObjectID]   `json:"creator_id"`
-	AgentID         helpers.Nullable[primitive.ObjectID]   `json:"agent_id"`
+	Messages        helpers.Nullable[[]MessageResponse]    `json:"messages"`
 	CollaboratorIDs helpers.Nullable[[]primitive.ObjectID] `json:"collaborator_ids"`
 	Action          helpers.Nullable[string]               `json:"action"`
-	Skill           helpers.Nullable[string]               `json:"skill"`
+	AgentID         helpers.Nullable[primitive.ObjectID]   `json:"agent_id"`
+	LastEdit        helpers.Nullable[time.Time]            `json:"last_edit"`
 	Share           helpers.Nullable[bool]                 `json:"share"`
 	IsArchived      helpers.Nullable[bool]                 `json:"is_archived"`
 }
@@ -49,10 +57,4 @@ type UpdateCaseRequest struct {
 
 type DeleteCaseRequest struct {
 	ID helpers.Nullable[primitive.ObjectID] `json:"id"`
-}
-
-type MessageResponse struct {
-	Content   helpers.Nullable[string]             `json:"content"`
-	SenderID  helpers.Nullable[primitive.ObjectID] `json:"sender_id"`
-	Recipient helpers.Nullable[string]             `json:"recipient"`
 }

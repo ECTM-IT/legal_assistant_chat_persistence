@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -65,7 +66,7 @@ func (d *CaseDAO) FindByCreatorID(creatorID primitive.ObjectID) ([]dtos.CaseResp
 	return cases, nil
 }
 
-func (d *CaseDAO) Create(caseRequest dtos.CreateCaseRequest) error {
+func (d *CaseDAO) Create(caseRequest *models.Case) error {
 	ctx := context.Background()
 	_, err := d.collection.InsertOne(ctx, caseRequest)
 	return err
