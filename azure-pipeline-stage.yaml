@@ -1,14 +1,5 @@
-resources:
-  repositories:
-    - repository: legal_assist_chat_persistence
-      endpoint: github-legal-assist
-      name: ECTM-IT/legal_assistant_chat_persistence
-      type: github
-      ref: stage
-
 trigger:
-  - none
-
+  - stage
 pool: Ubuntu2204-PrivatePool-04
 
 stages:
@@ -18,8 +9,7 @@ stages:
       - job: CheckoutRepository
         displayName: 'Checkout github repo'
         steps:
-          - checkout: legal_assist_chat_persistence
-          
+          - checkout: self
           - task: GoTool@0
             displayName: 'Compile Go code'
             inputs:
@@ -45,7 +35,7 @@ stages:
 
           - task: Docker@2
             displayName: 'Push Docker image to registry'
-            condition: and(succeeded(), eq(variables['Build.Reason'], 'Triggered'))
+            condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
             inputs:
               containerRegistry: 'legalassistcr'
               repository: 'legal_assist_chat_persistence_staging'
@@ -54,19 +44,19 @@ stages:
 
           - task: KubectlInstaller@0
             displayName: 'Install Kubectl'
-            condition: and(succeeded(), eq(variables['Build.Reason'], 'Triggered'))
+            condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
             inputs:
               kubectlVersion: 'latest'
 
           - task: KubeloginInstaller@0
             displayName: 'Login Kubectl'
-            condition: and(succeeded(), eq(variables['Build.Reason'], 'Triggered'))
+            condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
             inputs:
               kubeloginVersion: 'latest'
 
           - task: AzureCLI@2
             displayName: 'Deploy to AKS'
-            condition: and(succeeded(), eq(variables['Build.Reason'], 'Triggered'))
+            condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
             inputs: 
               azureSubscription: 'Legal Assist - SC'
               scriptType: 'bash'
@@ -81,7 +71,7 @@ stages:
 
           - task: AzureCLI@2
             displayName: 'Rollback to previous stable build'
-            condition: and(failed(), eq(variables['Build.Reason'], 'Triggered'))
+            condition: and(failed(), eq(variables['Build.Reason'], 'IndividualCI'))
             inputs: 
               azureSubscription: 'Legal Assist - SC'
               scriptType: 'bash'
@@ -89,7 +79,7 @@ stages:
               inlineScript: |
                 org=$(ORG)
                 definitionId=$(DEFID)
-                commitId=$(az pipelines runs list --org $org --branch main --project "Legal Assist" --pipeline-ids $definitionId --reason Triggered --result succeeded --status completed --query "[0].sourceVersion" -o tsv)
+                commitId=$(az pipelines runs list --org $org --branch main --project "Legal Assist" --pipeline-ids $definitionId --reason IndividualCI --result succeeded --status completed --query "[0].sourceVersion" -o tsv)
                 if [ -z "$commitId" ]; then
                   echo "No successful build found."
                   exit 1
