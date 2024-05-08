@@ -1,13 +1,5 @@
-resources:
-  repositories:
-    - repository: legal_assist_chat_persistence
-      endpoint: github-legal-assist
-      name: ECTM-IT/legal_assistant_chat_persistence
-      type: github
-      ref: stage
-
 trigger:
-  - none
+  - self
 
 pool: Ubuntu2204-PrivatePool-04
 
@@ -18,7 +10,7 @@ stages:
       - job: CheckoutRepository
         displayName: 'Checkout github repo'
         steps:
-          - checkout: legal_assist_chat_persistence
+          - checkout: self
           
           - task: GoTool@0
             displayName: 'Compile Go code'
