@@ -1,8 +1,11 @@
 package repositories
 
 import (
+	"time"
+
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/daos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -33,7 +36,32 @@ func (r *CaseRepository) GetCasesByCreatorID(creatorID string) ([]dtos.CaseRespo
 }
 
 func (r *CaseRepository) CreateCase(caseRequest dtos.CreateCaseRequest) error {
-	return r.caseDAO.Create(caseRequest)
+	messageDto := caseRequest.Messages
+	messages := []models.Message{}
+	if messageDto.Present {
+		for _, msg := range messageDto.Val {
+			messageModel := models.Message{
+				Content:     msg.Content.OrElse(""),
+				SenderID:    msg.SenderID.OrElse(primitive.NilObjectID),
+				RecipientID: msg.RecipientID.OrElse(primitive.NilObjectID),
+				Skill:       msg.Skill.OrElse(""),
+			}
+			messages = append(messages, messageModel)
+		}
+	}
+	caseModel := &models.Case{
+		ID:              primitive.NewObjectID(),
+		Name:            caseRequest.Name.OrElse(""),
+		CreatorID:       caseRequest.CreatorID.OrElse(primitive.NilObjectID),
+		Messages:        messages,
+		CollaboratorIDs: caseRequest.CollaboratorIDs.OrElse([]primitive.ObjectID{}),
+		Action:          caseRequest.Action.OrElse(""),
+		AgentID:         caseRequest.AgentID.OrElse(primitive.NilObjectID),
+		LastEdit:        caseRequest.LastEdit.OrElse(time.Now()),
+		Share:           caseRequest.Share.OrElse(false),
+		IsArchived:      caseRequest.IsArchived.OrElse(false),
+	}
+	return r.caseDAO.Create(caseModel)
 }
 
 func (r *CaseRepository) UpdateCase(id primitive.ObjectID, updates dtos.UpdateCaseRequest) error {
