@@ -29,6 +29,7 @@ func Main() {
 }
 
 func loadConfig() Config { 
+	logger := logs.Init()
 	var cfg Config 
 	cfg.BaseURL = env.GetString("BASE_URL", "http://0.0.0.0:4444") 
 	cfg.HTTPPort = env.GetInt("HTTP_PORT", 4444) 
