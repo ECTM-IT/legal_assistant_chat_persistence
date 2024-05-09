@@ -1,3 +1,4 @@
+// Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -68,6 +69,6 @@ spec:
           csi:
             driver: secrets-store.csi.k8s.io
             readOnly: true
-            volumeAttributes:
+            volumeAttributes:            
               secretProviderClass: "azure-kvname-system-stage-msi"
       restartPolicy: Always
