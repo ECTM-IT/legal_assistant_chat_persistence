@@ -25,6 +25,32 @@ func NewTeamRepository(teamDAO *daos.TeamDAO, userDAO *daos.UserDAO) *TeamReposi
 	}
 }
 
+func (r *TeamRepository) CreateTeam(ctx context.Context, request dtos.CreateTeamRequest) (*dtos.TeamResponse, error) {
+	membersRequest := request.Members
+	members := []models.TeamMember{}
+	if membersRequest.Valid {
+		for _, singleMember := range membersRequest.Val {
+			member := models.TeamMember{
+				ID:         singleMember.ID.OrElse(primitive.NilObjectID),
+				UserID:     singleMember.UserID.OrElse(primitive.NilObjectID),
+				DateAdded:  singleMember.DateAdded.OrElse(time.Time{}),
+				LastActive: singleMember.LastActive.OrElse(time.Time{}),
+			}
+			members = append(members, member)
+		}
+	}
+	team := &models.Team{
+		ID:      primitive.NewObjectID(),
+		AdminID: request.AdminID.OrElse(primitive.NilObjectID),
+		Members: members,
+	}
+	err := r.teamDAO.CreateTeam(ctx, team)
+	if err != nil {
+		return nil, err
+	}
+	return r.toTeamResponse(team), nil
+}
+
 func (r *TeamRepository) GetTeamByID(ctx context.Context, id string) (*dtos.TeamResponse, error) {
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -35,6 +61,49 @@ func (r *TeamRepository) GetTeamByID(ctx context.Context, id string) (*dtos.Team
 		return nil, err
 	}
 	return r.toTeamResponse(team), nil
+}
+
+func (r *TeamRepository) GetAllTeams(ctx context.Context) ([]*dtos.TeamResponse, error) {
+	teams, err := r.teamDAO.GetAllTeams(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var teamResponses []*dtos.TeamResponse
+	for _, team := range teams {
+		teamResponses = append(teamResponses, r.toTeamResponse(&team))
+	}
+	return teamResponses, nil
+}
+
+func (r *TeamRepository) UpdateTeam(ctx context.Context, id string, request dtos.UpdateTeamRequest) (*dtos.TeamResponse, error) {
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, err
+	}
+	update := bson.M{}
+	if request.AdminID.Valid {
+		update["admin_id"] = request.AdminID.Val
+	}
+	if request.Members.Valid {
+		update["members"] = request.Members.Val
+	}
+	_, err = r.teamDAO.UpdateTeam(ctx, objectID, update)
+	if err != nil {
+		return nil, err
+	}
+	team, err := r.teamDAO.GetTeamByID(ctx, objectID)
+	if err != nil {
+		return nil, err
+	}
+	return r.toTeamResponse(team), nil
+}
+
+func (r *TeamRepository) DeleteTeam(ctx context.Context, id string) error {
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+	return r.teamDAO.DeleteTeam(ctx, objectID)
 }
 
 func (r *TeamRepository) GetTeamMember(ctx context.Context, id string) (*dtos.TeamMemberResponse, error) {

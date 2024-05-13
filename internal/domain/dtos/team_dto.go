@@ -7,7 +7,18 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type CreateTeamRequest struct {
+	ID      helpers.Nullable[primitive.ObjectID]   `json:"id"`
+	AdminID helpers.Nullable[primitive.ObjectID]   `json:"admin_id"`
+	Members helpers.Nullable[[]TeamMemberResponse] `json:"members"`
+}
 type TeamResponse struct {
+	ID      helpers.Nullable[primitive.ObjectID]   `json:"id"`
+	AdminID helpers.Nullable[primitive.ObjectID]   `json:"admin_id"`
+	Members helpers.Nullable[[]TeamMemberResponse] `json:"members"`
+}
+
+type UpdateTeamRequest struct {
 	ID      helpers.Nullable[primitive.ObjectID]   `json:"id"`
 	AdminID helpers.Nullable[primitive.ObjectID]   `json:"admin_id"`
 	Members helpers.Nullable[[]TeamMemberResponse] `json:"members"`

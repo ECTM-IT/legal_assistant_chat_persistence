@@ -18,8 +18,24 @@ func NewTeamService(teamRepo *repositories.TeamRepository) *TeamService {
 	}
 }
 
+func (s *TeamService) CreateTeam(ctx context.Context, request dtos.CreateTeamRequest) (*dtos.TeamResponse, error) {
+	return s.teamRepo.CreateTeam(ctx, request)
+}
+
 func (s *TeamService) GetTeamByID(ctx context.Context, id string) (*dtos.TeamResponse, error) {
 	return s.teamRepo.GetTeamByID(ctx, id)
+}
+
+func (s *TeamService) GetAllTeams(ctx context.Context) ([]*dtos.TeamResponse, error) {
+	return s.teamRepo.GetAllTeams(ctx)
+}
+
+func (s *TeamService) UpdateTeam(ctx context.Context, id string, request dtos.UpdateTeamRequest) (*dtos.TeamResponse, error) {
+	return s.teamRepo.UpdateTeam(ctx, id, request)
+}
+
+func (s *TeamService) DeleteTeam(ctx context.Context, id string) error {
+	return s.teamRepo.DeleteTeam(ctx, id)
 }
 
 func (s *TeamService) GetTeamMember(ctx context.Context, id string) (*dtos.TeamMemberResponse, error) {
