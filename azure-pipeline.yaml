@@ -1,9 +1,9 @@
 trigger:
   branches:
     include:
-      - stage
+      - main
     exclude:
-      - stage/*
+      - main/*
       
 pool: Ubuntu2204-PrivatePool-04
 
@@ -15,35 +15,33 @@ stages:
         displayName: 'Checkout github repo'
         steps:
           - checkout: self
+          
           - task: GoTool@0
             displayName: 'Compile Go code'
             inputs:
               version: '1.22.2'
-              arguments: build ./cmd/server -o $(Build.ArtifactStagingDirectory)/server             
+              arguments: 'build ./cmd/server -o $(Build.ArtifactStagingDirectory)/server'
 
           - script: |
               # Run your unit tests here
               go test ./...
-              echo "================="
-              echo $(Build.Reason)
-              echo "================="
             displayName: 'Run Unit Tests'
 
           - task: Docker@2
             displayName: 'Build Docker image'
             inputs:
               containerRegistry: 'legalassistcr'
-              repository: 'legal_assist_chat_persistence_staging'
+              repository: 'legal_assist_chat_persistence'
               command: 'build'
               Dockerfile: 'DockerFile'
-              tags: $(Build.BuildId)  
+              tags: $(Build.BuildId) 
 
           - task: Docker@2
             displayName: 'Push Docker image to registry'
             condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
             inputs:
               containerRegistry: 'legalassistcr'
-              repository: 'legal_assist_chat_persistence_staging'
+              repository: 'legal_assist_chat_persistence'
               command: 'push'
               tags: $(Build.BuildId)
 
@@ -67,12 +65,12 @@ stages:
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
               inlineScript: |
-                az aks get-credentials --resource-group legal_assist --name legal_assist_staging
-                sed -i "s|{{IMAGENAME}}|$(IMAGENAME)|g" "$(Build.SourcesDirectory)/.k8s/go-deployment-staging.yaml"
-                sed -i 's/{{TID}}/$(TID)/g' $(Build.SourcesDirectory)/.k8s/secrets-provider-stage.yaml
-                kubectl apply -f .k8s/secrets-provider-stage.yaml --namespace staging
-                kubectl apply -f .k8s/go-deployment-staging.yaml --namespace staging
-                kubectl apply -f .k8s/go-service-staging.yaml --namespace staging
+                az aks get-credentials --resource-group legal_assist --name legal_assist_production
+                sed -i "s|{{IMAGENAME}}|$(IMAGENAME)|g" "$(Build.SourcesDirectory)/.k8s/go-deployment.yaml"
+                sed -i "s|{{TID}}|$(TID)|g" .k8s/secret-provider.yaml
+                kubectl apply -f .k8s/secret-provider.yaml --namespace production
+                kubectl apply -f .k8s/go-deployment.yaml --namespace production
+                kubectl apply -f .k8s/go-service.yaml --namespace production
 
           - task: AzureCLI@2
             displayName: 'Rollback to previous stable build'
@@ -83,8 +81,8 @@ stages:
               scriptLocation: 'inlineScript'
               inlineScript: |
                 org=$(ORG)
-                definitionId="15"
-                commitId=$(az pipelines runs list --org $org --branch main --project "Legal Assist" --pipeline-ids $definitionId --reason IndividualCI --result succeeded --status completed --query "[0].sourceVersion" -o tsv)
+                definitionId=17
+                commitId=$(az pipelines runs list --org $org --branch main --project "Legal Assist" --pipeline-ids $definitionId --reason individualCI --result succeeded --status completed --query "[0].sourceVersion" -o tsv)
                 if [ -z "$commitId" ]; then
                   echo "No successful build found."
                   exit 1
