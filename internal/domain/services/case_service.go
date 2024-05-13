@@ -40,7 +40,7 @@ func (s *CaseService) CreateCase(ctx context.Context, caseRequest dtos.CreateCas
 	return s.caseRepo.CreateCase(ctx, caseRequest)
 }
 
-func (s *CaseService) UpdateCase(ctx context.Context, id primitive.ObjectID, updates dtos.UpdateCaseRequest) (*mongo.UpdateResult, error) {
+func (s *CaseService) UpdateCase(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) (*mongo.UpdateResult, error) {
 	return s.caseRepo.UpdateCase(ctx, id, updates)
 }
 

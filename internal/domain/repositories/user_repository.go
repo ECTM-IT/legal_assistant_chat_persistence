@@ -93,71 +93,12 @@ func (r *UserRepositoryImpl) CreateUser(ctx context.Context, user *dtos.CreateUs
 	return r.userDAO.CreateUser(ctx, userModel)
 }
 
-func (r *UserRepositoryImpl) UpdateUser(ctx context.Context, userID string, user *dtos.UpdateUserRequest) (*mongo.UpdateResult, error) {
+func (r *UserRepositoryImpl) UpdateUser(ctx context.Context, userID string, user map[string]interface{}) (*mongo.UpdateResult, error) {
 	objectID, err := primitive.ObjectIDFromHex(userID)
 	if err != nil {
 		return nil, err
 	}
-
-	userModel := &models.User{}
-
-	if user.Image.Valid {
-		userModel.Image = user.Image.Val
-	}
-	if user.Email.Valid {
-		userModel.Email = user.Email.Val
-	}
-	if user.FirstName.Valid {
-		userModel.FirstName = user.FirstName.Val
-	}
-	if user.LastName.Valid {
-		userModel.LastName = user.LastName.Val
-	}
-	if user.Phone.Valid {
-		userModel.Phone = user.Phone.Val
-	}
-
-	if user.CaseIDs.Valid {
-		caseIDs := make([]primitive.ObjectID, len(user.CaseIDs.Val))
-		for i, caseID := range user.CaseIDs.Val {
-			caseObjectID, err := primitive.ObjectIDFromHex(caseID)
-			if err != nil {
-				return nil, err
-			}
-			caseIDs[i] = caseObjectID
-		}
-		userModel.CaseIDs = caseIDs
-	}
-
-	if user.TeamID.Valid {
-		teamID, err := primitive.ObjectIDFromHex(user.TeamID.Val)
-		if err != nil {
-			return nil, err
-		}
-		userModel.TeamID = teamID
-	}
-
-	if user.AgentIDs.Valid {
-		agentIDs := make([]primitive.ObjectID, len(user.AgentIDs.Val))
-		for i, agentID := range user.AgentIDs.Val {
-			agentObjectID, err := primitive.ObjectIDFromHex(agentID)
-			if err != nil {
-				return nil, err
-			}
-			agentIDs[i] = agentObjectID
-		}
-		userModel.AgentIDs = agentIDs
-	}
-
-	if user.SubscriptionID.Valid {
-		subscriptionID, err := primitive.ObjectIDFromHex(user.SubscriptionID.Val)
-		if err != nil {
-			return nil, err
-		}
-		userModel.SubscriptionID = subscriptionID
-	}
-
-	return r.userDAO.UpdateUser(ctx, objectID, userModel)
+	return r.userDAO.UpdateUser(ctx, objectID, user)
 }
 
 func (r *UserRepositoryImpl) toUserResponse(user *models.User) *dtos.UserResponse {

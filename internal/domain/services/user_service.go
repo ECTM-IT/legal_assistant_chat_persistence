@@ -72,7 +72,7 @@ func (s *UserServiceImpl) CreateUser(ctx context.Context, user *dto.CreateUserRe
 }
 
 // UpdateUser updates an existing user
-func (s *UserServiceImpl) UpdateUser(ctx context.Context, userID string, user *dto.UpdateUserRequest) (*mongo.UpdateResult, error) {
+func (s *UserServiceImpl) UpdateUser(ctx context.Context, userID string, user map[string]interface{}) (*mongo.UpdateResult, error) {
 	return s.userRepo.UpdateUser(ctx, userID, user)
 }
 

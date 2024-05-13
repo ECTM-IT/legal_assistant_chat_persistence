@@ -65,8 +65,8 @@ func (dao *UserDAO) CreateUser(ctx context.Context, user *models.User) (*models.
 	return user, nil
 }
 
-func (dao *UserDAO) UpdateUser(ctx context.Context, id primitive.ObjectID, user *models.User) (*mongo.UpdateResult, error) {
-	return dao.collection.ReplaceOne(ctx, bson.M{"_id": id}, user)
+func (dao *UserDAO) UpdateUser(ctx context.Context, id primitive.ObjectID, user map[string]interface{}) (*mongo.UpdateResult, error) {
+	return dao.collection.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": user})
 }
 
 func (dao *UserDAO) DeleteUser(ctx context.Context, id primitive.ObjectID) error {

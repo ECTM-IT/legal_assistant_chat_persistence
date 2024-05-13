@@ -45,7 +45,7 @@ func (h *AgentHandler) GetAgentByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AgentHandler) GetAgentsByUser(w http.ResponseWriter, r *http.Request) {
-	userID, err := primitive.ObjectIDFromHex(r.Header.Get("Authorization"))
+	userID, err := primitive.ObjectIDFromHex(strings.TrimSpace(r.Header.Get("Authorization")))
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -62,7 +62,7 @@ func (h *AgentHandler) GetAgentsByUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AgentHandler) PurchaseAgent(w http.ResponseWriter, r *http.Request) {
-	userID, err := primitive.ObjectIDFromHex(r.Header.Get("Authorization"))
+	userID, err := primitive.ObjectIDFromHex(strings.TrimSpace(r.Header.Get("Authorization")))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

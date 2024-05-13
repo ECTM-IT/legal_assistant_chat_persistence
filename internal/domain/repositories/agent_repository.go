@@ -10,6 +10,7 @@ import (
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/daos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
+	"github.com/fatih/structs"
 )
 
 type AgentRepository struct {
@@ -69,7 +70,9 @@ func (r *AgentRepository) PurchaseAgent(ctx context.Context, userID primitive.Ob
 		return nil, err
 	}
 	user.AgentIDs = append(user.AgentIDs, agentID)
-	_, err = r.userDAO.UpdateUser(ctx, userID, user)
+	userMap := structs.Map(user)
+
+	_, err = r.userDAO.UpdateUser(ctx, userID, userMap)
 	if err != nil {
 		return nil, err
 	}

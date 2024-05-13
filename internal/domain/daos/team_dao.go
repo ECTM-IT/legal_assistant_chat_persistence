@@ -19,6 +19,8 @@ func NewTeamDAO(db *mongo.Database) *TeamDAO {
 	}
 }
 
+// team admin
+
 func (dao *TeamDAO) GetTeamByID(ctx context.Context, id primitive.ObjectID) (*models.Team, error) {
 	var team models.Team
 	err := dao.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&team)

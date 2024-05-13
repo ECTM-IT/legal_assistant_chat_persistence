@@ -7,6 +7,8 @@ require (
 	golang.org/x/exp v0.0.0-20240119083558-1b970713d09a
 )
 
+require github.com/fatih/structs v1.1.0
+
 require (
 	cloud.google.com/go/compute v1.19.1 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect

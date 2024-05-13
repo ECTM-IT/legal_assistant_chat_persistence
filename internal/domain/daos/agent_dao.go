@@ -48,7 +48,7 @@ func (dao *AgentDAO) GetAgentByID(ctx context.Context, id primitive.ObjectID) (*
 	return &agent, nil
 }
 
-func (dao *AgentDAO) GetAgentsByIDs(ctx context.Context, ids []primitive.ObjectID) ([]models.Agent, error) {
+func (dao *AgentDAO) GetAgentsByIDs(ctx context.Context, ids []primitive.ObjectID) ([]models.Agent, error) { //todo: fix
 	cursor, err := dao.collection.Find(ctx, bson.M{"_id": bson.M{"$in": ids}})
 	if err != nil {
 		return nil, err
@@ -68,12 +68,10 @@ func (dao *AgentDAO) CreateAgent(ctx context.Context, agent *models.Agent) error
 	return err
 }
 
-func (dao *AgentDAO) UpdateAgent(ctx context.Context, id primitive.ObjectID, update bson.M) error {
-	_, err := dao.collection.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": update})
-	return err
+func (dao *AgentDAO) UpdateAgent(ctx context.Context, id primitive.ObjectID, update bson.M) (*mongo.UpdateResult, error) {
+	return dao.collection.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": update})
 }
 
-func (dao *AgentDAO) DeleteAgent(ctx context.Context, id primitive.ObjectID) error {
-	_, err := dao.collection.DeleteOne(ctx, bson.M{"_id": id})
-	return err
+func (dao *AgentDAO) DeleteAgent(ctx context.Context, id primitive.ObjectID) (*mongo.DeleteResult, error) {
+	return dao.collection.DeleteOne(ctx, bson.M{"_id": id})
 }

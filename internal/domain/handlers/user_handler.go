@@ -87,17 +87,53 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := strings.TrimSpace(mux.Vars(r)["id"])
+
 	var userRequest dtos.UpdateUserRequest
 	err := json.NewDecoder(r.Body).Decode(&userRequest)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	updatedUser, err := h.userService.UpdateUser(ctx, id, &userRequest)
+
+	// Create a map to store the update fields
+	updateFields := make(map[string]interface{})
+
+	// Check each field in the UpdateUserRequest and add non-null values to the updateFields map
+	if userRequest.Image.Valid {
+		updateFields["image"] = userRequest.Image.Val
+	}
+	if userRequest.Email.Valid {
+		updateFields["email"] = userRequest.Email.Val
+	}
+	if userRequest.FirstName.Valid {
+		updateFields["first_name"] = userRequest.FirstName.Val
+	}
+	if userRequest.LastName.Valid {
+		updateFields["last_name"] = userRequest.LastName.Val
+	}
+	if userRequest.Phone.Valid {
+		updateFields["phone"] = userRequest.Phone.Val
+	}
+	if userRequest.CaseIDs.Valid {
+		updateFields["case_ids"] = userRequest.CaseIDs.Val
+	}
+	if userRequest.TeamID.Valid {
+		updateFields["team_id"] = userRequest.TeamID.Val
+	}
+	if userRequest.AgentIDs.Valid {
+		updateFields["agent_ids"] = userRequest.AgentIDs.Val
+	}
+	if userRequest.SubscriptionID.Valid {
+		updateFields["subscription_id"] = userRequest.SubscriptionID.Val
+	}
+
+	// Call the UpdateUser service method with the update fields
+	updatedUser, err := h.userService.UpdateUser(ctx, id, updateFields)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(updatedUser)
 }

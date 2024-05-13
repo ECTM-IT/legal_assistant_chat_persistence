@@ -38,10 +38,9 @@ func (r *CaseRepository) GetCasesByCreatorID(ctx context.Context, creatorID stri
 }
 
 func (r *CaseRepository) CreateCase(ctx context.Context, caseRequest dtos.CreateCaseRequest) (*mongo.InsertOneResult, error) {
-	messageDto := caseRequest.Messages
-	messages := []models.Message{}
-	if messageDto.Present {
-		for _, msg := range messageDto.Val {
+	messages := make([]models.Message, 0)
+	if caseRequest.Messages.Present {
+		for _, msg := range caseRequest.Messages.Val {
 			messageModel := models.Message{
 				Content:     msg.Content.OrElse(""),
 				SenderID:    msg.SenderID.OrElse(primitive.NilObjectID),
@@ -51,22 +50,36 @@ func (r *CaseRepository) CreateCase(ctx context.Context, caseRequest dtos.Create
 			messages = append(messages, messageModel)
 		}
 	}
-	caseModel := &models.Case{
-		ID:              primitive.NewObjectID(),
-		Name:            caseRequest.Name.OrElse(""),
-		CreatorID:       caseRequest.CreatorID.OrElse(primitive.NilObjectID),
-		Messages:        messages,
-		CollaboratorIDs: caseRequest.CollaboratorIDs.OrElse([]primitive.ObjectID{}),
-		Action:          caseRequest.Action.OrElse(""),
-		AgentID:         caseRequest.AgentID.OrElse(primitive.NilObjectID),
-		LastEdit:        caseRequest.LastEdit.OrElse(time.Now()),
-		Share:           caseRequest.Share.OrElse(false),
-		IsArchived:      caseRequest.IsArchived.OrElse(false),
+
+	collaborators := make([]models.Collaborators, 0)
+	if caseRequest.Collaborators.Present {
+		for _, collab := range caseRequest.Collaborators.Val {
+			collaboratorsModel := models.Collaborators{
+				ID:   collab.ID,
+				Edit: collab.Edit,
+			}
+			collaborators = append(collaborators, collaboratorsModel)
+		}
 	}
+
+	caseModel := &models.Case{
+		ID:            primitive.NewObjectID(),
+		Name:          caseRequest.Name.OrElse(""),
+		Description:   caseRequest.Description.OrElse(""),
+		CreatorID:     caseRequest.CreatorID.OrElse(primitive.NilObjectID),
+		Messages:      messages,
+		Collaborators: caseRequest.Collaborators.OrElse(collaborators),
+		Action:        caseRequest.Action.OrElse(""),
+		AgentID:       caseRequest.AgentID.OrElse(primitive.NilObjectID),
+		LastEdit:      caseRequest.LastEdit.OrElse(time.Now()),
+		Share:         caseRequest.Share.OrElse(false),
+		IsArchived:    caseRequest.IsArchived.OrElse(false),
+	}
+
 	return r.caseDAO.Create(ctx, caseModel)
 }
 
-func (r *CaseRepository) UpdateCase(ctx context.Context, id primitive.ObjectID, updates dtos.UpdateCaseRequest) (*mongo.UpdateResult, error) {
+func (r *CaseRepository) UpdateCase(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) (*mongo.UpdateResult, error) {
 	return r.caseDAO.Update(ctx, id, updates)
 }
 

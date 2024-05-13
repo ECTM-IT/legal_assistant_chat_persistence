@@ -7,17 +7,22 @@ import (
 )
 
 type Case struct {
-	ID              primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
-	Name            string               `json:"name" bson:"name"`
-	Description     string               `json:"description" bson:"description"`
-	CreatorID       primitive.ObjectID   `json:"creator_id" bson:"creator_id"`
-	Messages        []Message            `json:"messages" bson:"messages"`
-	CollaboratorIDs []primitive.ObjectID `json:"collaborator_ids" bson:"collaborator_ids"`
-	Action          string               `json:"action" bson:"action"`
-	AgentID         primitive.ObjectID   `json:"agent_id" bson:"agent_id"`
-	LastEdit        time.Time            `json:"last_edit" bson:"last_edit"`
-	Share           bool                 `json:"share" bson:"share"`
-	IsArchived      bool                 `json:"is_archived" bson:"is_archived"`
+	ID            primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Name          string             `json:"name" bson:"name"`
+	Description   string             `json:"description" bson:"description"`
+	CreatorID     primitive.ObjectID `json:"creator_id" bson:"creator_id"`
+	Messages      []Message          `json:"messages" bson:"messages"`
+	Collaborators []Collaborators    `json:"collaborator_ids" bson:"collaborator_ids"`
+	Action        string             `json:"action" bson:"action"`
+	AgentID       primitive.ObjectID `json:"agent_id" bson:"agent_id"`
+	LastEdit      time.Time          `json:"last_edit" bson:"last_edit"`
+	Share         bool               `json:"share" bson:"share"`
+	IsArchived    bool               `json:"is_archived" bson:"is_archived"`
+}
+
+type Collaborators struct {
+	ID   primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Edit bool               `json:"edit" bson:"edit"`
 }
 
 type Message struct {

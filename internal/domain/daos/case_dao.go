@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -67,7 +66,7 @@ func (d *CaseDAO) Create(ctx context.Context, caseRequest *models.Case) (*mongo.
 	return d.collection.InsertOne(ctx, caseRequest)
 }
 
-func (d *CaseDAO) Update(ctx context.Context, id primitive.ObjectID, updates dtos.UpdateCaseRequest) (*mongo.UpdateResult, error) {
+func (d *CaseDAO) Update(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) (*mongo.UpdateResult, error) {
 	return d.collection.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": updates})
 }
 
