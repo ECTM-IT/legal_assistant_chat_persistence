@@ -2,6 +2,7 @@ package daos
 
 import (
 	"context"
+	"errors"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -21,22 +22,14 @@ func NewAgentDAO(db *mongo.Database) *AgentDAO {
 }
 
 func (dao *AgentDAO) GetAllAgents(ctx context.Context) ([]models.Agent, error) {
-	var agents []models.Agent
 	cursor, err := dao.collection.Find(ctx, bson.M{})
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
 
-	for cursor.Next(ctx) {
-		var agent models.Agent
-		if err := cursor.Decode(&agent); err != nil {
-			return nil, err
-		}
-		agents = append(agents, agent)
-	}
-
-	if err := cursor.Err(); err != nil {
+	var agents []models.Agent
+	if err := cursor.All(ctx, &agents); err != nil {
 		return nil, err
 	}
 
@@ -47,30 +40,40 @@ func (dao *AgentDAO) GetAgentByID(ctx context.Context, id primitive.ObjectID) (*
 	var agent models.Agent
 	err := dao.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&agent)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, errors.New("agent not found")
+		}
 		return nil, err
 	}
 	return &agent, nil
 }
 
 func (dao *AgentDAO) GetAgentsByIDs(ctx context.Context, ids []primitive.ObjectID) ([]models.Agent, error) {
-	var agents []models.Agent
 	cursor, err := dao.collection.Find(ctx, bson.M{"_id": bson.M{"$in": ids}})
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
 
-	for cursor.Next(ctx) {
-		var agent models.Agent
-		if err := cursor.Decode(&agent); err != nil {
-			return nil, err
-		}
-		agents = append(agents, agent)
-	}
-
-	if err := cursor.Err(); err != nil {
+	var agents []models.Agent
+	if err := cursor.All(ctx, &agents); err != nil {
 		return nil, err
 	}
 
 	return agents, nil
+}
+
+func (dao *AgentDAO) CreateAgent(ctx context.Context, agent *models.Agent) error {
+	_, err := dao.collection.InsertOne(ctx, agent)
+	return err
+}
+
+func (dao *AgentDAO) UpdateAgent(ctx context.Context, id primitive.ObjectID, update bson.M) error {
+	_, err := dao.collection.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": update})
+	return err
+}
+
+func (dao *AgentDAO) DeleteAgent(ctx context.Context, id primitive.ObjectID) error {
+	_, err := dao.collection.DeleteOne(ctx, bson.M{"_id": id})
+	return err
 }

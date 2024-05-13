@@ -28,20 +28,16 @@ type CreateCaseRequest struct {
 }
 
 type CaseResponse struct {
-	ID              helpers.Nullable[primitive.ObjectID]   `json:"id"`
 	Name            helpers.Nullable[string]               `json:"name"`
 	Description     helpers.Nullable[string]               `json:"description"`
 	CreatorID       helpers.Nullable[primitive.ObjectID]   `json:"creator_id"`
-	AgentID         helpers.Nullable[primitive.ObjectID]   `json:"agent_id"`
+	Messages        helpers.Nullable[[]MessageResponse]    `json:"messages"`
 	CollaboratorIDs helpers.Nullable[[]primitive.ObjectID] `json:"collaborator_ids"`
 	Action          helpers.Nullable[string]               `json:"action"`
-	Skill           helpers.Nullable[string]               `json:"skill"`
+	AgentID         helpers.Nullable[primitive.ObjectID]   `json:"agent_id"`
+	LastEdit        helpers.Nullable[time.Time]            `json:"last_edit"`
 	Share           helpers.Nullable[bool]                 `json:"share"`
 	IsArchived      helpers.Nullable[bool]                 `json:"is_archived"`
-	Messages        helpers.Nullable[[]MessageResponse]    `json:"messages"`
-	LastEdit        helpers.Nullable[time.Time]            `json:"last_edit"`
-	CreatedAt       helpers.Nullable[time.Time]            `json:"created_at"`
-	UpdatedAt       helpers.Nullable[time.Time]            `json:"updated_at"`
 }
 
 type UpdateCaseRequest struct {

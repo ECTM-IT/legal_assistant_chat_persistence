@@ -90,11 +90,12 @@ func (h *TeamHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSpace(mux.Vars(r)["id"])
 	memberID := mux.Vars(r)["memberId"]
 
-	err := h.teamService.RemoveMember(r.Context(), id, memberID)
+	removedMember, err := h.teamService.RemoveMember(r.Context(), id, memberID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(removedMember)
 }

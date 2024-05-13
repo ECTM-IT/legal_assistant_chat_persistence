@@ -2,6 +2,7 @@ package daos
 
 import (
 	"context"
+	"errors"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
@@ -20,78 +21,65 @@ func NewCaseDAO(db *mongo.Database) *CaseDAO {
 	}
 }
 
-func (d *CaseDAO) FindAll() ([]dtos.CaseResponse, error) {
-	ctx := context.Background()
-	var cases []dtos.CaseResponse
+func (d *CaseDAO) FindAll(ctx context.Context) ([]models.Case, error) {
 	cursor, err := d.collection.Find(ctx, bson.M{})
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	for cursor.Next(ctx) {
-		var caseResponse dtos.CaseResponse
-		if err := cursor.Decode(&caseResponse); err != nil {
-			return nil, err
-		}
-		cases = append(cases, caseResponse)
+
+	var cases []models.Case
+	if err := cursor.All(ctx, &cases); err != nil {
+		return nil, err
 	}
+
 	return cases, nil
 }
 
-func (d *CaseDAO) FindByID(id primitive.ObjectID) (dtos.CaseResponse, error) {
-	ctx := context.Background()
-	var caseResponse dtos.CaseResponse
+func (d *CaseDAO) FindByID(ctx context.Context, id primitive.ObjectID) (models.Case, error) {
+	var caseResponse models.Case
 	err := d.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&caseResponse)
 	if err != nil {
-		return dtos.CaseResponse{}, err
+		if err == mongo.ErrNoDocuments {
+			return models.Case{}, errors.New("case not found")
+		}
+		return models.Case{}, err
 	}
 	return caseResponse, nil
 }
 
-func (d *CaseDAO) FindByCreatorID(creatorID primitive.ObjectID) ([]dtos.CaseResponse, error) {
-	ctx := context.Background()
-	var cases []dtos.CaseResponse
+func (d *CaseDAO) FindByCreatorID(ctx context.Context, creatorID primitive.ObjectID) ([]models.Case, error) {
 	cursor, err := d.collection.Find(ctx, bson.M{"creator_id": creatorID})
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	for cursor.Next(ctx) {
-		var caseResponse dtos.CaseResponse
-		if err := cursor.Decode(&caseResponse); err != nil {
-			return nil, err
-		}
-		cases = append(cases, caseResponse)
+
+	var cases []models.Case
+	if err := cursor.All(ctx, &cases); err != nil {
+		return nil, err
 	}
+
 	return cases, nil
 }
 
-func (d *CaseDAO) Create(caseRequest *models.Case) error {
-	ctx := context.Background()
-	_, err := d.collection.InsertOne(ctx, caseRequest)
-	return err
+func (d *CaseDAO) Create(ctx context.Context, caseRequest *models.Case) (*mongo.InsertOneResult, error) {
+	return d.collection.InsertOne(ctx, caseRequest)
 }
 
-func (d *CaseDAO) Update(id primitive.ObjectID, updates dtos.UpdateCaseRequest) error {
-	ctx := context.Background()
-	_, err := d.collection.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": updates})
-	return err
+func (d *CaseDAO) Update(ctx context.Context, id primitive.ObjectID, updates dtos.UpdateCaseRequest) (*mongo.UpdateResult, error) {
+	return d.collection.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": updates})
 }
 
-func (d *CaseDAO) Delete(id primitive.ObjectID) error {
-	ctx := context.Background()
+func (d *CaseDAO) Delete(ctx context.Context, id primitive.ObjectID) error {
 	_, err := d.collection.DeleteOne(ctx, bson.M{"_id": id})
 	return err
 }
 
-func (d *CaseDAO) AddCollaborator(caseID, collaboratorID primitive.ObjectID) error {
-	ctx := context.Background()
-	_, err := d.collection.UpdateOne(ctx, bson.M{"_id": caseID}, bson.M{"$addToSet": bson.M{"collaborator_ids": collaboratorID}})
-	return err
+func (d *CaseDAO) AddCollaborator(ctx context.Context, caseID, collaboratorID primitive.ObjectID) (*mongo.UpdateResult, error) {
+	return d.collection.UpdateOne(ctx, bson.M{"_id": caseID}, bson.M{"$addToSet": bson.M{"collaborator_ids": collaboratorID}})
 }
 
-func (d *CaseDAO) RemoveCollaborator(caseID, collaboratorID primitive.ObjectID) error {
-	ctx := context.Background()
-	_, err := d.collection.UpdateOne(ctx, bson.M{"_id": caseID}, bson.M{"$pull": bson.M{"collaborator_ids": collaboratorID}})
-	return err
+func (d *CaseDAO) RemoveCollaborator(ctx context.Context, caseID, collaboratorID primitive.ObjectID) (*mongo.UpdateResult, error) {
+	return d.collection.UpdateOne(ctx, bson.M{"_id": caseID}, bson.M{"$pull": bson.M{"collaborator_ids": collaboratorID}})
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type TeamRepository struct {
@@ -41,7 +42,7 @@ func (r *TeamRepository) GetTeamMember(ctx context.Context, id string) (*dtos.Te
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.userDAO.GetUserByID(objectID)
+	user, err := r.userDAO.GetUserByID(ctx, objectID)
 	if err != nil {
 		return nil, err
 	}
@@ -58,14 +59,14 @@ func (r *TeamRepository) ChangeAdmin(ctx context.Context, id string, request dto
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.userDAO.GetUserByEmail(request.Email.OrElse(""))
+	user, err := r.userDAO.GetUserByEmail(ctx, request.Email.OrElse(""))
 	if err != nil {
 		return nil, err
 	}
 	update := bson.M{
 		"admin_id": user.ID,
 	}
-	err = r.teamDAO.UpdateTeam(ctx, teamObjectID, update)
+	_, err = r.teamDAO.UpdateTeam(ctx, teamObjectID, update)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +83,7 @@ func (r *TeamRepository) AddMember(ctx context.Context, id string, request dtos.
 	if err != nil {
 		return nil, err
 	}
-	user, err := r.userDAO.GetUserByEmail(request.Email.OrElse(""))
+	user, err := r.userDAO.GetUserByEmail(ctx, request.Email.OrElse(""))
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +93,7 @@ func (r *TeamRepository) AddMember(ctx context.Context, id string, request dtos.
 		DateAdded:  time.Now(),
 		LastActive: time.Now(),
 	}
-	err = r.teamDAO.AddMember(ctx, teamObjectID, member)
+	_, err = r.teamDAO.AddMember(ctx, teamObjectID, member)
 	if err != nil {
 		return nil, err
 	}
@@ -104,14 +105,14 @@ func (r *TeamRepository) AddMember(ctx context.Context, id string, request dtos.
 	}, nil
 }
 
-func (r *TeamRepository) RemoveMember(ctx context.Context, id string, memberID string) error {
+func (r *TeamRepository) RemoveMember(ctx context.Context, id string, memberID string) (*mongo.UpdateResult, error) {
 	teamObjectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	memberObjectID, err := primitive.ObjectIDFromHex(memberID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	return r.teamDAO.RemoveMember(ctx, teamObjectID, memberObjectID)
 }

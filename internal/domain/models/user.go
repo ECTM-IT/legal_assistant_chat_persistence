@@ -14,5 +14,5 @@ type User struct {
 	CaseIDs        []primitive.ObjectID `json:"case_ids" bson:"case_ids"`
 	TeamID         primitive.ObjectID   `json:"team_id" bson:"team_id"`
 	AgentIDs       []primitive.ObjectID `json:"agent_ids" bson:"agent_ids"`
-	SubscriptionID primitive.ObjectID   `json:"subscription_id" bson:"subscription_id"`
+	SubscriptionID primitive.ObjectID   `json:"subscription_id" bson:"subscription_id"` //choose encoding strategy to handle payments
 }

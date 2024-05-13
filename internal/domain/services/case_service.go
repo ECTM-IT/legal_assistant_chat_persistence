@@ -1,9 +1,13 @@
 package services
 
 import (
+	"context"
+
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/repositories"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type CaseService struct {
@@ -16,58 +20,58 @@ func NewCaseService(caseRepo *repositories.CaseRepository) *CaseService {
 	}
 }
 
-func (s *CaseService) GetAllCases() ([]dtos.CaseResponse, error) {
-	return s.caseRepo.GetAllCases()
+func (s *CaseService) GetAllCases(ctx context.Context) ([]models.Case, error) {
+	return s.caseRepo.GetAllCases(ctx)
 }
 
-func (s *CaseService) GetCaseByID(id string) (dtos.CaseResponse, error) {
+func (s *CaseService) GetCaseByID(ctx context.Context, id string) (models.Case, error) {
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return dtos.CaseResponse{}, err
+		return models.Case{}, err
 	}
-	return s.caseRepo.GetCaseByID(objectID)
+	return s.caseRepo.GetCaseByID(ctx, objectID)
 }
 
-func (s *CaseService) GetCasesByCreatorID(creatorID string) ([]dtos.CaseResponse, error) {
-	return s.caseRepo.GetCasesByCreatorID(creatorID)
+func (s *CaseService) GetCasesByCreatorID(ctx context.Context, creatorID string) ([]models.Case, error) {
+	return s.caseRepo.GetCasesByCreatorID(ctx, creatorID)
 }
 
-func (s *CaseService) CreateCase(caseRequest dtos.CreateCaseRequest) error {
-	return s.caseRepo.CreateCase(caseRequest)
+func (s *CaseService) CreateCase(ctx context.Context, caseRequest dtos.CreateCaseRequest) (*mongo.InsertOneResult, error) {
+	return s.caseRepo.CreateCase(ctx, caseRequest)
 }
 
-func (s *CaseService) UpdateCase(id primitive.ObjectID, updates dtos.UpdateCaseRequest) error {
-	return s.caseRepo.UpdateCase(id, updates)
+func (s *CaseService) UpdateCase(ctx context.Context, id primitive.ObjectID, updates dtos.UpdateCaseRequest) (*mongo.UpdateResult, error) {
+	return s.caseRepo.UpdateCase(ctx, id, updates)
 }
 
-func (s *CaseService) DeleteCase(id string) error {
+func (s *CaseService) DeleteCase(ctx context.Context, id string) error {
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return err
 	}
-	return s.caseRepo.DeleteCase(objectID)
+	return s.caseRepo.DeleteCase(ctx, objectID)
 }
 
-func (s *CaseService) AddCollaboratorToCase(id, collaboratorID string) error {
+func (s *CaseService) AddCollaboratorToCase(ctx context.Context, id, collaboratorID string) (*mongo.UpdateResult, error) {
 	caseID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	collaboratorObjectID, err := primitive.ObjectIDFromHex(collaboratorID)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return s.caseRepo.AddCollaboratorToCase(caseID, collaboratorObjectID)
+	return s.caseRepo.AddCollaboratorToCase(ctx, caseID, collaboratorObjectID)
 }
 
-func (s *CaseService) RemoveCollaboratorFromCase(id, collaboratorID string) error {
+func (s *CaseService) RemoveCollaboratorFromCase(ctx context.Context, id, collaboratorID string) (*mongo.UpdateResult, error) {
 	caseID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	collaboratorObjectID, err := primitive.ObjectIDFromHex(collaboratorID)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return s.caseRepo.RemoveCollaboratorFromCase(caseID, collaboratorObjectID)
+	return s.caseRepo.RemoveCollaboratorFromCase(ctx, caseID, collaboratorObjectID)
 }

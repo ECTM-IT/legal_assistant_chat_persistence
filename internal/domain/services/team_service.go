@@ -5,6 +5,7 @@ import (
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/repositories"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type TeamService struct {
@@ -33,6 +34,6 @@ func (s *TeamService) AddMember(ctx context.Context, id string, request dtos.Add
 	return s.teamRepo.AddMember(ctx, id, request)
 }
 
-func (s *TeamService) RemoveMember(ctx context.Context, id string, memberID string) error {
+func (s *TeamService) RemoveMember(ctx context.Context, id string, memberID string) (*mongo.UpdateResult, error) {
 	return s.teamRepo.RemoveMember(ctx, id, memberID)
 }

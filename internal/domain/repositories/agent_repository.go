@@ -45,7 +45,7 @@ func (r *AgentRepository) GetAgentByID(ctx context.Context, id string) (*dtos.Ag
 }
 
 func (r *AgentRepository) GetAgentsByUserID(ctx context.Context, userID primitive.ObjectID) ([]dtos.AgentResponse, error) {
-	user, err := r.userDAO.GetUserByID(userID)
+	user, err := r.userDAO.GetUserByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (r *AgentRepository) GetAgentsByUserID(ctx context.Context, userID primitiv
 }
 
 func (r *AgentRepository) PurchaseAgent(ctx context.Context, userID primitive.ObjectID, agentID primitive.ObjectID) (*dtos.UserResponse, error) {
-	user, err := r.userDAO.GetUserByID(userID)
+	user, err := r.userDAO.GetUserByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func (r *AgentRepository) PurchaseAgent(ctx context.Context, userID primitive.Ob
 		return nil, err
 	}
 	user.AgentIDs = append(user.AgentIDs, agentID)
-	err = r.userDAO.UpdateUser(userID, user)
+	_, err = r.userDAO.UpdateUser(ctx, userID, user)
 	if err != nil {
 		return nil, err
 	}
