@@ -15,14 +15,14 @@ type CaseService interface {
 	GetAllCases(ctx context.Context) ([]models.Case, error)
 	GetCaseByID(ctx context.Context, id primitive.ObjectID) (models.Case, error)
 	GetCasesByCreatorID(ctx context.Context, creatorID primitive.ObjectID) ([]models.Case, error)
-	CreateCase(ctx context.Context, caseRequest dtos.CreateCaseRequest) (*mongo.InsertOneResult, error)
-	UpdateCase(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) (*mongo.UpdateResult, error)
-	DeleteCase(ctx context.Context, id primitive.ObjectID) error
-	AddCollaboratorToCase(ctx context.Context, id, collaboratorID primitive.ObjectID) (*mongo.UpdateResult, error)
-	RemoveCollaboratorFromCase(ctx context.Context, id, collaboratorID primitive.ObjectID) (*mongo.UpdateResult, error)
+	CreateCase(ctx context.Context, caseRequest dtos.CreateCaseRequest) (models.Case, error)
+	UpdateCase(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) (models.Case, error)
+	DeleteCase(ctx context.Context, id primitive.ObjectID) (models.Case, error)
+	AddCollaboratorToCase(ctx context.Context, id, collaboratorID primitive.ObjectID) (models.Case, error)
+	RemoveCollaboratorFromCase(ctx context.Context, id, collaboratorID primitive.ObjectID) (models.Case, error)
 }
 
-// caseServiceImpl implements the CaseService interface.
+// CaseServiceImpl implements the CaseService interface.
 type CaseServiceImpl struct {
 	caseRepo *repositories.CaseRepository
 }
@@ -50,23 +50,43 @@ func (s *CaseServiceImpl) GetCasesByCreatorID(ctx context.Context, creatorID pri
 }
 
 // CreateCase creates a new case.
-func (s *CaseServiceImpl) CreateCase(ctx context.Context, caseRequest dtos.CreateCaseRequest) (*mongo.InsertOneResult, error) {
-	return s.caseRepo.CreateCase(ctx, caseRequest)
+func (s *CaseServiceImpl) CreateCase(ctx context.Context, caseRequest dtos.CreateCaseRequest) (models.Case, error) {
+	insertResult, err := s.caseRepo.CreateCase(ctx, caseRequest)
+	if err != nil {
+		return models.Case{}, err
+	}
+	return s.GetCaseByID(ctx, insertResult.InsertedID.(primitive.ObjectID))
 }
 
 // UpdateCase updates an existing case.
-func (s *CaseServiceImpl) UpdateCase(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) (*mongo.UpdateResult, error) {
-	return s.caseRepo.UpdateCase(ctx, id, updates)
+func (s *CaseServiceImpl) UpdateCase(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) (models.Case, error) {
+	_, err := s.caseRepo.UpdateCase(ctx, id, updates)
+	if err != nil {
+		return models.Case{}, err
+	}
+	return s.GetCaseByID(ctx, id)
 }
 
 // DeleteCase deletes a case by its ID.
-func (s *CaseServiceImpl) DeleteCase(ctx context.Context, id primitive.ObjectID) error {
-	return s.caseRepo.DeleteCase(ctx, id)
+func (s *CaseServiceImpl) DeleteCase(ctx context.Context, id primitive.ObjectID) (models.Case, error) {
+	deletedCase, err := s.GetCaseByID(ctx, id)
+	if err != nil {
+		return models.Case{}, err
+	}
+	err = s.caseRepo.DeleteCase(ctx, id)
+	if err != nil {
+		return models.Case{}, err
+	}
+	return deletedCase, nil
 }
 
 // AddCollaboratorToCase adds a collaborator to a case.
-func (s *CaseServiceImpl) AddCollaboratorToCase(ctx context.Context, id, collaboratorID primitive.ObjectID) (*mongo.UpdateResult, error) {
-	return s.caseRepo.AddCollaboratorToCase(ctx, id, collaboratorID)
+func (s *CaseServiceImpl) AddCollaboratorToCase(ctx context.Context, id, collaboratorID primitive.ObjectID) (models.Case, error) {
+	_, err := s.caseRepo.AddCollaboratorToCase(ctx, id, collaboratorID)
+	if err != nil {
+		return models.Case{}, err
+	}
+	return s.GetCaseByID(ctx, id)
 }
 
 // RemoveCollaboratorFromCase removes a collaborator from a case.

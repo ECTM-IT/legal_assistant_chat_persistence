@@ -152,11 +152,13 @@ func (h *CaseHandler) DeleteCase(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
-	err = h.caseService.DeleteCase(ctx, id)
+	deletedCase, err := h.caseService.DeleteCase(ctx, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(deletedCase)
 	w.WriteHeader(http.StatusNoContent)
 }
 

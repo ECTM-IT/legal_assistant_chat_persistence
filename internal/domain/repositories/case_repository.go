@@ -48,6 +48,10 @@ func (r *CaseRepository) CreateCase(ctx context.Context, caseRequest dtos.Create
 	}
 
 	collaborators := make([]models.Collaborators, 0)
+	collaborators = append(collaborators, models.Collaborators{
+		ID:   caseRequest.CreatorID.Val,
+		Edit: true,
+	})
 	if caseRequest.Collaborators.Present {
 		for _, collab := range caseRequest.Collaborators.Val {
 			collaboratorsModel := models.Collaborators{
