@@ -8,13 +8,14 @@ import (
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
 	"github.com/gorilla/mux"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type TeamHandler struct {
-	teamService *services.TeamService
+	teamService *services.TeamServiceImpl
 }
 
-func NewTeamHandler(teamService *services.TeamService) *TeamHandler {
+func NewTeamHandler(teamService *services.TeamServiceImpl) *TeamHandler {
 	return &TeamHandler{
 		teamService: teamService,
 	}
@@ -38,7 +39,11 @@ func (h *TeamHandler) CreateTeam(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TeamHandler) GetTeamByID(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimSpace(mux.Vars(r)["id"])
+	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
 	team, err := h.teamService.GetTeamByID(r.Context(), id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
@@ -59,9 +64,13 @@ func (h *TeamHandler) GetAllTeams(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TeamHandler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimSpace(mux.Vars(r)["id"])
+	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
 	var request dtos.UpdateTeamRequest
-	err := json.NewDecoder(r.Body).Decode(&request)
+	err = json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -76,8 +85,12 @@ func (h *TeamHandler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TeamHandler) DeleteTeam(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimSpace(mux.Vars(r)["id"])
-	err := h.teamService.DeleteTeam(r.Context(), id)
+	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	err = h.teamService.DeleteTeam(r.Context(), id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -86,7 +99,11 @@ func (h *TeamHandler) DeleteTeam(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TeamHandler) GetTeamMember(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimSpace(mux.Vars(r)["id"])
+	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
 	member, err := h.teamService.GetTeamMember(r.Context(), id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
@@ -97,9 +114,13 @@ func (h *TeamHandler) GetTeamMember(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TeamHandler) ChangeAdmin(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimSpace(mux.Vars(r)["id"])
+	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
 	var request dtos.ChangeAdminRequest
-	err := json.NewDecoder(r.Body).Decode(&request)
+	err = json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -114,9 +135,13 @@ func (h *TeamHandler) ChangeAdmin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TeamHandler) AddMember(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimSpace(mux.Vars(r)["id"])
+	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
 	var request dtos.AddMemberRequest
-	err := json.NewDecoder(r.Body).Decode(&request)
+	err = json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -131,8 +156,16 @@ func (h *TeamHandler) AddMember(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TeamHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimSpace(mux.Vars(r)["id"])
-	memberID := mux.Vars(r)["memberId"]
+	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	memberID, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["memberId"]))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
 	removedMember, err := h.teamService.RemoveMember(r.Context(), id, memberID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

@@ -2,13 +2,13 @@ package errors
 
 import "net/http"
 
-// ErrorType represents a specific type of error with a corresponding HTTP status code
+// ErrorType represents a specific type of error with a corresponding HTTP status code.
 type ErrorType struct {
-	T        string // Consider if you really need to export this field
+	Type     string
 	HTTPCode int
 }
 
-// Define error types with corresponding HTTP status codes
+// Define error types with corresponding HTTP status codes.
 var (
 	ErrorTypeUnknown        = ErrorType{"unknown", http.StatusInternalServerError}
 	ErrorTypeAuthorization  = ErrorType{"authorization", http.StatusUnauthorized}
@@ -20,64 +20,67 @@ var (
 	ErrorTypeRateLimit      = ErrorType{"rate-limit", http.StatusTooManyRequests}
 )
 
-// SlugError represents a detailed error with a type and a slug for more context
+// SlugError represents a detailed error with a type and a slug for more context.
 type SlugError struct {
-	error     string
+	message   string
 	slug      string
 	errorType ErrorType
 }
 
+// Error implements the error interface for SlugError.
 func (s SlugError) Error() string {
-	return s.error
+	return s.message
 }
 
+// Slug returns the slug associated with the SlugError.
 func (s SlugError) Slug() string {
 	return s.slug
 }
 
+// ErrorType returns the error type of the SlugError.
 func (s SlugError) ErrorType() ErrorType {
 	return s.errorType
 }
 
-// HTTPStatus returns the HTTP status code associated with the SlugError's error type
+// HTTPStatus returns the HTTP status code associated with the SlugError's error type.
 func (s SlugError) HTTPStatus() int {
 	return s.errorType.HTTPCode
 }
 
-// Factory functions for creating specific types of SlugErrors
-func NewSlugError(errorMsg, slug string, errorType ErrorType) SlugError {
+// NewSlugError creates a new SlugError with the given message, slug, and error type.
+func NewSlugError(message, slug string, errorType ErrorType) SlugError {
 	return SlugError{
-		error:     errorMsg,
+		message:   message,
 		slug:      slug,
 		errorType: errorType,
 	}
 }
 
-// Specific error constructors
-func NewAuthorizationError(errorMsg, slug string) SlugError {
-	return NewSlugError(errorMsg, slug, ErrorTypeAuthorization)
+// Specific error constructors for creating different types of SlugErrors.
+func NewAuthorizationError(message, slug string) SlugError {
+	return NewSlugError(message, slug, ErrorTypeAuthorization)
 }
 
-func NewNotFoundError(errorMsg, slug string) SlugError {
-	return NewSlugError(errorMsg, slug, ErrorTypeNotFound)
+func NewNotFoundError(message, slug string) SlugError {
+	return NewSlugError(message, slug, ErrorTypeNotFound)
 }
 
-func NewIncorrectInputError(errorMsg, slug string) SlugError {
-	return NewSlugError(errorMsg, slug, ErrorTypeIncorrectInput)
+func NewIncorrectInputError(message, slug string) SlugError {
+	return NewSlugError(message, slug, ErrorTypeIncorrectInput)
 }
 
-func NewDatabaseError(errorMsg, slug string) SlugError {
-	return NewSlugError(errorMsg, slug, ErrorTypeDatabase)
+func NewDatabaseError(message, slug string) SlugError {
+	return NewSlugError(message, slug, ErrorTypeDatabase)
 }
 
-func NewTimeoutError(errorMsg, slug string) SlugError {
-	return NewSlugError(errorMsg, slug, ErrorTypeTimeout)
+func NewTimeoutError(message, slug string) SlugError {
+	return NewSlugError(message, slug, ErrorTypeTimeout)
 }
 
-func NewConflictError(errorMsg, slug string) SlugError {
-	return NewSlugError(errorMsg, slug, ErrorTypeConflict)
+func NewConflictError(message, slug string) SlugError {
+	return NewSlugError(message, slug, ErrorTypeConflict)
 }
 
-func NewRateLimitError(errorMsg, slug string) SlugError {
-	return NewSlugError(errorMsg, slug, ErrorTypeRateLimit)
+func NewRateLimitError(message, slug string) SlugError {
+	return NewSlugError(message, slug, ErrorTypeRateLimit)
 }

@@ -29,7 +29,7 @@ func NewHttpLogger(logger *ZapLogger) func(next http.Handler) http.Handler {
 			}
 
 			// Store the logger with initial fields in the request context
-			ctx := context.WithValue(r.Context(), logEntryCtxKey, logger.With(fields...))
+			ctx := context.WithValue(r.Context(), logEntryCtxKey, logger.logger.With(fields...))
 			r = r.WithContext(ctx)
 
 			// Process the request

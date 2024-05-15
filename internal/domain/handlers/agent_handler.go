@@ -11,10 +11,10 @@ import (
 )
 
 type AgentHandler struct {
-	agentService *services.AgentService
+	agentService *services.AgentServiceImpl
 }
 
-func NewAgentHandler(agentService *services.AgentService) *AgentHandler {
+func NewAgentHandler(agentService *services.AgentServiceImpl) *AgentHandler {
 	return &AgentHandler{
 		agentService: agentService,
 	}
@@ -32,7 +32,11 @@ func (h *AgentHandler) GetAllAgents(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AgentHandler) GetAgentByID(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimSpace(mux.Vars(r)["id"])
+	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
 
 	agent, err := h.agentService.GetAgentByID(r.Context(), id)
 	if err != nil {

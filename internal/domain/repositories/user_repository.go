@@ -11,72 +11,67 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+// UserRepository defines the operations available on a user repository.
 type UserRepository interface {
-	FindUserByID(ctx context.Context, userID helpers.Nullable[primitive.ObjectID]) (*dtos.UserResponse, error)
+	FindUserByID(ctx context.Context, userID primitive.ObjectID) (*dtos.UserResponse, error)
 	FindUserByEmail(ctx context.Context, email string) (*dtos.UserResponse, error)
-	FindUserByCasesID(ctx context.Context, casesID helpers.Nullable[string]) (*dtos.UserResponse, error)
+	FindUserByCaseID(ctx context.Context, caseID primitive.ObjectID) (*dtos.UserResponse, error)
 	TotalUsers(ctx context.Context) ([]*models.User, error)
-	DeleteUser(ctx context.Context, userID helpers.Nullable[string]) error
+	DeleteUser(ctx context.Context, userID primitive.ObjectID) error
 	CreateUser(ctx context.Context, user *dtos.CreateUserRequest) (*models.User, error)
-	UpdateUser(ctx context.Context, userID helpers.Nullable[string], user *dtos.UpdateUserRequest) (*mongo.UpdateResult, error)
+	UpdateUser(ctx context.Context, userID primitive.ObjectID, user *dtos.UpdateUserRequest) (*mongo.UpdateResult, error)
 }
 
+// UserRepositoryImpl implements the UserRepository interface.
 type UserRepositoryImpl struct {
 	userDAO *daos.UserDAO
 }
 
+// NewUserRepository creates a new instance of the user repository.
 func NewUserRepository(userDAO *daos.UserDAO) *UserRepositoryImpl {
 	return &UserRepositoryImpl{
 		userDAO: userDAO,
 	}
 }
 
+// FindUserByID retrieves a user by their ID.
 func (r *UserRepositoryImpl) FindUserByID(ctx context.Context, userID primitive.ObjectID) (*dtos.UserResponse, error) {
 	user, err := r.userDAO.GetUserByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-
 	return r.toUserResponse(user), nil
 }
 
+// FindUserByEmail retrieves a user by their email.
 func (r *UserRepositoryImpl) FindUserByEmail(ctx context.Context, email string) (*dtos.UserResponse, error) {
 	user, err := r.userDAO.GetUserByEmail(ctx, email)
-
 	if err != nil {
 		return nil, err
 	}
-
 	return r.toUserResponse(user), nil
 }
 
-func (r *UserRepositoryImpl) FindUserByCasesID(ctx context.Context, casesID string) (*dtos.UserResponse, error) {
-	objectID, err := primitive.ObjectIDFromHex(casesID)
+// FindUserByCaseID retrieves a user by a case ID.
+func (r *UserRepositoryImpl) FindUserByCaseID(ctx context.Context, caseID primitive.ObjectID) (*dtos.UserResponse, error) {
+	user, err := r.userDAO.GetUserByCaseID(ctx, caseID)
 	if err != nil {
 		return nil, err
 	}
-
-	user, err := r.userDAO.GetUserByCaseID(ctx, objectID)
-	if err != nil {
-		return nil, err
-	}
-
 	return r.toUserResponse(user), nil
 }
 
+// TotalUsers retrieves all users.
 func (r *UserRepositoryImpl) TotalUsers(ctx context.Context) ([]*models.User, error) {
 	return r.userDAO.GetAllUsers(ctx)
 }
 
-func (r *UserRepositoryImpl) DeleteUser(ctx context.Context, userID string) error {
-	objectID, err := primitive.ObjectIDFromHex(userID)
-	if err != nil {
-		return err
-	}
-
-	return r.userDAO.DeleteUser(ctx, objectID)
+// DeleteUser deletes a user by their ID.
+func (r *UserRepositoryImpl) DeleteUser(ctx context.Context, userID primitive.ObjectID) error {
+	return r.userDAO.DeleteUser(ctx, userID)
 }
 
+// CreateUser creates a new user.
 func (r *UserRepositoryImpl) CreateUser(ctx context.Context, user *dtos.CreateUserRequest) (*models.User, error) {
 	userModel := &models.User{
 		ID:             primitive.NewObjectID(),
@@ -93,14 +88,12 @@ func (r *UserRepositoryImpl) CreateUser(ctx context.Context, user *dtos.CreateUs
 	return r.userDAO.CreateUser(ctx, userModel)
 }
 
-func (r *UserRepositoryImpl) UpdateUser(ctx context.Context, userID string, user map[string]interface{}) (*mongo.UpdateResult, error) {
-	objectID, err := primitive.ObjectIDFromHex(userID)
-	if err != nil {
-		return nil, err
-	}
-	return r.userDAO.UpdateUser(ctx, objectID, user)
+// UpdateUser updates an existing user.
+func (r *UserRepositoryImpl) UpdateUser(ctx context.Context, userID primitive.ObjectID, user map[string]interface{}) (*mongo.UpdateResult, error) {
+	return r.userDAO.UpdateUser(ctx, userID, user)
 }
 
+// toUserResponse converts a User model to a UserResponse DTO.
 func (r *UserRepositoryImpl) toUserResponse(user *models.User) *dtos.UserResponse {
 	return &dtos.UserResponse{
 		ID:             helpers.NewNullable(user.ID),

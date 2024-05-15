@@ -29,12 +29,8 @@ func (r *CaseRepository) GetCaseByID(ctx context.Context, id primitive.ObjectID)
 	return r.caseDAO.FindByID(ctx, id)
 }
 
-func (r *CaseRepository) GetCasesByCreatorID(ctx context.Context, creatorID string) ([]models.Case, error) {
-	objectID, err := primitive.ObjectIDFromHex(creatorID)
-	if err != nil {
-		return nil, err
-	}
-	return r.caseDAO.FindByCreatorID(ctx, objectID)
+func (r *CaseRepository) GetCasesByCreatorID(ctx context.Context, creatorID primitive.ObjectID) ([]models.Case, error) {
+	return r.caseDAO.FindByCreatorID(ctx, creatorID)
 }
 
 func (r *CaseRepository) CreateCase(ctx context.Context, caseRequest dtos.CreateCaseRequest) (*mongo.InsertOneResult, error) {

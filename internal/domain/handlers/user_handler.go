@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -28,14 +27,12 @@ func NewUserHandler(userService *services.UserServiceImpl) *UserHandler {
 // GetUserByID - Handles GET requests for a specific user
 func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	id := strings.TrimSpace(mux.Vars(r)["id"])
-	userID, err := primitive.ObjectIDFromHex(id)
-	fmt.Println(userID)
+	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
-	user, err := h.userService.GetUserByID(ctx, userID)
+	user, err := h.userService.GetUserByID(ctx, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -86,10 +83,15 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 // UpdateUser - Handles PUT requests to update a user
 func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	id := strings.TrimSpace(mux.Vars(r)["id"])
+	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	var userRequest dtos.UpdateUserRequest
-	err := json.NewDecoder(r.Body).Decode(&userRequest)
+	err = json.NewDecoder(r.Body).Decode(&userRequest)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -141,8 +143,12 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 // DeleteUser - Handles DELETE requests to delete a user
 func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	id := strings.TrimSpace(mux.Vars(r)["id"])
-	err := h.userService.DeleteUserByID(ctx, id)
+	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = h.userService.DeleteUserByID(ctx, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

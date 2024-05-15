@@ -12,6 +12,7 @@ import (
 
 	handler "github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/handlers"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/pkg/db"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/logs"
 	"go.uber.org/zap"
 )
 
@@ -22,48 +23,61 @@ const (
 	defaultShutdownPeriod = 30 * time.Second
 )
 
+// HTTPServer holds the necessary components to run the HTTP server.
 type HTTPServer struct {
-	app      *Application
-	services *db.Services
+	addr       string
+	handler    http.Handler
+	logger     logs.Logger
+	shutdownCh chan os.Signal
 }
 
-func (s *HTTPServer) serveHTTP() error {
+// NewHTTPServer initializes a new HTTPServer with the provided configuration and dependencies.
+func NewHTTPServer(config *Config, services *db.Services, logger logs.Logger) *HTTPServer {
+	return &HTTPServer{
+		addr:       fmt.Sprintf("0.0.0.0:%d", config.HTTPPort),
+		handler:    handler.Routes(services.AgentService, services.CaseService, services.TeamService, services.UserService),
+		logger:     logger,
+		shutdownCh: make(chan os.Signal, 1),
+	}
+}
+
+// ServeHTTP starts the HTTP server and manages graceful shutdown.
+func (s *HTTPServer) ServeHTTP() error {
 	srv := &http.Server{
-		Addr:         fmt.Sprintf("0.0.0.0:%d", s.app.config.HTTPPort),
-		Handler:      handler.Routes(s.services.AgentService, s.services.CaseService, s.services.TeamService, s.services.UserService),
+		Addr:         s.addr,
+		Handler:      s.handler,
 		IdleTimeout:  defaultIdleTimeout,
 		ReadTimeout:  defaultReadTimeout,
 		WriteTimeout: defaultWriteTimeout,
 	}
 
+	// Handle graceful shutdown
+	signal.Notify(s.shutdownCh, syscall.SIGINT, syscall.SIGTERM)
 	shutdownErrorChan := make(chan error)
+
 	go func() {
-		quitChan := make(chan os.Signal, 1)
-		signal.Notify(quitChan, syscall.SIGINT, syscall.SIGTERM)
-		<-quitChan
+		<-s.shutdownCh
 		ctx, cancel := context.WithTimeout(context.Background(), defaultShutdownPeriod)
 		defer cancel()
-		s.app.logger.Info("Shutting down server", zap.String("addr", srv.Addr))
+		s.logger.Info("Shutting down server", zap.String("addr", srv.Addr))
 		shutdownErrorChan <- srv.Shutdown(ctx)
 	}()
 
-	s.app.logger.Info("Starting server", zap.String("addr", srv.Addr))
-	err := srv.ListenAndServe()
-	if err != nil && err != http.ErrServerClosed {
+	s.logger.Info("Starting server", zap.String("addr", srv.Addr))
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		if opErr, ok := err.(*net.OpError); ok && opErr.Err.Error() == "read: connection reset by peer" {
-			s.app.logger.Warn("Connection reset by peer" + err.Error())
+			s.logger.Warn("Connection reset by peer", zap.Error(err))
 		} else {
-			s.app.logger.Warn("Server error" + err.Error())
+			s.logger.Error("Server error", err)
 			return err
 		}
 	}
 
-	err = <-shutdownErrorChan
-	if err != nil {
-		s.app.logger.Warn("Shutdown error" + err.Error())
+	if err := <-shutdownErrorChan; err != nil {
+		s.logger.Error("Shutdown error", err)
 		return err
 	}
 
-	s.app.logger.Info("Stopped server", zap.String("addr", srv.Addr))
+	s.logger.Info("Stopped server", zap.String("addr", srv.Addr))
 	return nil
 }

@@ -4,22 +4,23 @@ import (
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/daos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/repositories"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/logs"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Services struct {
-	AgentService *services.AgentService
-	CaseService  *services.CaseService
-	TeamService  *services.TeamService
+	AgentService *services.AgentServiceImpl
+	CaseService  *services.CaseServiceImpl
+	TeamService  *services.TeamServiceImpl
 	UserService  *services.UserServiceImpl
 }
 
-func InitializeServices(db *mongo.Database) *Services {
+func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 	// Initialize DAOs
-	agentDAO := daos.NewAgentDAO(db)
-	caseDAO := daos.NewCaseDAO(db)
-	teamDAO := daos.NewTeamDAO(db)
-	userDAO := daos.NewUserDAO(db)
+	agentDAO := daos.NewAgentDAO(db, logger)
+	caseDAO := daos.NewCaseDAO(db, logger)
+	teamDAO := daos.NewTeamDAO(db, logger)
+	userDAO := daos.NewUserDAO(db, logger)
 
 	// Initialize repositories
 	agentRepo := repositories.NewAgentRepository(agentDAO, userDAO)

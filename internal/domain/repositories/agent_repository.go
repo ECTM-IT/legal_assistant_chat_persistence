@@ -33,12 +33,8 @@ func (r *AgentRepository) GetAllAgents(ctx context.Context) ([]dtos.AgentRespons
 	return r.toAgentResponses(agents), nil
 }
 
-func (r *AgentRepository) GetAgentByID(ctx context.Context, id string) (*dtos.AgentResponse, error) {
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, err
-	}
-	agent, err := r.agentDAO.GetAgentByID(ctx, objectID)
+func (r *AgentRepository) GetAgentByID(ctx context.Context, id primitive.ObjectID) (*dtos.AgentResponse, error) {
+	agent, err := r.agentDAO.GetAgentByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}

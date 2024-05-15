@@ -10,68 +10,66 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type CaseService struct {
+// CaseService defines the operations available for managing cases.
+type CaseService interface {
+	GetAllCases(ctx context.Context) ([]models.Case, error)
+	GetCaseByID(ctx context.Context, id primitive.ObjectID) (models.Case, error)
+	GetCasesByCreatorID(ctx context.Context, creatorID primitive.ObjectID) ([]models.Case, error)
+	CreateCase(ctx context.Context, caseRequest dtos.CreateCaseRequest) (*mongo.InsertOneResult, error)
+	UpdateCase(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) (*mongo.UpdateResult, error)
+	DeleteCase(ctx context.Context, id primitive.ObjectID) error
+	AddCollaboratorToCase(ctx context.Context, id, collaboratorID primitive.ObjectID) (*mongo.UpdateResult, error)
+	RemoveCollaboratorFromCase(ctx context.Context, id, collaboratorID primitive.ObjectID) (*mongo.UpdateResult, error)
+}
+
+// caseServiceImpl implements the CaseService interface.
+type CaseServiceImpl struct {
 	caseRepo *repositories.CaseRepository
 }
 
-func NewCaseService(caseRepo *repositories.CaseRepository) *CaseService {
-	return &CaseService{
+// NewCaseService creates a new instance of the case service.
+func NewCaseService(caseRepo *repositories.CaseRepository) *CaseServiceImpl {
+	return &CaseServiceImpl{
 		caseRepo: caseRepo,
 	}
 }
 
-func (s *CaseService) GetAllCases(ctx context.Context) ([]models.Case, error) {
+// GetAllCases retrieves all cases.
+func (s *CaseServiceImpl) GetAllCases(ctx context.Context) ([]models.Case, error) {
 	return s.caseRepo.GetAllCases(ctx)
 }
 
-func (s *CaseService) GetCaseByID(ctx context.Context, id string) (models.Case, error) {
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return models.Case{}, err
-	}
-	return s.caseRepo.GetCaseByID(ctx, objectID)
+// GetCaseByID retrieves a case by its ID.
+func (s *CaseServiceImpl) GetCaseByID(ctx context.Context, id primitive.ObjectID) (models.Case, error) {
+	return s.caseRepo.GetCaseByID(ctx, id)
 }
 
-func (s *CaseService) GetCasesByCreatorID(ctx context.Context, creatorID string) ([]models.Case, error) {
+// GetCasesByCreatorID retrieves cases by the creator's ID.
+func (s *CaseServiceImpl) GetCasesByCreatorID(ctx context.Context, creatorID primitive.ObjectID) ([]models.Case, error) {
 	return s.caseRepo.GetCasesByCreatorID(ctx, creatorID)
 }
 
-func (s *CaseService) CreateCase(ctx context.Context, caseRequest dtos.CreateCaseRequest) (*mongo.InsertOneResult, error) {
+// CreateCase creates a new case.
+func (s *CaseServiceImpl) CreateCase(ctx context.Context, caseRequest dtos.CreateCaseRequest) (*mongo.InsertOneResult, error) {
 	return s.caseRepo.CreateCase(ctx, caseRequest)
 }
 
-func (s *CaseService) UpdateCase(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) (*mongo.UpdateResult, error) {
+// UpdateCase updates an existing case.
+func (s *CaseServiceImpl) UpdateCase(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) (*mongo.UpdateResult, error) {
 	return s.caseRepo.UpdateCase(ctx, id, updates)
 }
 
-func (s *CaseService) DeleteCase(ctx context.Context, id string) error {
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return err
-	}
-	return s.caseRepo.DeleteCase(ctx, objectID)
+// DeleteCase deletes a case by its ID.
+func (s *CaseServiceImpl) DeleteCase(ctx context.Context, id primitive.ObjectID) error {
+	return s.caseRepo.DeleteCase(ctx, id)
 }
 
-func (s *CaseService) AddCollaboratorToCase(ctx context.Context, id, collaboratorID string) (*mongo.UpdateResult, error) {
-	caseID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, err
-	}
-	collaboratorObjectID, err := primitive.ObjectIDFromHex(collaboratorID)
-	if err != nil {
-		return nil, err
-	}
-	return s.caseRepo.AddCollaboratorToCase(ctx, caseID, collaboratorObjectID)
+// AddCollaboratorToCase adds a collaborator to a case.
+func (s *CaseServiceImpl) AddCollaboratorToCase(ctx context.Context, id, collaboratorID primitive.ObjectID) (*mongo.UpdateResult, error) {
+	return s.caseRepo.AddCollaboratorToCase(ctx, id, collaboratorID)
 }
 
-func (s *CaseService) RemoveCollaboratorFromCase(ctx context.Context, id, collaboratorID string) (*mongo.UpdateResult, error) {
-	caseID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, err
-	}
-	collaboratorObjectID, err := primitive.ObjectIDFromHex(collaboratorID)
-	if err != nil {
-		return nil, err
-	}
-	return s.caseRepo.RemoveCollaboratorFromCase(ctx, caseID, collaboratorObjectID)
+// RemoveCollaboratorFromCase removes a collaborator from a case.
+func (s *CaseServiceImpl) RemoveCollaboratorFromCase(ctx context.Context, id, collaboratorID primitive.ObjectID) (*mongo.UpdateResult, error) {
+	return s.caseRepo.RemoveCollaboratorFromCase(ctx, id, collaboratorID)
 }

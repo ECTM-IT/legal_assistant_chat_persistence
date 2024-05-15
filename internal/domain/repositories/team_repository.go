@@ -44,19 +44,15 @@ func (r *TeamRepository) CreateTeam(ctx context.Context, request dtos.CreateTeam
 		AdminID: request.AdminID.OrElse(primitive.NilObjectID),
 		Members: members,
 	}
-	err := r.teamDAO.CreateTeam(ctx, team)
+	team, err := r.teamDAO.CreateTeam(ctx, team)
 	if err != nil {
 		return nil, err
 	}
 	return r.toTeamResponse(team), nil
 }
 
-func (r *TeamRepository) GetTeamByID(ctx context.Context, id string) (*dtos.TeamResponse, error) {
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, err
-	}
-	team, err := r.teamDAO.GetTeamByID(ctx, objectID)
+func (r *TeamRepository) GetTeamByID(ctx context.Context, id primitive.ObjectID) (*dtos.TeamResponse, error) {
+	team, err := r.teamDAO.GetTeamByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -75,11 +71,7 @@ func (r *TeamRepository) GetAllTeams(ctx context.Context) ([]*dtos.TeamResponse,
 	return teamResponses, nil
 }
 
-func (r *TeamRepository) UpdateTeam(ctx context.Context, id string, request dtos.UpdateTeamRequest) (*dtos.TeamResponse, error) {
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, err
-	}
+func (r *TeamRepository) UpdateTeam(ctx context.Context, id primitive.ObjectID, request dtos.UpdateTeamRequest) (*dtos.TeamResponse, error) {
 	update := bson.M{}
 	if request.AdminID.Valid {
 		update["admin_id"] = request.AdminID.Val
@@ -87,31 +79,23 @@ func (r *TeamRepository) UpdateTeam(ctx context.Context, id string, request dtos
 	if request.Members.Valid {
 		update["members"] = request.Members.Val
 	}
-	_, err = r.teamDAO.UpdateTeam(ctx, objectID, update)
+	_, err := r.teamDAO.UpdateTeam(ctx, id, update)
 	if err != nil {
 		return nil, err
 	}
-	team, err := r.teamDAO.GetTeamByID(ctx, objectID)
+	team, err := r.teamDAO.GetTeamByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 	return r.toTeamResponse(team), nil
 }
 
-func (r *TeamRepository) DeleteTeam(ctx context.Context, id string) error {
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return err
-	}
-	return r.teamDAO.DeleteTeam(ctx, objectID)
+func (r *TeamRepository) DeleteTeam(ctx context.Context, id primitive.ObjectID) error {
+	return r.teamDAO.DeleteTeam(ctx, id)
 }
 
-func (r *TeamRepository) GetTeamMember(ctx context.Context, id string) (*dtos.TeamMemberResponse, error) {
-	objectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, err
-	}
-	user, err := r.userDAO.GetUserByID(ctx, objectID)
+func (r *TeamRepository) GetTeamMember(ctx context.Context, id primitive.ObjectID) (*dtos.TeamMemberResponse, error) {
+	user, err := r.userDAO.GetUserByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -123,11 +107,7 @@ func (r *TeamRepository) GetTeamMember(ctx context.Context, id string) (*dtos.Te
 	}, nil
 }
 
-func (r *TeamRepository) ChangeAdmin(ctx context.Context, id string, request dtos.ChangeAdminRequest) (*dtos.TeamMemberResponse, error) {
-	teamObjectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, err
-	}
+func (r *TeamRepository) ChangeAdmin(ctx context.Context, id primitive.ObjectID, request dtos.ChangeAdminRequest) (*dtos.TeamMemberResponse, error) {
 	user, err := r.userDAO.GetUserByEmail(ctx, request.Email.OrElse(""))
 	if err != nil {
 		return nil, err
@@ -135,7 +115,7 @@ func (r *TeamRepository) ChangeAdmin(ctx context.Context, id string, request dto
 	update := bson.M{
 		"admin_id": user.ID,
 	}
-	_, err = r.teamDAO.UpdateTeam(ctx, teamObjectID, update)
+	_, err = r.teamDAO.UpdateTeam(ctx, id, update)
 	if err != nil {
 		return nil, err
 	}
@@ -147,11 +127,7 @@ func (r *TeamRepository) ChangeAdmin(ctx context.Context, id string, request dto
 	}, nil
 }
 
-func (r *TeamRepository) AddMember(ctx context.Context, id string, request dtos.AddMemberRequest) (*dtos.TeamMemberResponse, error) {
-	teamObjectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, err
-	}
+func (r *TeamRepository) AddMember(ctx context.Context, id primitive.ObjectID, request dtos.AddMemberRequest) (*dtos.TeamMemberResponse, error) {
 	user, err := r.userDAO.GetUserByEmail(ctx, request.Email.OrElse(""))
 	if err != nil {
 		return nil, err
@@ -162,7 +138,7 @@ func (r *TeamRepository) AddMember(ctx context.Context, id string, request dtos.
 		DateAdded:  time.Now(),
 		LastActive: time.Now(),
 	}
-	_, err = r.teamDAO.AddMember(ctx, teamObjectID, member)
+	_, err = r.teamDAO.AddMember(ctx, id, member)
 	if err != nil {
 		return nil, err
 	}
@@ -174,16 +150,8 @@ func (r *TeamRepository) AddMember(ctx context.Context, id string, request dtos.
 	}, nil
 }
 
-func (r *TeamRepository) RemoveMember(ctx context.Context, id string, memberID string) (*mongo.UpdateResult, error) {
-	teamObjectID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, err
-	}
-	memberObjectID, err := primitive.ObjectIDFromHex(memberID)
-	if err != nil {
-		return nil, err
-	}
-	return r.teamDAO.RemoveMember(ctx, teamObjectID, memberObjectID)
+func (r *TeamRepository) RemoveMember(ctx context.Context, id, memberID primitive.ObjectID) (*mongo.UpdateResult, error) {
+	return r.teamDAO.RemoveMember(ctx, id, memberID)
 }
 
 func (r *TeamRepository) toTeamResponse(team *models.Team) *dtos.TeamResponse {

@@ -12,29 +12,34 @@ type Logger interface {
 	Info(msg string, fields ...zap.Field)
 	Warn(msg string, fields ...zap.Field)
 	Error(msg string, err error, fields ...zap.Field)
+	Sync()
 }
 
 type ZapLogger struct {
-	*zap.Logger
+	logger *zap.Logger
 }
 
 func (l *ZapLogger) Debug(msg string, fields ...zap.Field) {
-	l.Logger.Debug(msg, fields...)
+	l.logger.Debug(msg, fields...)
 }
 
 func (l *ZapLogger) Info(msg string, fields ...zap.Field) {
-	l.Logger.Info(msg, fields...)
+	l.logger.Info(msg, fields...)
 }
 
 func (l *ZapLogger) Warn(msg string, fields ...zap.Field) {
-	l.Logger.Warn(msg, fields...)
+	l.logger.Warn(msg, fields...)
 }
 
 func (l *ZapLogger) Error(msg string, err error, fields ...zap.Field) {
 	if err != nil {
 		fields = append(fields, zap.Error(err))
 	}
-	l.Logger.Error(msg, fields...)
+	l.logger.Error(msg, fields...)
+}
+
+func (l *ZapLogger) Sync() {
+	l.logger.Sync()
 }
 
 // Init initializes the logger
@@ -43,7 +48,7 @@ func Init() Logger {
 	if err != nil {
 		panic(err)
 	}
-	return &ZapLogger{logger}
+	return &ZapLogger{logger: logger}
 }
 
 func newZapLogger() (*zap.Logger, error) {

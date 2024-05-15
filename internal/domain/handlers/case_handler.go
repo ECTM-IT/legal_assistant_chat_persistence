@@ -12,10 +12,10 @@ import (
 )
 
 type CaseHandler struct {
-	caseService *services.CaseService
+	caseService *services.CaseServiceImpl
 }
 
-func NewCaseHandler(caseService *services.CaseService) *CaseHandler {
+func NewCaseHandler(caseService *services.CaseServiceImpl) *CaseHandler {
 	return &CaseHandler{
 		caseService: caseService,
 	}
@@ -34,7 +34,11 @@ func (h *CaseHandler) GetAllCases(w http.ResponseWriter, r *http.Request) {
 
 func (h *CaseHandler) GetCaseByID(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	id := strings.TrimSpace(mux.Vars(r)["id"])
+	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
 	caseResponse, err := h.caseService.GetCaseByID(ctx, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
@@ -47,8 +51,12 @@ func (h *CaseHandler) GetCaseByID(w http.ResponseWriter, r *http.Request) {
 func (h *CaseHandler) GetCasesByCreatorID(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	creatorID := strings.TrimSpace(r.Header.Get("Authorization"))
-	println(creatorID)
-	cases, err := h.caseService.GetCasesByCreatorID(ctx, creatorID)
+	objectID, err := primitive.ObjectIDFromHex(creatorID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	cases, err := h.caseService.GetCasesByCreatorID(ctx, objectID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -133,8 +141,12 @@ func (h *CaseHandler) UpdateCase(w http.ResponseWriter, r *http.Request) {
 
 func (h *CaseHandler) DeleteCase(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	id := strings.TrimSpace(mux.Vars(r)["id"])
-	err := h.caseService.DeleteCase(ctx, id)
+	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	err = h.caseService.DeleteCase(ctx, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -144,8 +156,16 @@ func (h *CaseHandler) DeleteCase(w http.ResponseWriter, r *http.Request) {
 
 func (h *CaseHandler) AddCollaboratorToCase(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	id := strings.TrimSpace(mux.Vars(r)["id"])
-	collaboratorID := mux.Vars(r)["collaboratorID"]
+	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	collaboratorID, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["collaboratorID"]))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
 	updatedCase, err := h.caseService.AddCollaboratorToCase(ctx, id, collaboratorID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -158,8 +178,16 @@ func (h *CaseHandler) AddCollaboratorToCase(w http.ResponseWriter, r *http.Reque
 
 func (h *CaseHandler) RemoveCollaboratorFromCase(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	id := strings.TrimSpace(mux.Vars(r)["id"])
-	collaboratorID := mux.Vars(r)["collaboratorID"]
+	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	collaboratorID, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["collaboratorID"]))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
 	updatedCase, err := h.caseService.RemoveCollaboratorFromCase(ctx, id, collaboratorID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
