@@ -64,12 +64,12 @@ func (r *CaseRepository) CreateCase(ctx context.Context, caseRequest dtos.Create
 
 	caseModel := &models.Case{
 		ID:            primitive.NewObjectID(),
-		Name:          caseRequest.Name.OrElse(""),
+		Name:          caseRequest.Name.OrElse("New Case"),
 		Description:   caseRequest.Description.OrElse(""),
 		CreatorID:     caseRequest.CreatorID.Val,
 		Messages:      messages,
 		Collaborators: caseRequest.Collaborators.OrElse(collaborators),
-		Action:        caseRequest.Action.OrElse(""),
+		Action:        caseRequest.Action.OrElse("Riassumere"),
 		AgentID:       caseRequest.AgentID.OrElse(primitive.NilObjectID),
 		LastEdit:      caseRequest.LastEdit.OrElse(time.Now()),
 		Share:         caseRequest.Share.OrElse(false),
