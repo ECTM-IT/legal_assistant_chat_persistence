@@ -62,7 +62,7 @@ func (r *CaseRepository) CreateCase(ctx context.Context, caseRequest dtos.Create
 		ID:            primitive.NewObjectID(),
 		Name:          caseRequest.Name.OrElse(""),
 		Description:   caseRequest.Description.OrElse(""),
-		CreatorID:     caseRequest.CreatorID.OrElse(primitive.NilObjectID),
+		CreatorID:     caseRequest.CreatorID.Val,
 		Messages:      messages,
 		Collaborators: caseRequest.Collaborators.OrElse(collaborators),
 		Action:        caseRequest.Action.OrElse(""),
