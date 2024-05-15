@@ -68,11 +68,17 @@ func (h *CaseHandler) GetCasesByCreatorID(w http.ResponseWriter, r *http.Request
 func (h *CaseHandler) CreateCase(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var caseRequest dtos.CreateCaseRequest
-	err := json.NewDecoder(r.Body).Decode(&caseRequest)
+	creatorId, err := primitive.ObjectIDFromHex(strings.TrimSpace(r.Header.Get("Authorization")))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	err = json.NewDecoder(r.Body).Decode(&caseRequest)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	caseRequest.CreatorID.Val = creatorId
 	createdCase, err := h.caseService.CreateCase(ctx, caseRequest)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
