@@ -73,8 +73,12 @@ func (s *UserServiceImpl) CreateUser(ctx context.Context, user *dtos.CreateUserR
 }
 
 // UpdateUser updates an existing user.
-func (s *UserServiceImpl) UpdateUser(ctx context.Context, userID primitive.ObjectID, user map[string]interface{}) (*mongo.UpdateResult, error) {
-	return s.userRepo.UpdateUser(ctx, userID, user)
+func (s *UserServiceImpl) UpdateUser(ctx context.Context, userID primitive.ObjectID, user map[string]interface{}) (*dtos.UserResponse, error) {
+	_, err := s.userRepo.UpdateUser(ctx, userID, user)
+	if err != nil {
+		return nil, err
+	}
+	return s.userRepo.FindUserByID(ctx, userID)
 }
 
 // DeleteUserByID deletes an existing user by ID.
