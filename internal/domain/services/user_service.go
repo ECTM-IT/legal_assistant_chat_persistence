@@ -33,7 +33,7 @@ func NewUserService(repo *repositories.UserRepositoryImpl) *UserServiceImpl {
 
 // GetUserByID retrieves details of a user by ID.
 func (s *UserServiceImpl) GetUserByID(ctx context.Context, userID primitive.ObjectID) (*dtos.UserResponse, error) {
-	user, err := s.userRepo.FindUserByCaseID(ctx, userID)
+	user, err := s.userRepo.FindUserByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
