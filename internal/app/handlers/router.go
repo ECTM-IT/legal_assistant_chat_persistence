@@ -10,7 +10,7 @@ import (
 )
 
 // Routes initializes the routes for the application with the provided services.
-func Routes(agentService *services.AgentServiceImpl, caseService *services.CaseServiceImpl, teamService *services.TeamServiceImpl, userService *services.UserServiceImpl) http.Handler {
+func Routes(agentService *services.AgentServiceImpl, caseService *services.CaseServiceImpl, teamService *services.TeamServiceImpl, userService *services.UserServiceImpl, subscriptionService *services.SubscriptionServiceImpl) http.Handler {
 	router := mux.NewRouter()
 
 	// Create a new CORS handler with the desired configuration
@@ -30,6 +30,7 @@ func Routes(agentService *services.AgentServiceImpl, caseService *services.CaseS
 	caseHandler := handlers.NewCaseHandler(caseService)
 	teamHandler := handlers.NewTeamHandler(teamService)
 	userHandler := handlers.NewUserHandler(userService)
+	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionService)
 
 	// Register agent routes
 	registerAgentRoutes(router, agentHandler)
@@ -42,6 +43,9 @@ func Routes(agentService *services.AgentServiceImpl, caseService *services.CaseS
 
 	// Register user routes
 	registerUserRoutes(router, userHandler)
+
+	// Register subscription routes
+	registerSubscriptionRoutes(router, subscriptionHandler)
 
 	router.NotFoundHandler = http.HandlerFunc(NotFoundHandler)
 	router.MethodNotAllowedHandler = http.HandlerFunc(MethodNotAllowedHandler)
@@ -82,4 +86,13 @@ func registerUserRoutes(router *mux.Router, handler *handlers.UserHandler) {
 	router.HandleFunc("/users/", handler.CreateUser).Methods(http.MethodPost)
 	router.HandleFunc("/users/{id}/", handler.UpdateUser).Methods(http.MethodPatch)
 	router.HandleFunc("/users/{id}/", handler.DeleteUser).Methods(http.MethodDelete)
+}
+
+func registerSubscriptionRoutes(router *mux.Router, handler *handlers.SubscriptionHandler) {
+	router.HandleFunc("/subscriptions", handler.GetAllSubscriptions).Methods(http.MethodGet)
+	router.HandleFunc("/subscriptions/{id}", handler.GetSubscriptionByID).Methods(http.MethodGet)
+	router.HandleFunc("/subscriptions/plan", handler.GetSubscriptionsByPlan).Methods(http.MethodGet)
+	router.HandleFunc("/subscriptions", handler.CreateSubscription).Methods(http.MethodPost)
+	router.HandleFunc("/subscriptions/{id}", handler.UpdateSubscription).Methods(http.MethodPatch)
+	router.HandleFunc("/subscriptions/{id}", handler.DeleteSubscription).Methods(http.MethodDelete)
 }

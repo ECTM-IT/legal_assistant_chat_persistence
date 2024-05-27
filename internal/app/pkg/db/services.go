@@ -9,10 +9,11 @@ import (
 )
 
 type Services struct {
-	AgentService *services.AgentServiceImpl
-	CaseService  *services.CaseServiceImpl
-	TeamService  *services.TeamServiceImpl
-	UserService  *services.UserServiceImpl
+	AgentService        *services.AgentServiceImpl
+	CaseService         *services.CaseServiceImpl
+	TeamService         *services.TeamServiceImpl
+	UserService         *services.UserServiceImpl
+	SubscriptionService *services.SubscriptionServiceImpl
 }
 
 func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
@@ -21,23 +22,27 @@ func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 	caseDAO := daos.NewCaseDAO(db, logger)
 	teamDAO := daos.NewTeamDAO(db, logger)
 	userDAO := daos.NewUserDAO(db, logger)
+	subscriptionDAO := daos.NewSubscriptionsDAO(db, logger)
 
 	// Initialize repositories
 	agentRepo := repositories.NewAgentRepository(agentDAO, userDAO)
 	caseRepo := repositories.NewCaseRepository(caseDAO)
 	teamRepo := repositories.NewTeamRepository(teamDAO, userDAO)
 	userRepo := repositories.NewUserRepository(userDAO)
+	subscriptionRepo := repositories.NewSubscriptionRepository(subscriptionDAO)
 
 	// Initialize services
 	agentService := services.NewAgentService(agentRepo)
 	caseService := services.NewCaseService(caseRepo)
 	teamService := services.NewTeamService(teamRepo)
 	userService := services.NewUserService(userRepo)
+	subscriptionService := services.NewSubscriptionService(subscriptionRepo)
 
 	return &Services{
-		AgentService: agentService,
-		CaseService:  caseService,
-		TeamService:  teamService,
-		UserService:  userService,
+		AgentService:        agentService,
+		CaseService:         caseService,
+		TeamService:         teamService,
+		UserService:         userService,
+		SubscriptionService: subscriptionService,
 	}
 }
