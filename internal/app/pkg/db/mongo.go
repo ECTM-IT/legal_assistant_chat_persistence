@@ -13,8 +13,7 @@ import (
 
 // Connect establishes a connection to the MongoDB database.
 func Connect(uri string, timeout time.Duration, logger logs.Logger) (*mongo.Client, error) {
-	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
-	opts := options.Client().ApplyURI(uri).SetServerAPIOptions(serverAPI)
+	opts := options.Client().ApplyURI(uri)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
