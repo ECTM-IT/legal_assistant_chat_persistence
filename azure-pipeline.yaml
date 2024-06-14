@@ -65,7 +65,7 @@ stages:
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
               inlineScript: |
-                az aks get-credentials --resource-group legal_as --name legal_assist_production
+                az aks get-credentials --resource-group legal_assist --name legal_assist_production
                 sed -i "s|{{IMAGENAME}}|$(IMAGENAME)|g" "$(Build.SourcesDirectory)/.k8s/go-deployment.yaml"
                 sed -i "s|{{TID}}|$(TID)|g" .k8s/secret-provider.yaml
                 kubectl apply -f .k8s/secret-provider.yaml --namespace production
