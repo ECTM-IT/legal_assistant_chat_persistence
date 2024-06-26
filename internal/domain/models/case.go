@@ -26,8 +26,8 @@ type Collaborators struct {
 }
 
 type Message struct {
-	Content     string             `json:"content" bson:"content"`
-	SenderID    primitive.ObjectID `json:"sender_id" bson:"sender_id"`
-	RecipientID primitive.ObjectID `json:"recipient_id" bson:"recipient_id"`
-	Skill       string             `json:"skill" bson:"skill"`
+	Content     string `json:"content" bson:"content"`
+	SenderID    string `json:"sender_id" bson:"sender_id"`
+	RecipientID string `json:"recipient_id" bson:"recipient_id"`
+	Skill       string `json:"skill" bson:"skill"`
 }

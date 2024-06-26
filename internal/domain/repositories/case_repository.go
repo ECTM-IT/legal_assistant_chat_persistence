@@ -2,10 +2,8 @@ package repositories
 
 import (
 	"context"
-	"time"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/daos"
-	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -33,50 +31,8 @@ func (r *CaseRepository) GetCasesByCreatorID(ctx context.Context, creatorID prim
 	return r.caseDAO.FindByCreatorID(ctx, creatorID)
 }
 
-func (r *CaseRepository) CreateCase(ctx context.Context, caseRequest dtos.CreateCaseRequest) (*mongo.InsertOneResult, error) {
-	messages := make([]models.Message, 0)
-	if caseRequest.Messages.Present {
-		for _, msg := range caseRequest.Messages.Val {
-			messageModel := models.Message{
-				Content:     msg.Content.OrElse(""),
-				SenderID:    msg.SenderID.OrElse(primitive.NilObjectID),
-				RecipientID: msg.RecipientID.OrElse(primitive.NilObjectID),
-				Skill:       msg.Skill.OrElse(""),
-			}
-			messages = append(messages, messageModel)
-		}
-	}
-
-	collaborators := make([]models.Collaborators, 0)
-	collaborators = append(collaborators, models.Collaborators{
-		ID:   caseRequest.CreatorID.Val,
-		Edit: true,
-	})
-	if caseRequest.Collaborators.Present {
-		for _, collab := range caseRequest.Collaborators.Val {
-			collaboratorsModel := models.Collaborators{
-				ID:   collab.ID,
-				Edit: collab.Edit,
-			}
-			collaborators = append(collaborators, collaboratorsModel)
-		}
-	}
-
-	caseModel := &models.Case{
-		ID:            primitive.NewObjectID(),
-		Name:          caseRequest.Name.OrElse("New Case"),
-		Description:   caseRequest.Description.OrElse(""),
-		CreatorID:     caseRequest.CreatorID.Val,
-		Messages:      messages,
-		Collaborators: caseRequest.Collaborators.OrElse(collaborators),
-		Action:        caseRequest.Action.OrElse("Riassumere"),
-		AgentID:       caseRequest.AgentID.OrElse(primitive.NilObjectID),
-		LastEdit:      caseRequest.LastEdit.OrElse(time.Now()),
-		Share:         caseRequest.Share.OrElse(false),
-		IsArchived:    caseRequest.IsArchived.OrElse(false),
-	}
-
-	return r.caseDAO.Create(ctx, caseModel)
+func (r *CaseRepository) CreateCase(ctx context.Context, caseModel models.Case) (*mongo.InsertOneResult, error) {
+	return r.caseDAO.Create(ctx, &caseModel)
 }
 
 func (r *CaseRepository) UpdateCase(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) (*mongo.UpdateResult, error) {

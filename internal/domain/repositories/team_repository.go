@@ -28,8 +28,8 @@ func NewTeamRepository(teamDAO *daos.TeamDAO, userDAO *daos.UserDAO) *TeamReposi
 func (r *TeamRepository) CreateTeam(ctx context.Context, request dtos.CreateTeamRequest) (*dtos.TeamResponse, error) {
 	membersRequest := request.Members
 	members := []models.TeamMember{}
-	if membersRequest.Valid {
-		for _, singleMember := range membersRequest.Val {
+	if membersRequest.Present {
+		for _, singleMember := range membersRequest.Value {
 			member := models.TeamMember{
 				ID:         singleMember.ID.OrElse(primitive.NilObjectID),
 				UserID:     singleMember.UserID.OrElse(primitive.NilObjectID),
@@ -73,11 +73,11 @@ func (r *TeamRepository) GetAllTeams(ctx context.Context) ([]*dtos.TeamResponse,
 
 func (r *TeamRepository) UpdateTeam(ctx context.Context, id primitive.ObjectID, request dtos.UpdateTeamRequest) (*dtos.TeamResponse, error) {
 	update := bson.M{}
-	if request.AdminID.Valid {
-		update["admin_id"] = request.AdminID.Val
+	if request.AdminID.Present {
+		update["admin_id"] = request.AdminID.Value
 	}
-	if request.Members.Valid {
-		update["members"] = request.Members.Val
+	if request.Members.Present {
+		update["members"] = request.Members.Value
 	}
 	_, err := r.teamDAO.UpdateTeam(ctx, id, update)
 	if err != nil {

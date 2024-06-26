@@ -37,10 +37,10 @@ func (s *SubscriptionServiceImpl) CreateSubscription(ctx context.Context, req *d
 	// Transform DTO to entity
 	subscription := &models.Subscriptions{
 		ID:                  primitive.NewObjectID(),
-		Plan:                req.Plan.Val,
-		Expiry:              req.Expiry.Val,
-		Type:                req.Type.Val,
-		BillingInformations: req.BillingInformations.Val,
+		Plan:                req.Plan.Value,
+		Expiry:              req.Expiry.Value,
+		Type:                req.Type.Value,
+		BillingInformations: req.BillingInformations.Value,
 	}
 	// Call repository to save the entity
 	_, err := s.repo.Create(ctx, subscription)
@@ -54,10 +54,10 @@ func (s *SubscriptionServiceImpl) CreateSubscription(ctx context.Context, req *d
 func (s *SubscriptionServiceImpl) UpdateSubscription(ctx context.Context, id primitive.ObjectID, req *dtos.UpdateSubscriptionRequest) (*dtos.SubscriptionResponse, error) {
 	// Transform DTO to entity updates
 	update := bson.M{
-		"plan":                 req.Plan.Val,
-		"expiry":               req.Expiry.Val,
-		"type":                 req.Type.Val,
-		"billing_informations": req.BillingInformations.Val,
+		"plan":                 req.Plan.Value,
+		"expiry":               req.Expiry.Value,
+		"type":                 req.Type.Value,
+		"billing_informations": req.BillingInformations.Value,
 	}
 	// Call repository to update the entity
 	_, err := s.repo.Update(ctx, id, update)

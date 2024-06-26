@@ -101,32 +101,32 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	updateFields := make(map[string]interface{})
 
 	// Check each field in the UpdateUserRequest and add non-null values to the updateFields map
-	if userRequest.Image.Valid {
-		updateFields["image"] = userRequest.Image.Val
+	if userRequest.Image.Present {
+		updateFields["image"] = userRequest.Image.Value
 	}
-	if userRequest.Email.Valid {
-		updateFields["email"] = userRequest.Email.Val
+	if userRequest.Email.Present {
+		updateFields["email"] = userRequest.Email.Value
 	}
-	if userRequest.FirstName.Valid {
-		updateFields["first_name"] = userRequest.FirstName.Val
+	if userRequest.FirstName.Present {
+		updateFields["first_name"] = userRequest.FirstName.Value
 	}
-	if userRequest.LastName.Valid {
-		updateFields["last_name"] = userRequest.LastName.Val
+	if userRequest.LastName.Present {
+		updateFields["last_name"] = userRequest.LastName.Value
 	}
-	if userRequest.Phone.Valid {
-		updateFields["phone"] = userRequest.Phone.Val
+	if userRequest.Phone.Present {
+		updateFields["phone"] = userRequest.Phone.Value
 	}
-	if userRequest.CaseIDs.Valid {
-		updateFields["case_ids"] = userRequest.CaseIDs.Val
+	if userRequest.CaseIDs.Present {
+		updateFields["case_ids"] = userRequest.CaseIDs.Value
 	}
-	if userRequest.TeamID.Valid {
-		updateFields["team_id"] = userRequest.TeamID.Val
+	if userRequest.TeamID.Present {
+		updateFields["team_id"] = userRequest.TeamID.Value
 	}
-	if userRequest.AgentIDs.Valid {
-		updateFields["agent_ids"] = userRequest.AgentIDs.Val
+	if userRequest.AgentIDs.Present {
+		updateFields["agent_ids"] = userRequest.AgentIDs.Value
 	}
-	if userRequest.SubscriptionID.Valid {
-		updateFields["subscription_id"] = userRequest.SubscriptionID.Val
+	if userRequest.SubscriptionID.Present {
+		updateFields["subscription_id"] = userRequest.SubscriptionID.Value
 	}
 
 	// Call the UpdateUser service method with the update fields

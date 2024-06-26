@@ -81,9 +81,9 @@ func (r *UserRepositoryImpl) CreateUser(ctx context.Context, user *dtos.CreateUs
 		LastName:       user.LastName.OrElse(""),
 		Phone:          user.Phone.OrElse(""),
 		CaseIDs:        user.CaseIDs.OrElse([]primitive.ObjectID{}),
-		TeamID:         user.TeamID.Val,
+		TeamID:         user.TeamID.Value,
 		AgentIDs:       user.AgentIDs.OrElse([]primitive.ObjectID{}),
-		SubscriptionID: user.SubscriptionID.Val,
+		SubscriptionID: user.SubscriptionID.Value,
 	}
 	return r.userDAO.CreateUser(ctx, userModel)
 }

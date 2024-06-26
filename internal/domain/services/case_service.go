@@ -50,7 +50,7 @@ func (s *CaseServiceImpl) GetCasesByCreatorID(ctx context.Context, creatorID pri
 }
 
 // CreateCase creates a new case.
-func (s *CaseServiceImpl) CreateCase(ctx context.Context, caseRequest dtos.CreateCaseRequest) (models.Case, error) {
+func (s *CaseServiceImpl) CreateCase(ctx context.Context, caseRequest models.Case) (models.Case, error) {
 	insertResult, err := s.caseRepo.CreateCase(ctx, caseRequest)
 	if err != nil {
 		return models.Case{}, err

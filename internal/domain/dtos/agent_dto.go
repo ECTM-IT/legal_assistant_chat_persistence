@@ -6,34 +6,38 @@ import (
 )
 
 type CreateAgentRequest struct {
-	ProfileImage helpers.Nullable[string]   `json:"profile_image"`
-	Name         helpers.Nullable[string]   `json:"name"`
-	Description  helpers.Nullable[string]   `json:"description"`
-	Skills       helpers.Nullable[[]string] `json:"skills"`
-	Price        helpers.Nullable[float64]  `json:"price"`
-	Code         helpers.Nullable[string]   `json:"code"`
+	ProfileImage helpers.Nullable[string]   `json:"profile_image" bson:"profile_image"`
+	Name         helpers.Nullable[string]   `json:"name" bson:"name"`
+	Description  helpers.Nullable[string]   `json:"description" bson:"description"`
+	Skills       helpers.Nullable[[]string] `json:"skills" bson:"skills"`
+	Price        helpers.Nullable[float64]  `json:"price" bson:"price"`
+	Code         helpers.Nullable[string]   `json:"code" bson:"code"`
 }
 
 type AgentResponse struct {
-	ID           helpers.Nullable[primitive.ObjectID] `json:"id"`
-	ProfileImage helpers.Nullable[string]             `json:"profile_image"`
-	Name         helpers.Nullable[string]             `json:"name"`
-	Description  helpers.Nullable[string]             `json:"description"`
-	Skills       helpers.Nullable[[]SkillResponse]    `json:"skills"`
-	Price        helpers.Nullable[float64]            `json:"price"`
-	Code         helpers.Nullable[string]             `json:"code"`
+	ID           helpers.Nullable[primitive.ObjectID] `json:"id" bson:"_id,omitempty"`
+	ProfileImage helpers.Nullable[string]             `json:"profile_image" bson:"profile_image"`
+	Name         helpers.Nullable[string]             `json:"name" bson:"name"`
+	Description  helpers.Nullable[string]             `json:"description" bson:"description"`
+	Skills       helpers.Nullable[[]SkillResponse]    `json:"skills" bson:"skills"`
+	Price        helpers.Nullable[float64]            `json:"price" bson:"price"`
+	Code         helpers.Nullable[string]             `json:"code" bson:"code"`
 }
 
 type SkillResponse struct {
-	Name         helpers.Nullable[string]   `json:"name"`
-	Descriptions helpers.Nullable[[]string] `json:"descriptions"`
+	Name         helpers.Nullable[string]   `json:"name" bson:"name"`
+	Descriptions helpers.Nullable[[]string] `json:"descriptions" bson:"descriptions"`
 }
 
 type UpdateAgentRequest struct {
-	ProfileImage helpers.Nullable[string]   `json:"profile_image"`
-	Name         helpers.Nullable[string]   `json:"name"`
-	Description  helpers.Nullable[string]   `json:"description"`
-	Skills       helpers.Nullable[[]string] `json:"skills"`
-	Price        helpers.Nullable[float64]  `json:"price"`
-	Code         helpers.Nullable[string]   `json:"code"`
+	ProfileImage helpers.Nullable[string]   `json:"profile_image" bson:"profile_image,omitempty"`
+	Name         helpers.Nullable[string]   `json:"name" bson:"name,omitempty"`
+	Description  helpers.Nullable[string]   `json:"description" bson:"description,omitempty"`
+	Skills       helpers.Nullable[[]string] `json:"skills" bson:"skills,omitempty"`
+	Price        helpers.Nullable[float64]  `json:"price" bson:"price,omitempty"`
+	Code         helpers.Nullable[string]   `json:"code" bson:"code,omitempty"`
+}
+
+type DeleteAgentRequest struct {
+	ID helpers.Nullable[primitive.ObjectID] `json:"id" bson:"_id"`
 }

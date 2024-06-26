@@ -89,10 +89,10 @@ func registerUserRoutes(router *mux.Router, handler *handlers.UserHandler) {
 }
 
 func registerSubscriptionRoutes(router *mux.Router, handler *handlers.SubscriptionHandler) {
-	router.HandleFunc("/subscriptions", handler.GetAllSubscriptions).Methods(http.MethodGet)
-	router.HandleFunc("/subscriptions/{id}", handler.GetSubscriptionByID).Methods(http.MethodGet)
-	router.HandleFunc("/subscriptions/plan", handler.GetSubscriptionsByPlan).Methods(http.MethodGet)
-	router.HandleFunc("/subscriptions", handler.CreateSubscription).Methods(http.MethodPost)
-	router.HandleFunc("/subscriptions/{id}", handler.UpdateSubscription).Methods(http.MethodPatch)
-	router.HandleFunc("/subscriptions/{id}", handler.DeleteSubscription).Methods(http.MethodDelete)
+	router.HandleFunc("/subscriptions/", handler.GetAllSubscriptions).Methods(http.MethodGet)
+	router.HandleFunc("/subscriptions/{id}/", handler.GetSubscriptionByID).Methods(http.MethodGet)
+	router.HandleFunc("/subscriptions/plan/", handler.GetSubscriptionsByPlan).Methods(http.MethodGet)
+	router.HandleFunc("/subscriptions/", handler.CreateSubscription).Methods(http.MethodPost)
+	router.HandleFunc("/subscriptions/{id}/", handler.UpdateSubscription).Methods(http.MethodPatch)
+	router.HandleFunc("/subscriptions/{id}/", handler.DeleteSubscription).Methods(http.MethodDelete)
 }
