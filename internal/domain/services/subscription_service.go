@@ -7,6 +7,7 @@ import (
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/repositories"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -34,7 +35,6 @@ func NewSubscriptionService(repo *repositories.SubscriptionRepositoryImpl) *Subs
 
 // CreateSubscription handles the business logic for creating a subscription.
 func (s *SubscriptionServiceImpl) CreateSubscription(ctx context.Context, req *dtos.CreateSubscriptionRequest) (*dtos.SubscriptionResponse, error) {
-	// Transform DTO to entity
 	subscription := &models.Subscriptions{
 		ID:                  primitive.NewObjectID(),
 		Plan:                req.Plan.Value,
@@ -42,33 +42,34 @@ func (s *SubscriptionServiceImpl) CreateSubscription(ctx context.Context, req *d
 		Type:                req.Type.Value,
 		BillingInformations: req.BillingInformations.Value,
 	}
-	// Call repository to save the entity
+
 	_, err := s.repo.Create(ctx, subscription)
 	if err != nil {
-		return nil, err
+		return nil, errors.NewDatabaseError("Failed to create subscription", "create_subscription_failed")
 	}
+
 	return s.toSubscriptionResponse(subscription), nil
 }
 
 // UpdateSubscription handles the business logic for updating a subscription.
 func (s *SubscriptionServiceImpl) UpdateSubscription(ctx context.Context, id primitive.ObjectID, req *dtos.UpdateSubscriptionRequest) (*dtos.SubscriptionResponse, error) {
-	// Transform DTO to entity updates
 	update := bson.M{
 		"plan":                 req.Plan.Value,
 		"expiry":               req.Expiry.Value,
 		"type":                 req.Type.Value,
 		"billing_informations": req.BillingInformations.Value,
 	}
-	// Call repository to update the entity
+
 	_, err := s.repo.Update(ctx, id, update)
 	if err != nil {
-		return nil, err
+		return nil, errors.NewDatabaseError("Failed to update subscription", "update_subscription_failed")
 	}
-	// Fetch updated subscription to return
+
 	updatedSubscription, err := s.repo.FindByID(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, errors.NewDatabaseError("Failed to get updated subscription", "get_updated_subscription_failed")
 	}
+
 	return s.toSubscriptionResponse(updatedSubscription), nil
 }
 
@@ -76,8 +77,9 @@ func (s *SubscriptionServiceImpl) UpdateSubscription(ctx context.Context, id pri
 func (s *SubscriptionServiceImpl) GetAllSubscriptions(ctx context.Context) ([]dtos.SubscriptionResponse, error) {
 	subscriptions, err := s.repo.FindAll(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.NewDatabaseError("Failed to get all subscriptions", "get_all_subscriptions_failed")
 	}
+
 	return s.toSubscriptionResponseList(subscriptions), nil
 }
 
@@ -85,8 +87,12 @@ func (s *SubscriptionServiceImpl) GetAllSubscriptions(ctx context.Context) ([]dt
 func (s *SubscriptionServiceImpl) GetSubscriptionByID(ctx context.Context, id primitive.ObjectID) (*dtos.SubscriptionResponse, error) {
 	subscription, err := s.repo.FindByID(ctx, id)
 	if err != nil {
-		return nil, err
+		if err == mongo.ErrNoDocuments {
+			return nil, errors.NewNotFoundError("Subscription not found", "subscription_not_found")
+		}
+		return nil, errors.NewDatabaseError("Failed to get subscription", "get_subscription_failed")
 	}
+
 	return s.toSubscriptionResponse(subscription), nil
 }
 
@@ -94,14 +100,20 @@ func (s *SubscriptionServiceImpl) GetSubscriptionByID(ctx context.Context, id pr
 func (s *SubscriptionServiceImpl) GetSubscriptionsByPlan(ctx context.Context, plan string) ([]dtos.SubscriptionResponse, error) {
 	subscriptions, err := s.repo.FindByPlan(ctx, plan)
 	if err != nil {
-		return nil, err
+		return nil, errors.NewDatabaseError("Failed to get subscriptions by plan", "get_subscriptions_by_plan_failed")
 	}
+
 	return s.toSubscriptionResponseList(subscriptions), nil
 }
 
 // DeleteSubscription deletes a subscription by its ID.
-func (s *SubscriptionServiceImpl) DeleteSubscription(ctx context.Context, id primitive.ObjectID) (*mongo.DeleteResult, error) {
-	return s.repo.Delete(ctx, id)
+func (s *SubscriptionServiceImpl) DeleteSubscription(ctx context.Context, id primitive.ObjectID) error {
+	_, err := s.repo.Delete(ctx, id)
+	if err != nil {
+		return errors.NewDatabaseError("Failed to delete subscription", "delete_subscription_failed")
+	}
+
+	return nil
 }
 
 // toSubscriptionResponse converts a Subscriptions model to a SubscriptionResponse DTO.
