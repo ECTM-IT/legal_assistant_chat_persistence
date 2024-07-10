@@ -8,10 +8,10 @@ import (
 )
 
 type MessageResponse struct {
-	Content   helpers.Nullable[string] `json:"content" bson:"content"`
-	Sender    helpers.Nullable[string] `json:"sender_id" bson:"sender_id"`
-	Recipient helpers.Nullable[string] `json:"recipient_id" bson:"recipient_id"`
-	Skill     helpers.Nullable[string] `json:"skill" bson:"skill"`
+	Content      helpers.Nullable[string] `json:"content" bson:"content"`
+	Sender       helpers.Nullable[string] `json:"sender_id" bson:"sender_id"`
+	Recipient    helpers.Nullable[string] `json:"recipient_id" bson:"recipient_id"`
+	FunctionCall helpers.Nullable[bool]   `json:"function_call" bson:"function_call"`
 }
 
 type CollaboratorResponse struct {

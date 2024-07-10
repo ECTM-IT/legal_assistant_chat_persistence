@@ -19,14 +19,9 @@ type AgentResponse struct {
 	ProfileImage helpers.Nullable[string]             `json:"profile_image" bson:"profile_image"`
 	Name         helpers.Nullable[string]             `json:"name" bson:"name"`
 	Description  helpers.Nullable[string]             `json:"description" bson:"description"`
-	Skills       helpers.Nullable[[]SkillResponse]    `json:"skills" bson:"skills"`
+	Skills       helpers.Nullable[[]string]           `json:"skills" bson:"skills"`
 	Price        helpers.Nullable[float64]            `json:"price" bson:"price"`
 	Code         helpers.Nullable[string]             `json:"code" bson:"code"`
-}
-
-type SkillResponse struct {
-	Name         helpers.Nullable[string]   `json:"name" bson:"name"`
-	Descriptions helpers.Nullable[[]string] `json:"descriptions" bson:"descriptions"`
 }
 
 type UpdateAgentRequest struct {

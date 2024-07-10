@@ -1,157 +1,112 @@
+// handlers/user_handler.go
+
 package handlers
 
 import (
-	"encoding/json"
+	"context"
 	"net/http"
-	"strings"
-
-	"github.com/gorilla/mux"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// UserHandler - Handles user-related HTTP requests
+type UserService interface {
+	GetUserByID(ctx context.Context, id primitive.ObjectID) (*dtos.UserResponse, error)
+	GetUserByEmail(ctx context.Context, email string) (*dtos.UserResponse, error)
+	CreateUser(ctx context.Context, req *dtos.CreateUserRequest) (*dtos.UserResponse, error)
+	UpdateUser(ctx context.Context, id primitive.ObjectID, updateFields map[string]interface{}) (*dtos.UserResponse, error)
+	DeleteUserByID(ctx context.Context, id primitive.ObjectID) error
+}
+
 type UserHandler struct {
-	userService *services.UserServiceImpl
+	BaseHandler
+	service *services.UserServiceImpl
 }
 
-// NewUserHandler - Creates a new UserHandler
-func NewUserHandler(userService *services.UserServiceImpl) *UserHandler {
-	return &UserHandler{
-		userService: userService,
-	}
+func NewUserHandler(service *services.UserServiceImpl) *UserHandler {
+	return &UserHandler{service: service}
 }
 
-// GetUserByID - Handles GET requests for a specific user
 func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	id, err := h.ParseObjectID(r, "id", false)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
-	user, err := h.userService.GetUserByID(ctx, id)
+
+	user, err := h.service.GetUserByID(r.Context(), id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.RespondWithError(w, http.StatusNotFound, "User not found")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
+	h.RespondWithJSON(w, http.StatusOK, user)
 }
 
-// GetUserByEmail - Handles POST requests to retrieve a user by email
 func (h *UserHandler) GetUserByEmail(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
 	var emailRequest struct {
 		Email string `json:"email"`
 	}
-	err := json.NewDecoder(r.Body).Decode(&emailRequest)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := h.DecodeJSONBody(r, &emailRequest); err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
-	user, err := h.userService.GetUserByEmail(ctx, emailRequest.Email)
+
+	user, err := h.service.GetUserByEmail(r.Context(), emailRequest.Email)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.RespondWithError(w, http.StatusNotFound, "User not found")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
+	h.RespondWithJSON(w, http.StatusOK, user)
 }
 
-// CreateUser - Handles POST requests to create a new user
 func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	var userRequest dtos.CreateUserRequest
-	err := json.NewDecoder(r.Body).Decode(&userRequest)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	var req dtos.CreateUserRequest
+	if err := h.DecodeJSONBody(r, &req); err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
-	createdUser, err := h.userService.CreateUser(ctx, &userRequest)
+
+	createdUser, err := h.service.CreateUser(r.Context(), &req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to create user")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(createdUser)
+	h.RespondWithJSON(w, http.StatusCreated, createdUser)
 }
 
-// UpdateUser - Handles PUT requests to update a user
 func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
-
+	id, err := h.ParseObjectID(r, "id", false)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
-	var userRequest dtos.UpdateUserRequest
-	err = json.NewDecoder(r.Body).Decode(&userRequest)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	var req dtos.UpdateUserRequest
+	if err := h.DecodeJSONBody(r, &req); err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	// Create a map to store the update fields
-	updateFields := make(map[string]interface{})
-
-	// Check each field in the UpdateUserRequest and add non-null values to the updateFields map
-	if userRequest.Image.Present {
-		updateFields["image"] = userRequest.Image.Value
-	}
-	if userRequest.Email.Present {
-		updateFields["email"] = userRequest.Email.Value
-	}
-	if userRequest.FirstName.Present {
-		updateFields["first_name"] = userRequest.FirstName.Value
-	}
-	if userRequest.LastName.Present {
-		updateFields["last_name"] = userRequest.LastName.Value
-	}
-	if userRequest.Phone.Present {
-		updateFields["phone"] = userRequest.Phone.Value
-	}
-	if userRequest.CaseIDs.Present {
-		updateFields["case_ids"] = userRequest.CaseIDs.Value
-	}
-	if userRequest.TeamID.Present {
-		updateFields["team_id"] = userRequest.TeamID.Value
-	}
-	if userRequest.AgentIDs.Present {
-		updateFields["agent_ids"] = userRequest.AgentIDs.Value
-	}
-	if userRequest.SubscriptionID.Present {
-		updateFields["subscription_id"] = userRequest.SubscriptionID.Value
-	}
-
-	// Call the UpdateUser service method with the update fields
-	updatedUser, err := h.userService.UpdateUser(ctx, id, updateFields)
+	updatedUser, err := h.service.UpdateUser(r.Context(), id, &req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to update user")
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(updatedUser)
+	h.RespondWithJSON(w, http.StatusOK, updatedUser)
 }
 
-// DeleteUser - Handles DELETE requests to delete a user
 func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	id, err := h.ParseObjectID(r, "id", false)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
-	err = h.userService.DeleteUserByID(ctx, id)
+
+	err = h.service.DeleteUserByID(r.Context(), id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to delete user")
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	h.RespondWithJSON(w, http.StatusNoContent, nil)
 }

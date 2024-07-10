@@ -1,275 +1,168 @@
 package handlers
 
 import (
-	"encoding/json"
+	"context"
 	"net/http"
-	"strings"
-	"time"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
-	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
-	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type CaseHandler struct {
-	caseService *services.CaseServiceImpl
+type CaseHanler interface {
+	GetAllCases(ctx context.Context) ([]dtos.CaseResponse, error)
+	GetCaseByID(ctx context.Context, id primitive.ObjectID) (*dtos.CaseResponse, error)
+	GetCasesByCreatorID(ctx context.Context, creatorID primitive.ObjectID) ([]dtos.CaseResponse, error)
+	CreateCase(ctx context.Context, req *dtos.CreateCaseRequest) (*dtos.CaseResponse, error)
+	UpdateCase(ctx context.Context, id primitive.ObjectID, req *dtos.UpdateCaseRequest) (*dtos.CaseResponse, error)
+	DeleteCase(ctx context.Context, id primitive.ObjectID) (*dtos.CaseResponse, error)
+	AddCollaboratorToCase(ctx context.Context, caseID, collaboratorID primitive.ObjectID) (*dtos.CaseResponse, error)
+	RemoveCollaboratorFromCase(ctx context.Context, caseID, collaboratorID primitive.ObjectID) (*dtos.CaseResponse, error)
 }
 
-func NewCaseHandler(caseService *services.CaseServiceImpl) *CaseHandler {
-	return &CaseHandler{
-		caseService: caseService,
-	}
+type CaseHandler struct {
+	BaseHandler
+	service *services.CaseServiceImpl
+}
+
+func NewCaseHandler(service *services.CaseServiceImpl) *CaseHandler {
+	return &CaseHandler{service: service}
 }
 
 func (h *CaseHandler) GetAllCases(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	cases, err := h.caseService.GetAllCases(ctx)
+	cases, err := h.service.GetAllCases(r.Context())
 	if err != nil {
-		h.respondWithError(w, http.StatusInternalServerError, "Failed to retrieve cases")
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to retrieve cases")
 		return
 	}
-	h.respondWithJSON(w, http.StatusOK, cases)
+	h.RespondWithJSON(w, http.StatusOK, cases)
 }
 
 func (h *CaseHandler) GetCaseByID(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	id, err := h.getObjectIDFromVars(r, "id")
+	id, err := h.ParseObjectID(r, "id", false)
 	if err != nil {
-		h.respondWithError(w, http.StatusBadRequest, "InValueid case ID")
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
 		return
 	}
-	caseResponse, err := h.caseService.GetCaseByID(ctx, id)
+
+	caseResponse, err := h.service.GetCaseByID(r.Context(), id)
 	if err != nil {
-		h.respondWithError(w, http.StatusNotFound, "Case not found")
+		h.RespondWithError(w, http.StatusNotFound, "Case not found")
 		return
 	}
-	h.respondWithJSON(w, http.StatusOK, caseResponse)
+	h.RespondWithJSON(w, http.StatusOK, caseResponse)
 }
 
 func (h *CaseHandler) GetCasesByCreatorID(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	creatorID, err := h.getObjectIDFromHeader(r, "Authorization")
+	creatorID, err := h.ParseObjectID(r, "creatorID", false)
 	if err != nil {
-		h.respondWithError(w, http.StatusBadRequest, "InValueid creator ID")
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid creator ID")
 		return
 	}
-	cases, err := h.caseService.GetCasesByCreatorID(ctx, creatorID)
+
+	cases, err := h.service.GetCasesByCreatorID(r.Context(), creatorID)
 	if err != nil {
-		h.respondWithError(w, http.StatusInternalServerError, "Failed to retrieve cases")
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to retrieve cases")
 		return
 	}
-	h.respondWithJSON(w, http.StatusOK, cases)
+	h.RespondWithJSON(w, http.StatusOK, cases)
 }
 
 func (h *CaseHandler) CreateCase(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	var caseRequest dtos.CreateCaseRequest
-	if err := json.NewDecoder(r.Body).Decode(&caseRequest); err != nil {
-		h.respondWithError(w, http.StatusBadRequest, "InValueid request payload")
-		return
-	}
-	creatorID, err := h.getObjectIDFromHeader(r, "Authorization")
-	if err != nil {
-		h.respondWithError(w, http.StatusBadRequest, "InValueid creator ID")
-		return
-	}
-	caseRequest.CreatorID.Value = creatorID
-
-	caseModel, err := h.prepareCaseModel(caseRequest)
-	if err != nil {
-		h.respondWithError(w, http.StatusBadRequest, err.Error())
+	var req dtos.CreateCaseRequest
+	if err := h.DecodeJSONBody(r, &req); err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	createdCase, err := h.caseService.CreateCase(ctx, *caseModel)
+	creatorID, err := h.BaseHandler.ParseObjectID(r, "Authorization", true)
 	if err != nil {
-		h.respondWithError(w, http.StatusInternalServerError, "Failed to create case")
+		h.RespondWithError(w, http.StatusBadRequest, "CreatorID not found on headers")
+	}
+	req.CreatorID.Value = creatorID
+	req.CreatorID.Present = true
+	createdCase, err := h.service.CreateCase(r.Context(), req)
+	if err != nil {
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to create case")
 		return
 	}
-	h.respondWithJSON(w, http.StatusCreated, createdCase)
+	h.RespondWithJSON(w, http.StatusCreated, createdCase)
 }
 
 func (h *CaseHandler) UpdateCase(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	id, err := h.getObjectIDFromVars(r, "id")
+	id, err := h.ParseObjectID(r, "id", false)
 	if err != nil {
-		h.respondWithError(w, http.StatusBadRequest, "InValueid case ID")
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
 		return
 	}
 
-	var updateRequest dtos.UpdateCaseRequest
-	if err := json.NewDecoder(r.Body).Decode(&updateRequest); err != nil {
-		h.respondWithError(w, http.StatusBadRequest, "InValueid request payload")
+	var req dtos.UpdateCaseRequest
+	if err := h.DecodeJSONBody(r, &req); err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	updateFields := h.prepareUpdateFields(updateRequest)
-	updatedCase, err := h.caseService.UpdateCase(ctx, id, updateFields)
+	updatedCase, err := h.service.UpdateCase(r.Context(), id, req)
 	if err != nil {
-		h.respondWithError(w, http.StatusInternalServerError, "Failed to update case")
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to update case")
 		return
 	}
-	h.respondWithJSON(w, http.StatusOK, updatedCase)
+	h.RespondWithJSON(w, http.StatusOK, updatedCase)
 }
 
 func (h *CaseHandler) DeleteCase(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	id, err := h.getObjectIDFromVars(r, "id")
+	id, err := h.ParseObjectID(r, "id", false)
 	if err != nil {
-		h.respondWithError(w, http.StatusBadRequest, "InValueid case ID")
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
 		return
 	}
-	deletedCase, err := h.caseService.DeleteCase(ctx, id)
+
+	deletedCase, err := h.service.DeleteCase(r.Context(), id)
 	if err != nil {
-		h.respondWithError(w, http.StatusInternalServerError, "Failed to delete case")
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to delete case")
 		return
 	}
-	h.respondWithJSON(w, http.StatusOK, deletedCase)
+	h.RespondWithJSON(w, http.StatusOK, deletedCase)
 }
 
 func (h *CaseHandler) AddCollaboratorToCase(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	caseID, collaboratorID, err := h.getCaseAndCollaboratorIDs(r)
+	caseID, err := h.ParseObjectID(r, "id", false)
 	if err != nil {
-		h.respondWithError(w, http.StatusBadRequest, "InValueid case or collaborator ID")
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
 		return
 	}
-	updatedCase, err := h.caseService.AddCollaboratorToCase(ctx, caseID, collaboratorID)
+
+	collaboratorID, err := h.ParseObjectID(r, "collaboratorID", false)
 	if err != nil {
-		h.respondWithError(w, http.StatusInternalServerError, "Failed to add collaborator")
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid collaborator ID")
 		return
 	}
-	h.respondWithJSON(w, http.StatusOK, updatedCase)
+
+	updatedCase, err := h.service.AddCollaboratorToCase(r.Context(), caseID, collaboratorID)
+	if err != nil {
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to add collaborator to case")
+		return
+	}
+	h.RespondWithJSON(w, http.StatusOK, updatedCase)
 }
 
 func (h *CaseHandler) RemoveCollaboratorFromCase(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	caseID, collaboratorID, err := h.getCaseAndCollaboratorIDs(r)
+	caseID, err := h.ParseObjectID(r, "id", false)
 	if err != nil {
-		h.respondWithError(w, http.StatusBadRequest, "InValueid case or collaborator ID")
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
 		return
 	}
-	updatedCase, err := h.caseService.RemoveCollaboratorFromCase(ctx, caseID, collaboratorID)
+
+	collaboratorID, err := h.ParseObjectID(r, "collaboratorID", false)
 	if err != nil {
-		h.respondWithError(w, http.StatusInternalServerError, "Failed to remove collaborator")
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid collaborator ID")
 		return
 	}
-	h.respondWithJSON(w, http.StatusOK, updatedCase)
-}
 
-// Helper methods
-
-func (h *CaseHandler) prepareCaseModel(caseRequest dtos.CreateCaseRequest) (*models.Case, error) {
-	messages := h.prepareMessages(caseRequest.Messages.Value)
-	collaborators := h.prepareCollaborators(caseRequest)
-
-	return &models.Case{
-		ID:            primitive.NewObjectID(),
-		Name:          caseRequest.Name.OrElse("New Case"),
-		Description:   caseRequest.Description.OrElse(""),
-		CreatorID:     caseRequest.CreatorID.Value,
-		Messages:      messages,
-		Collaborators: collaborators,
-		Action:        caseRequest.Action.OrElse("Riassumere"),
-		AgentID:       caseRequest.AgentID.OrElse(primitive.NilObjectID),
-		LastEdit:      caseRequest.LastEdit.OrElse(time.Now()),
-		Share:         caseRequest.Share.OrElse(false),
-		IsArchived:    caseRequest.IsArchived.OrElse(false),
-	}, nil
-}
-
-func (h *CaseHandler) prepareMessages(messagesDTO []dtos.MessageResponse) []models.Message {
-
-	messages := make([]models.Message, len(messagesDTO))
-	for i, msg := range messagesDTO {
-		messages[i] = models.Message{
-			Content:     msg.Content.OrElse(""),
-			SenderID:    msg.Sender.OrElse(""),
-			RecipientID: msg.Recipient.OrElse(""),
-			Skill:       msg.Skill.OrElse(""),
-		}
-	}
-	return messages
-}
-
-func (h *CaseHandler) prepareCollaborators(caseRequest dtos.CreateCaseRequest) []models.Collaborators {
-	collaborators := []models.Collaborators{{
-		ID:   caseRequest.CreatorID.Value,
-		Edit: true,
-	}}
-
-	if caseRequest.Collaborators.Present {
-		for _, collab := range caseRequest.Collaborators.Value {
-			collaborators = append(collaborators, models.Collaborators{
-				ID:   collab.ID.OrElse(primitive.NilObjectID),
-				Edit: collab.Edit.OrElse(false),
-			})
-		}
-	}
-
-	return collaborators
-}
-
-func (h *CaseHandler) prepareUpdateFields(updateRequest dtos.UpdateCaseRequest) map[string]interface{} {
-	updateFields := make(map[string]interface{})
-
-	if updateRequest.Messages.Present {
-		updateFields["messages"] = h.prepareMessages(updateRequest.Messages.Value)
-	}
-	if updateRequest.Name.Present {
-		updateFields["name"] = updateRequest.Name.Value
-	}
-	if updateRequest.Description.Present {
-		updateFields["description"] = updateRequest.Description.Value
-	}
-	if updateRequest.AgentID.Present {
-		updateFields["agent_id"] = updateRequest.AgentID.Value
-	}
-	if updateRequest.Collaborators.Present {
-		updateFields["collaborators"] = updateRequest.Collaborators.Value
-	}
-	if updateRequest.Action.Present {
-		updateFields["action"] = updateRequest.Action.Value
-	}
-	if updateRequest.Share.Present {
-		updateFields["share"] = updateRequest.Share.Value
-	}
-	if updateRequest.IsArchived.Present {
-		updateFields["is_archived"] = updateRequest.IsArchived.Value
-	}
-
-	return updateFields
-}
-
-func (h *CaseHandler) getObjectIDFromVars(r *http.Request, key string) (primitive.ObjectID, error) {
-	return primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)[key]))
-}
-
-func (h *CaseHandler) getObjectIDFromHeader(r *http.Request, key string) (primitive.ObjectID, error) {
-	return primitive.ObjectIDFromHex(strings.TrimSpace(r.Header.Get(key)))
-}
-
-func (h *CaseHandler) getCaseAndCollaboratorIDs(r *http.Request) (primitive.ObjectID, primitive.ObjectID, error) {
-	caseID, err := h.getObjectIDFromVars(r, "id")
+	updatedCase, err := h.service.RemoveCollaboratorFromCase(r.Context(), caseID, collaboratorID)
 	if err != nil {
-		return primitive.NilObjectID, primitive.NilObjectID, err
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to remove collaborator from case")
+		return
 	}
-	collaboratorID, err := h.getObjectIDFromVars(r, "collaboratorID")
-	if err != nil {
-		return primitive.NilObjectID, primitive.NilObjectID, err
-	}
-	return caseID, collaboratorID, nil
-}
-
-func (h *CaseHandler) respondWithError(w http.ResponseWriter, code int, message string) {
-	h.respondWithJSON(w, code, map[string]string{"error": message})
-}
-
-func (h *CaseHandler) respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-	response, _ := json.Marshal(payload)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	w.Write(response)
+	h.RespondWithJSON(w, http.StatusOK, updatedCase)
 }

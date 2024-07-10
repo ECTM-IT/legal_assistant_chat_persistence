@@ -1,176 +1,186 @@
+// handlers/team_handler.go
+
 package handlers
 
 import (
-	"encoding/json"
+	"context"
 	"net/http"
-	"strings"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
-	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type TeamHandler struct {
-	teamService *services.TeamServiceImpl
+type TeamService interface {
+	CreateTeam(ctx context.Context, req dtos.CreateTeamRequest) (*dtos.TeamResponse, error)
+	GetTeamByID(ctx context.Context, id primitive.ObjectID) (*dtos.TeamResponse, error)
+	GetAllTeams(ctx context.Context) ([]dtos.TeamResponse, error)
+	UpdateTeam(ctx context.Context, id primitive.ObjectID, req dtos.UpdateTeamRequest) (*dtos.TeamResponse, error)
+	DeleteTeam(ctx context.Context, id primitive.ObjectID) error
+	GetTeamMember(ctx context.Context, id primitive.ObjectID) (*dtos.TeamMemberResponse, error)
+	ChangeAdmin(ctx context.Context, id primitive.ObjectID, req dtos.ChangeAdminRequest) (*dtos.TeamMemberResponse, error)
+	AddMember(ctx context.Context, id primitive.ObjectID, req dtos.AddMemberRequest) (*dtos.TeamMemberResponse, error)
+	RemoveMember(ctx context.Context, id, memberID primitive.ObjectID) (*dtos.TeamMemberResponse, error)
 }
 
-func NewTeamHandler(teamService *services.TeamServiceImpl) *TeamHandler {
-	return &TeamHandler{
-		teamService: teamService,
-	}
+type TeamHandler struct {
+	BaseHandler
+	service *services.TeamServiceImpl
+}
+
+func NewTeamHandler(service *services.TeamServiceImpl) *TeamHandler {
+	return &TeamHandler{service: service}
 }
 
 func (h *TeamHandler) CreateTeam(w http.ResponseWriter, r *http.Request) {
-	var request dtos.CreateTeamRequest
-	err := json.NewDecoder(r.Body).Decode(&request)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	var req dtos.CreateTeamRequest
+	if err := h.DecodeJSONBody(r, &req); err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
-	team, err := h.teamService.CreateTeam(r.Context(), request)
+
+	team, err := h.service.CreateTeam(r.Context(), req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to create team")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(team)
+	h.RespondWithJSON(w, http.StatusCreated, team)
 }
 
 func (h *TeamHandler) GetTeamByID(w http.ResponseWriter, r *http.Request) {
-	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	id, err := h.ParseObjectID(r, "id", false)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid team ID")
 		return
 	}
-	team, err := h.teamService.GetTeamByID(r.Context(), id)
+
+	team, err := h.service.GetTeamByID(r.Context(), id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		h.RespondWithError(w, http.StatusNotFound, "Team not found")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(team)
+	h.RespondWithJSON(w, http.StatusOK, team)
 }
 
 func (h *TeamHandler) GetAllTeams(w http.ResponseWriter, r *http.Request) {
-	teams, err := h.teamService.GetAllTeams(r.Context())
+	teams, err := h.service.GetAllTeams(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to retrieve teams")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(teams)
+	h.RespondWithJSON(w, http.StatusOK, teams)
 }
 
 func (h *TeamHandler) UpdateTeam(w http.ResponseWriter, r *http.Request) {
-	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	id, err := h.ParseObjectID(r, "id", false)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid team ID")
 		return
 	}
-	var request dtos.UpdateTeamRequest
-	err = json.NewDecoder(r.Body).Decode(&request)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+
+	var req dtos.UpdateTeamRequest
+	if err := h.DecodeJSONBody(r, &req); err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
-	team, err := h.teamService.UpdateTeam(r.Context(), id, request)
+
+	team, err := h.service.UpdateTeam(r.Context(), id, req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to update team")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(team)
+	h.RespondWithJSON(w, http.StatusOK, team)
 }
 
 func (h *TeamHandler) DeleteTeam(w http.ResponseWriter, r *http.Request) {
-	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	id, err := h.ParseObjectID(r, "id", false)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid team ID")
 		return
 	}
-	err = h.teamService.DeleteTeam(r.Context(), id)
+
+	err = h.service.DeleteTeam(r.Context(), id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to delete team")
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	h.RespondWithJSON(w, http.StatusNoContent, nil)
 }
 
 func (h *TeamHandler) GetTeamMember(w http.ResponseWriter, r *http.Request) {
-	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	id, err := h.ParseObjectID(r, "id", false)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid team ID")
 		return
 	}
-	member, err := h.teamService.GetTeamMember(r.Context(), id)
+
+	member, err := h.service.GetTeamMember(r.Context(), id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		h.RespondWithError(w, http.StatusNotFound, "Team member not found")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(member)
+	h.RespondWithJSON(w, http.StatusOK, member)
 }
 
 func (h *TeamHandler) ChangeAdmin(w http.ResponseWriter, r *http.Request) {
-	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	id, err := h.ParseObjectID(r, "id", false)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid team ID")
 		return
 	}
-	var request dtos.ChangeAdminRequest
-	err = json.NewDecoder(r.Body).Decode(&request)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+
+	var req dtos.ChangeAdminRequest
+	if err := h.DecodeJSONBody(r, &req); err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
-	member, err := h.teamService.ChangeAdmin(r.Context(), id, request)
+
+	member, err := h.service.ChangeAdmin(r.Context(), id, req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to change admin")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(member)
+	h.RespondWithJSON(w, http.StatusOK, member)
 }
 
 func (h *TeamHandler) AddMember(w http.ResponseWriter, r *http.Request) {
-	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	id, err := h.ParseObjectID(r, "id", false)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid team ID")
 		return
 	}
-	var request dtos.AddMemberRequest
-	err = json.NewDecoder(r.Body).Decode(&request)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+
+	var req dtos.AddMemberRequest
+	if err := h.DecodeJSONBody(r, &req); err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
-	member, err := h.teamService.AddMember(r.Context(), id, request)
+
+	member, err := h.service.AddMember(r.Context(), id, req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to add member")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(member)
+	h.RespondWithJSON(w, http.StatusOK, member)
 }
 
 func (h *TeamHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
-	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	id, err := h.ParseObjectID(r, "id", false)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid team ID")
 		return
 	}
-	memberID, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["memberId"]))
+
+	memberID, err := h.ParseObjectID(r, "memberId", false)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid member ID")
 		return
 	}
-	removedMember, err := h.teamService.RemoveMember(r.Context(), id, memberID)
+
+	removedMember, err := h.service.RemoveMember(r.Context(), id, memberID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to remove member")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(removedMember)
+	h.RespondWithJSON(w, http.StatusOK, removedMember)
 }

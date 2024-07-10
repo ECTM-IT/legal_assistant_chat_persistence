@@ -1,123 +1,115 @@
+// handlers/subscription_handler.go
+
 package handlers
 
 import (
-	"encoding/json"
+	"context"
 	"net/http"
-	"strings"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
-	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// SubscriptionHandler handles HTTP requests for subscription management.
+type SubscriptionService interface {
+	GetAllSubscriptions(ctx context.Context) ([]dtos.SubscriptionResponse, error)
+	GetSubscriptionByID(ctx context.Context, id primitive.ObjectID) (*dtos.SubscriptionResponse, error)
+	GetSubscriptionsByPlan(ctx context.Context, plan string) ([]dtos.SubscriptionResponse, error)
+	CreateSubscription(ctx context.Context, req *dtos.CreateSubscriptionRequest) (*dtos.SubscriptionResponse, error)
+	UpdateSubscription(ctx context.Context, id primitive.ObjectID, req *dtos.UpdateSubscriptionRequest) (*dtos.SubscriptionResponse, error)
+	DeleteSubscription(ctx context.Context, id primitive.ObjectID) (bool, error)
+}
+
 type SubscriptionHandler struct {
-	subscriptionService *services.SubscriptionServiceImpl
+	BaseHandler
+	service *services.SubscriptionServiceImpl
 }
 
-// NewSubscriptionHandler creates a new instance of SubscriptionHandler.
-func NewSubscriptionHandler(subscriptionService *services.SubscriptionServiceImpl) *SubscriptionHandler {
-	return &SubscriptionHandler{
-		subscriptionService: subscriptionService,
-	}
+func NewSubscriptionHandler(service *services.SubscriptionServiceImpl) *SubscriptionHandler {
+	return &SubscriptionHandler{service: service}
 }
 
-// GetAllSubscriptions handles the retrieval of all subscriptions.
 func (h *SubscriptionHandler) GetAllSubscriptions(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	subscriptions, err := h.subscriptionService.GetAllSubscriptions(ctx)
+	subscriptions, err := h.service.GetAllSubscriptions(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to retrieve subscriptions")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(subscriptions)
+	h.RespondWithJSON(w, http.StatusOK, subscriptions)
 }
 
-// GetSubscriptionByID handles the retrieval of a subscription by its ID.
 func (h *SubscriptionHandler) GetSubscriptionByID(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	id, err := h.ParseObjectID(r, "id", false)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid subscription ID")
 		return
 	}
-	subscription, err := h.subscriptionService.GetSubscriptionByID(ctx, id)
+
+	subscription, err := h.service.GetSubscriptionByID(r.Context(), id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		h.RespondWithError(w, http.StatusNotFound, "Subscription not found")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(subscription)
+	h.RespondWithJSON(w, http.StatusOK, subscription)
 }
 
-// GetSubscriptionsByPlan handles the retrieval of subscriptions by their plan.
 func (h *SubscriptionHandler) GetSubscriptionsByPlan(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	plan := strings.TrimSpace(r.URL.Query().Get("plan"))
-	subscriptions, err := h.subscriptionService.GetSubscriptionsByPlan(ctx, plan)
+	plan := r.URL.Query().Get("plan")
+	subscriptions, err := h.service.GetSubscriptionsByPlan(r.Context(), plan)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to retrieve subscriptions")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(subscriptions)
+	h.RespondWithJSON(w, http.StatusOK, subscriptions)
 }
 
-// CreateSubscription handles the creation of a new subscription.
 func (h *SubscriptionHandler) CreateSubscription(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
 	var req dtos.CreateSubscriptionRequest
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := h.DecodeJSONBody(r, &req); err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
-	subscription, err := h.subscriptionService.CreateSubscription(ctx, &req)
+
+	subscription, err := h.service.CreateSubscription(r.Context(), &req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to create subscription")
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(subscription)
+	h.RespondWithJSON(w, http.StatusCreated, subscription)
 }
 
-// UpdateSubscription handles the update of an existing subscription.
 func (h *SubscriptionHandler) UpdateSubscription(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	id, err := h.ParseObjectID(r, "id", false)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid subscription ID")
 		return
 	}
+
 	var req dtos.UpdateSubscriptionRequest
-	err = json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := h.DecodeJSONBody(r, &req); err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
-	subscription, err := h.subscriptionService.UpdateSubscription(ctx, id, &req)
+
+	subscription, err := h.service.UpdateSubscription(r.Context(), id, &req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to update subscription")
 		return
 	}
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(subscription)
+	h.RespondWithJSON(w, http.StatusOK, subscription)
 }
 
-// DeleteSubscription handles the deletion of a subscription.
 func (h *SubscriptionHandler) DeleteSubscription(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	id, err := h.ParseObjectID(r, "id", false)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid subscription ID")
 		return
 	}
-	deletedResult := h.subscriptionService.DeleteSubscription(ctx, id)
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(deletedResult)
+
+	err = h.service.DeleteSubscription(r.Context(), id)
+	if err != nil {
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to delete subscription")
+		return
+	}
+	h.RespondWithJSON(w, http.StatusOK, "deleted")
 }

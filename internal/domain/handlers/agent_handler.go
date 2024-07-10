@@ -1,93 +1,86 @@
 package handlers
 
 import (
-	"encoding/json"
+	"context"
 	"net/http"
-	"strings"
 
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
-	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type AgentHandler struct {
-	agentService *services.AgentServiceImpl
+type AgentService interface {
+	GetAllAgents(ctx context.Context) ([]dtos.AgentResponse, error)
+	GetAgentByID(ctx context.Context, id primitive.ObjectID) (*dtos.AgentResponse, error)
+	GetAgentsByUserID(ctx context.Context, userID primitive.ObjectID) ([]dtos.AgentResponse, error)
+	PurchaseAgent(ctx context.Context, userID, agentID primitive.ObjectID) (*dtos.UserResponse, error)
 }
 
-func NewAgentHandler(agentService *services.AgentServiceImpl) *AgentHandler {
-	return &AgentHandler{
-		agentService: agentService,
-	}
+type AgentHandler struct {
+	BaseHandler
+	service *services.AgentServiceImpl
+}
+
+func NewAgentHandler(service *services.AgentServiceImpl) *AgentHandler {
+	return &AgentHandler{service: service}
 }
 
 func (h *AgentHandler) GetAllAgents(w http.ResponseWriter, r *http.Request) {
-	agents, err := h.agentService.GetAllAgents(r.Context())
+	agents, err := h.service.GetAllAgents(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to retrieve agents")
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(agents)
+	h.RespondWithJSON(w, http.StatusOK, agents)
 }
 
 func (h *AgentHandler) GetAgentByID(w http.ResponseWriter, r *http.Request) {
-	id, err := primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)["id"]))
+	id, err := h.ParseObjectID(r, "id", false)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid agent ID")
 		return
 	}
 
-	agent, err := h.agentService.GetAgentByID(r.Context(), id)
+	agent, err := h.service.GetAgentByID(r.Context(), id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		h.RespondWithError(w, http.StatusNotFound, "Agent not found")
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(agent)
+	h.RespondWithJSON(w, http.StatusOK, agent)
 }
 
 func (h *AgentHandler) GetAgentsByUser(w http.ResponseWriter, r *http.Request) {
-	userID, err := primitive.ObjectIDFromHex(strings.TrimSpace(r.Header.Get("Authorization")))
-
+	userID, err := h.ParseObjectID(r, "userID", true)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-
-	agents, err := h.agentService.GetAgentsByUserID(r.Context(), userID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(agents)
+	agents, err := h.service.GetAgentsByUserID(r.Context(), userID)
+	if err != nil {
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to retrieve agents")
+		return
+	}
+	h.RespondWithJSON(w, http.StatusOK, agents)
 }
 
 func (h *AgentHandler) PurchaseAgent(w http.ResponseWriter, r *http.Request) {
-	userID, err := primitive.ObjectIDFromHex(strings.TrimSpace(r.Header.Get("Authorization")))
+	userID, err := h.ParseObjectID(r, "userID", true)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-	agentID, err := primitive.ObjectIDFromHex(mux.Vars(r)["id"])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-
-	user, err := h.agentService.PurchaseAgent(r.Context(), userID, agentID)
-	if err != nil {
-		if err.Error() == "agent already added to the user" {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"message": "Agent added successfully",
-		"user":    user,
-	})
+	agentID, err := h.ParseObjectID(r, "id", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid agent ID")
+		return
+	}
+
+	user, err := h.service.PurchaseAgent(r.Context(), userID, agentID)
+	if err != nil {
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to purchase agent")
+		return
+	}
+	h.RespondWithJSON(w, http.StatusOK, user)
 }

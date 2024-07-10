@@ -5,6 +5,7 @@ import (
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/repositories"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services/mappers"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -18,32 +19,52 @@ type AgentService interface {
 
 // AgentServiceImpl implements the AgentService interface.
 type AgentServiceImpl struct {
-	agentRepo *repositories.AgentRepository
+	agentRepo  *repositories.AgentRepository
+	mapper     *mappers.AgentConversionServiceImpl
+	userMapper *mappers.UserConversionServiceImpl
 }
 
 // NewAgentService creates a new AgentService.
-func NewAgentService(agentRepo *repositories.AgentRepository) *AgentServiceImpl {
+func NewAgentService(agentRepo *repositories.AgentRepository, mapper *mappers.AgentConversionServiceImpl, userMapper *mappers.UserConversionServiceImpl) *AgentServiceImpl {
 	return &AgentServiceImpl{
-		agentRepo: agentRepo,
+		agentRepo:  agentRepo,
+		mapper:     mapper,
+		userMapper: userMapper,
 	}
 }
 
 // GetAllAgents retrieves all agents.
 func (s *AgentServiceImpl) GetAllAgents(ctx context.Context) ([]dtos.AgentResponse, error) {
-	return s.agentRepo.GetAllAgents(ctx)
+	agents, err := s.agentRepo.GetAllAgents(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.mapper.AgentsToDTO(agents), nil
 }
 
 // GetAgentByID retrieves an agent by its ID.
 func (s *AgentServiceImpl) GetAgentByID(ctx context.Context, id primitive.ObjectID) (*dtos.AgentResponse, error) {
-	return s.agentRepo.GetAgentByID(ctx, id)
+	agents, err := s.agentRepo.GetAgentByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return s.mapper.AgentToDTO(agents), nil
 }
 
 // GetAgentsByUserID retrieves agents by the user ID.
 func (s *AgentServiceImpl) GetAgentsByUserID(ctx context.Context, userID primitive.ObjectID) ([]dtos.AgentResponse, error) {
-	return s.agentRepo.GetAgentsByUserID(ctx, userID)
+	agents, err := s.agentRepo.GetAgentsByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return s.mapper.AgentsToDTO(agents), nil
 }
 
 // PurchaseAgent allows a user to purchase an agent.
 func (s *AgentServiceImpl) PurchaseAgent(ctx context.Context, userID, agentID primitive.ObjectID) (*dtos.UserResponse, error) {
-	return s.agentRepo.PurchaseAgent(ctx, userID, agentID)
+	user, err := s.agentRepo.PurchaseAgent(ctx, userID, agentID)
+	if err != nil {
+		return nil, err
+	}
+	return s.userMapper.UserToDTO(user), nil
 }
