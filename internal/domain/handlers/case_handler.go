@@ -54,7 +54,7 @@ func (h *CaseHandler) GetCaseByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *CaseHandler) GetCasesByCreatorID(w http.ResponseWriter, r *http.Request) {
-	creatorID, err := h.ParseObjectID(r, "creatorID", false)
+	creatorID, err := h.ParseObjectID(r, "", true)
 	if err != nil {
 		h.RespondWithError(w, http.StatusBadRequest, "Invalid creator ID")
 		return

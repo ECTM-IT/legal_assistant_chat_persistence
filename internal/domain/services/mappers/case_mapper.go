@@ -31,20 +31,17 @@ func NewCaseConversionService() *CaseConversionServiceImpl {
 
 func (s *CaseConversionServiceImpl) DTOToCase(caseRequest dtos.CreateCaseRequest) (*models.Case, error) {
 	if !caseRequest.CreatorID.Present {
-		panic("diocane")
-		// return nil, errors.New("creator ID is required")
+		return nil, errors.New("creator ID is required")
 	}
 
 	messages, err := s.DTOToMessages(caseRequest.Messages.Value)
 	if err != nil {
-		panic("madonna puttana")
-		// return nil, err
+		return nil, err
 	}
 
 	collaborators, err := s.DTOToCollaborators(caseRequest.Collaborators.Value)
 	if err != nil {
-		panic("diosventrato")
-		// return nil, err
+		return nil, err
 	}
 
 	return &models.Case{
@@ -54,7 +51,7 @@ func (s *CaseConversionServiceImpl) DTOToCase(caseRequest dtos.CreateCaseRequest
 		CreatorID:     caseRequest.CreatorID.Value,
 		Messages:      messages,
 		Collaborators: collaborators,
-		Action:        caseRequest.Action.OrElse("Riassumere"),
+		Action:        caseRequest.Action.OrElse("summarize"),
 		AgentID:       caseRequest.AgentID.OrElse(primitive.NilObjectID),
 		LastEdit:      caseRequest.LastEdit.OrElse(time.Now()),
 		Share:         caseRequest.Share.OrElse(false),
