@@ -4,7 +4,10 @@ trigger:
       - stage
     exclude:
       - stage/*
-      
+
+ variables:
+  - group: ContainerRegisteryConnectionName 
+
 pool: Ubuntu2204-PrivatePool-04
 
 stages:
@@ -32,7 +35,7 @@ stages:
           - task: Docker@2
             displayName: 'Build Docker image'
             inputs:
-              containerRegistry: 'legalassistcr'
+              containerRegistry: $(containerRegistry)
               repository: 'legal_assist_chat_persistence_staging'
               command: 'build'
               Dockerfile: 'DockerFile'
@@ -42,7 +45,7 @@ stages:
             displayName: 'Push Docker image to registry'
             condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
             inputs:
-              containerRegistry: 'legalassistcr'
+              containerRegistry: $(containerRegistry)
               repository: 'legal_assist_chat_persistence_staging'
               command: 'push'
               tags: $(Build.BuildId)
