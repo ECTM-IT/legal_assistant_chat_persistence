@@ -47,13 +47,13 @@ func (s *CaseConversionServiceImpl) DTOToCase(caseRequest dtos.CreateCaseRequest
 	return &models.Case{
 		ID:            primitive.NewObjectID(),
 		Name:          caseRequest.Name.OrElse("New Case"),
-		Description:   caseRequest.Description.OrElse(""),
 		CreatorID:     caseRequest.CreatorID.Value,
 		Messages:      messages,
 		Collaborators: collaborators,
 		Action:        caseRequest.Action.OrElse("summarize"),
 		AgentID:       caseRequest.AgentID.OrElse(primitive.NilObjectID),
 		LastEdit:      caseRequest.LastEdit.OrElse(time.Now()),
+		CreationDate:  time.Now(),
 		Share:         caseRequest.Share.OrElse(false),
 		IsArchived:    caseRequest.IsArchived.OrElse(false),
 	}, nil
@@ -67,13 +67,13 @@ func (s *CaseConversionServiceImpl) CaseToDTO(caseModel *models.Case) *dtos.Case
 	return &dtos.CaseResponse{
 		ID:            helpers.NewNullable(caseModel.ID),
 		Name:          helpers.NewNullable(caseModel.Name),
-		Description:   helpers.NewNullable(caseModel.Description),
 		CreatorID:     helpers.NewNullable(caseModel.CreatorID),
 		Messages:      helpers.NewNullable(s.MessagesToDTO(caseModel.Messages)),
 		Collaborators: helpers.NewNullable(s.CollaboratorsToDTO(caseModel.Collaborators)),
 		Action:        helpers.NewNullable(caseModel.Action),
 		AgentID:       helpers.NewNullable(caseModel.AgentID),
 		LastEdit:      helpers.NewNullable(caseModel.LastEdit),
+		CreationDate:  helpers.NewNullable(caseModel.CreationDate),
 		Share:         helpers.NewNullable(caseModel.Share),
 		IsArchived:    helpers.NewNullable(caseModel.IsArchived),
 	}
@@ -92,9 +92,6 @@ func (s *CaseConversionServiceImpl) UpdateCaseFieldsToMap(updateRequest dtos.Upd
 
 	if updateRequest.Name.Present {
 		updateFields["name"] = updateRequest.Name.Value
-	}
-	if updateRequest.Description.Present {
-		updateFields["description"] = updateRequest.Description.Value
 	}
 	if updateRequest.Messages.Present {
 		messages, _ := s.DTOToMessages(updateRequest.Messages.Value)

@@ -9,7 +9,6 @@ import (
 type Case struct {
 	ID            primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	Name          string             `json:"name" bson:"name"`
-	Description   string             `json:"description" bson:"description"`
 	CreatorID     primitive.ObjectID `json:"creator_id" bson:"creator_id"`
 	Messages      []Message          `json:"messages" bson:"messages"`
 	Collaborators []Collaborators    `json:"collaborator_ids" bson:"collaborator_ids"`

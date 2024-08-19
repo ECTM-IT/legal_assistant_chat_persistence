@@ -21,7 +21,6 @@ type CollaboratorResponse struct {
 
 type CreateCaseRequest struct {
 	Name          helpers.Nullable[string]                 `json:"name" bson:"name"`
-	Description   helpers.Nullable[string]                 `json:"description" bson:"description"`
 	CreatorID     helpers.Nullable[primitive.ObjectID]     `json:"creator_id" bson:"creator_id"`
 	Messages      helpers.Nullable[[]MessageResponse]      `json:"messages" bson:"messages"`
 	Collaborators helpers.Nullable[[]CollaboratorResponse] `json:"collaborators" bson:"collaborators"`
@@ -35,7 +34,6 @@ type CreateCaseRequest struct {
 type CaseResponse struct {
 	ID            helpers.Nullable[primitive.ObjectID]     `json:"id" bson:"_id,omitempty"`
 	Name          helpers.Nullable[string]                 `json:"name" bson:"name"`
-	Description   helpers.Nullable[string]                 `json:"description" bson:"description"`
 	CreatorID     helpers.Nullable[primitive.ObjectID]     `json:"creator_id" bson:"creator_id"`
 	Messages      helpers.Nullable[[]MessageResponse]      `json:"messages" bson:"messages"`
 	Collaborators helpers.Nullable[[]CollaboratorResponse] `json:"collaborators" bson:"collaborators"`
@@ -49,7 +47,6 @@ type CaseResponse struct {
 
 type UpdateCaseRequest struct {
 	Name          helpers.Nullable[string]                 `json:"name" bson:"name,omitempty"`
-	Description   helpers.Nullable[string]                 `json:"description" bson:"description,omitempty"`
 	Messages      helpers.Nullable[[]MessageResponse]      `json:"messages" bson:"messages,omitempty"`
 	Collaborators helpers.Nullable[[]CollaboratorResponse] `json:"collaborators" bson:"collaborators,omitempty"`
 	Action        helpers.Nullable[string]                 `json:"action" bson:"action,omitempty"`
