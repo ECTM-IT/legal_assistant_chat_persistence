@@ -138,7 +138,7 @@ func (h *CaseHandler) AddCollaboratorToCase(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	updatedCase, err := h.service.AddCollaboratorToCase(r.Context(), caseID, req.Email.Value)
+	updatedCase, err := h.service.AddCollaboratorToCase(r.Context(), caseID, req.Email.Value, req.Edit.Value)
 	if err != nil {
 		h.RespondWithError(w, http.StatusInternalServerError, "Failed to add collaborator to case")
 		return

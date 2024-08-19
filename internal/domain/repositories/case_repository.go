@@ -43,8 +43,8 @@ func (r *CaseRepository) DeleteCase(ctx context.Context, id primitive.ObjectID) 
 	return r.caseDAO.Delete(ctx, id)
 }
 
-func (r *CaseRepository) AddCollaboratorToCase(ctx context.Context, id primitive.ObjectID, collaboratorID primitive.ObjectID) (*mongo.UpdateResult, error) {
-	return r.caseDAO.AddCollaborator(ctx, id, collaboratorID)
+func (r *CaseRepository) AddCollaboratorToCase(ctx context.Context, id primitive.ObjectID, collaborator map[string]interface{}) (*mongo.UpdateResult, error) {
+	return r.caseDAO.AddCollaborator(ctx, id, collaborator)
 }
 
 func (r *CaseRepository) RemoveCollaboratorFromCase(ctx context.Context, id primitive.ObjectID, collaboratorID primitive.ObjectID) (*mongo.UpdateResult, error) {

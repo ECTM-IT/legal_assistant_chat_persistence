@@ -18,7 +18,7 @@ type CaseDAOInterface interface {
 	Create(ctx context.Context, caseRequest *models.Case) (*mongo.InsertOneResult, error)
 	Update(ctx context.Context, id primitive.ObjectID, updates map[string]interface{}) (*mongo.UpdateResult, error)
 	Delete(ctx context.Context, id primitive.ObjectID) error
-	AddCollaborator(ctx context.Context, caseID, collaboratorID primitive.ObjectID) (*mongo.UpdateResult, error)
+	AddCollaborator(ctx context.Context, caseID, collaboratorID map[string]interface{}) (*mongo.UpdateResult, error)
 	RemoveCollaborator(ctx context.Context, caseID, collaboratorID primitive.ObjectID) (*mongo.UpdateResult, error)
 }
 
@@ -107,8 +107,8 @@ func (dao *CaseDAO) Delete(ctx context.Context, id primitive.ObjectID) error {
 }
 
 // AddCollaborator adds a collaborator to a case in the database
-func (dao *CaseDAO) AddCollaborator(ctx context.Context, caseID, collaboratorID primitive.ObjectID) (*mongo.UpdateResult, error) {
-	result, err := dao.collection.UpdateOne(ctx, bson.M{"_id": caseID}, bson.M{"$addToSet": bson.M{"collaborator_ids": collaboratorID}})
+func (dao *CaseDAO) AddCollaborator(ctx context.Context, caseID primitive.ObjectID, collaborator map[string]interface{}) (*mongo.UpdateResult, error) {
+	result, err := dao.collection.UpdateOne(ctx, bson.M{"_id": caseID}, bson.M{"$addToSet": bson.M{"collaborator_ids": collaborator}})
 	if err != nil {
 		return nil, err
 	}

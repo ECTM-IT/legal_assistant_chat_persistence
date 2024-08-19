@@ -113,12 +113,17 @@ func (s *CaseServiceImpl) DeleteCase(ctx context.Context, id primitive.ObjectID)
 }
 
 // AddCollaboratorToCase adds a collaborator to a case.
-func (s *CaseServiceImpl) AddCollaboratorToCase(ctx context.Context, id primitive.ObjectID, email string) (*dtos.CaseResponse, error) {
+func (s *CaseServiceImpl) AddCollaboratorToCase(ctx context.Context, id primitive.ObjectID, email string, canEdit bool) (*dtos.CaseResponse, error) {
 	collaborator, err := s.userRepo.FindUserByEmail(ctx, email)
 	if err != nil {
 		return nil, err
 	}
-	_, err = s.caseRepo.AddCollaboratorToCase(ctx, id, collaborator.ID)
+
+	updates := map[string]interface{}{
+		"collaborator_id": collaborator.ID,
+		"can_edit":        canEdit,
+	}
+	_, err = s.caseRepo.AddCollaboratorToCase(ctx, id, updates)
 	if err != nil {
 		return nil, err
 	}

@@ -136,7 +136,7 @@ func (s *CaseConversionServiceImpl) DTOToCollaborators(collaboratorsDTO []dtos.C
 		}
 		collaborators[i] = models.Collaborators{
 			ID:   dto.ID.Value,
-			Edit: dto.Edit.OrElse(false),
+			Edit: dto.Edit.Value,
 		}
 	}
 	return collaborators, nil
