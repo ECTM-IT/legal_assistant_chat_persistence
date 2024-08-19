@@ -132,13 +132,13 @@ func (h *CaseHandler) AddCollaboratorToCase(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	collaboratorID, err := h.ParseObjectID(r, "collaboratorID", true)
-	if err != nil {
-		h.RespondWithError(w, http.StatusBadRequest, "Invalid collaborator ID")
+	var req dtos.AddCollaboratorToCase
+	if err := h.DecodeJSONBody(r, &req); err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	updatedCase, err := h.service.AddCollaboratorToCase(r.Context(), caseID, collaboratorID)
+	updatedCase, err := h.service.AddCollaboratorToCase(r.Context(), caseID, req.Email.Value)
 	if err != nil {
 		h.RespondWithError(w, http.StatusInternalServerError, "Failed to add collaborator to case")
 		return

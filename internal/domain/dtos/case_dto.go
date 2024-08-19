@@ -59,6 +59,10 @@ type UpdateCaseRequest struct {
 	IsArchived    helpers.Nullable[bool]                   `json:"is_archived" bson:"is_archived,omitempty"`
 }
 
+type AddCollaboratorToCase struct {
+	Edit  helpers.Nullable[bool]   `json:"edit" bson:"edit,omitempty"`
+	Email helpers.Nullable[string] `json:"email" bson:"email,omitempty"`
+}
 type DeleteCaseRequest struct {
 	ID helpers.Nullable[primitive.ObjectID] `json:"id" bson:"_id"`
 }
