@@ -132,7 +132,7 @@ func (h *CaseHandler) AddCollaboratorToCase(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	collaboratorID, err := h.ParseObjectID(r, "collaboratorID", false)
+	collaboratorID, err := h.ParseObjectID(r, "collaboratorID", true)
 	if err != nil {
 		h.RespondWithError(w, http.StatusBadRequest, "Invalid collaborator ID")
 		return
