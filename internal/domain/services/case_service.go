@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"time"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/repositories"
@@ -67,6 +68,7 @@ func (s *CaseServiceImpl) GetCasesByCreatorID(ctx context.Context, creatorID pri
 // CreateCase creates a new case.
 func (s *CaseServiceImpl) CreateCase(ctx context.Context, caseRequest dtos.CreateCaseRequest) (*dtos.CaseResponse, error) {
 	caseModel, err := s.mapper.DTOToCase(caseRequest)
+	caseModel.CreationDate = time.Now()
 	if err != nil {
 		return nil, err
 	}

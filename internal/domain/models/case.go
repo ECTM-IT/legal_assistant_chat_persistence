@@ -15,6 +15,7 @@ type Case struct {
 	Collaborators []Collaborators    `json:"collaborator_ids" bson:"collaborator_ids"`
 	Action        string             `json:"action" bson:"action"`
 	AgentID       primitive.ObjectID `json:"agent_id" bson:"agent_id"`
+	CreationDate  time.Time          `json:"creation_date" bson:"creation_date"`
 	LastEdit      time.Time          `json:"last_edit" bson:"last_edit"`
 	Share         bool               `json:"share" bson:"share"`
 	IsArchived    bool               `json:"is_archived" bson:"is_archived"`

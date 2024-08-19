@@ -41,6 +41,7 @@ type CaseResponse struct {
 	Collaborators helpers.Nullable[[]CollaboratorResponse] `json:"collaborators" bson:"collaborators"`
 	Action        helpers.Nullable[string]                 `json:"action" bson:"action"`
 	AgentID       helpers.Nullable[primitive.ObjectID]     `json:"agent_id" bson:"agent_id"`
+	CreationDate  helpers.Nullable[time.Time]              `json:"creation_date" bson:"creation_date"`
 	LastEdit      helpers.Nullable[time.Time]              `json:"last_edit" bson:"last_edit"`
 	Share         helpers.Nullable[bool]                   `json:"share" bson:"share"`
 	IsArchived    helpers.Nullable[bool]                   `json:"is_archived" bson:"is_archived"`
