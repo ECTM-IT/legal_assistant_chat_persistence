@@ -25,19 +25,21 @@ type CaseService interface {
 
 // CaseServiceImpl implements the CaseService interface.
 type CaseServiceImpl struct {
-	caseRepo *repositories.CaseRepository
-	userRepo *repositories.UserRepositoryImpl
-	mapper   *mappers.CaseConversionServiceImpl
-	logger   logs.Logger
+	caseRepo   *repositories.CaseRepository
+	userRepo   *repositories.UserRepositoryImpl
+	mapper     *mappers.CaseConversionServiceImpl
+	userMapper *mappers.UserConversionServiceImpl
+	logger     logs.Logger
 }
 
 // NewCaseService creates a new instance of the case service.
-func NewCaseService(caseRepo *repositories.CaseRepository, mapper *mappers.CaseConversionServiceImpl, userRepo *repositories.UserRepositoryImpl, logger logs.Logger) *CaseServiceImpl {
+func NewCaseService(caseRepo *repositories.CaseRepository, mapper *mappers.CaseConversionServiceImpl, userMapper *mappers.UserConversionServiceImpl, userRepo *repositories.UserRepositoryImpl, logger logs.Logger) *CaseServiceImpl {
 	return &CaseServiceImpl{
-		caseRepo: caseRepo,
-		userRepo: userRepo,
-		mapper:   mapper,
-		logger:   logger,
+		caseRepo:   caseRepo,
+		userRepo:   userRepo,
+		mapper:     mapper,
+		userMapper: userMapper,
+		logger:     logger,
 	}
 }
 
@@ -151,7 +153,7 @@ func (s *CaseServiceImpl) DeleteCase(ctx context.Context, id primitive.ObjectID)
 }
 
 // AddCollaboratorToCase adds a collaborator to a case.
-func (s *CaseServiceImpl) AddCollaboratorToCase(ctx context.Context, id primitive.ObjectID, email string, canEdit bool) (*dtos.CaseResponse, error) {
+func (s *CaseServiceImpl) AddCollaboratorToCase(ctx context.Context, id primitive.ObjectID, email string, canEdit bool) (*dtos.UserResponse, error) {
 	s.logger.Info("Service Level: Attempting to add collaborator to case")
 	collaborator, err := s.userRepo.FindUserByEmail(ctx, email)
 	if err != nil {
@@ -168,13 +170,8 @@ func (s *CaseServiceImpl) AddCollaboratorToCase(ctx context.Context, id primitiv
 		s.logger.Error("Service Level: Failed to add collaborator to case", err)
 		return nil, err
 	}
-	updatedCase, err := s.GetCaseByID(ctx, id)
-	if err != nil {
-		s.logger.Error("Service Level: Failed to retrieve updated case", err)
-		return nil, err
-	}
 	s.logger.Info("Service Level: Successfully added collaborator to case")
-	return updatedCase, nil
+	return s.userMapper.UserToDTO(collaborator), nil
 }
 
 // RemoveCollaboratorFromCase removes a collaborator from a case.
