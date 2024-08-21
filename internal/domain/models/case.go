@@ -11,7 +11,7 @@ type Case struct {
 	Name          string             `json:"name" bson:"name"`
 	CreatorID     primitive.ObjectID `json:"creator_id" bson:"creator_id"`
 	Messages      []Message          `json:"messages" bson:"messages"`
-	Collaborators []Collaborators    `json:"collaborator_ids" bson:"collaborator_ids"`
+	Collaborators []Collaborators    `json:"collaborators" bson:"collaborators"`
 	Action        string             `json:"action" bson:"action"`
 	AgentID       primitive.ObjectID `json:"agent_id" bson:"agent_id"`
 	CreationDate  time.Time          `json:"creation_date" bson:"creation_date"`

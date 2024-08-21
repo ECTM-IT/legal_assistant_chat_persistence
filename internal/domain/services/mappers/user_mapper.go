@@ -6,6 +6,7 @@ import (
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/pkg/helpers"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/logs"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -18,18 +19,24 @@ type UserConversionService interface {
 	DTOToObjectIDs(idStrings []string) ([]primitive.ObjectID, error)
 }
 
-type UserConversionServiceImpl struct{}
+type UserConversionServiceImpl struct {
+	logger logs.Logger
+}
 
-func NewUserConversionService() *UserConversionServiceImpl {
-	return &UserConversionServiceImpl{}
+func NewUserConversionService(logger logs.Logger) *UserConversionServiceImpl {
+	return &UserConversionServiceImpl{
+		logger: logger,
+	}
 }
 
 func (s *UserConversionServiceImpl) UserToDTO(user *models.User) *dtos.UserResponse {
+	s.logger.Info("Converting User to DTO")
 	if user == nil {
+		s.logger.Warn("Attempted to convert nil User to DTO")
 		return nil
 	}
 
-	return &dtos.UserResponse{
+	dto := &dtos.UserResponse{
 		ID:             helpers.NewNullable(user.ID),
 		Image:          helpers.NewNullable(user.Image),
 		Email:          helpers.NewNullable(user.Email),
@@ -41,26 +48,33 @@ func (s *UserConversionServiceImpl) UserToDTO(user *models.User) *dtos.UserRespo
 		AgentIDs:       helpers.NewNullable(user.AgentIDs),
 		SubscriptionID: helpers.NewNullable(user.SubscriptionID),
 	}
+	s.logger.Info("Successfully converted User to DTO")
+	return dto
 }
 
 func (s *UserConversionServiceImpl) UsersToDTO(users []models.User) []dtos.UserResponse {
+	s.logger.Info("Converting multiple Users to DTOs")
 	userResponses := make([]dtos.UserResponse, len(users))
 	for i, user := range users {
 		userResponses[i] = *s.UserToDTO(&user)
 	}
+	s.logger.Info("Successfully converted multiple Users to DTOs")
 	return userResponses
 }
 
 func (s *UserConversionServiceImpl) DTOToUser(userDTO *dtos.CreateUserRequest) (*models.User, error) {
+	s.logger.Info("Converting DTO to User")
 	if userDTO == nil {
+		s.logger.Error("Failed to convert DTO to User: user DTO cannot be nil", errors.New("user DTO cannot be nil"))
 		return nil, errors.New("user DTO cannot be nil")
 	}
 
 	if !userDTO.Email.Present {
+		s.logger.Error("Failed to convert DTO to User: email is required", errors.New("email is required"))
 		return nil, errors.New("email is required")
 	}
 
-	return &models.User{
+	user := &models.User{
 		ID:             primitive.NewObjectID(),
 		Image:          userDTO.Image.OrElse(""),
 		Email:          userDTO.Email.Value,
@@ -71,10 +85,13 @@ func (s *UserConversionServiceImpl) DTOToUser(userDTO *dtos.CreateUserRequest) (
 		TeamID:         userDTO.TeamID.OrElse(primitive.NilObjectID),
 		AgentIDs:       userDTO.AgentIDs.OrElse([]primitive.ObjectID{}),
 		SubscriptionID: userDTO.SubscriptionID.OrElse(primitive.NilObjectID),
-	}, nil
+	}
+	s.logger.Info("Successfully converted DTO to User")
+	return user, nil
 }
 
 func (s *UserConversionServiceImpl) UpdateUserFieldsToMap(updateRequest dtos.UpdateUserRequest) map[string]interface{} {
+	s.logger.Info("Converting UpdateUserRequest to map")
 	updateFields := make(map[string]interface{})
 
 	if updateRequest.Image.Present {
@@ -105,5 +122,31 @@ func (s *UserConversionServiceImpl) UpdateUserFieldsToMap(updateRequest dtos.Upd
 		updateFields["subscription_id"] = updateRequest.SubscriptionID.Value
 	}
 
+	s.logger.Info("Successfully converted UpdateUserRequest to map")
 	return updateFields
+}
+
+func (s *UserConversionServiceImpl) ObjectIDsToDTO(ids []primitive.ObjectID) []string {
+	s.logger.Info("Converting ObjectIDs to DTO")
+	dtoIDs := make([]string, len(ids))
+	for i, id := range ids {
+		dtoIDs[i] = id.Hex()
+	}
+	s.logger.Info("Successfully converted ObjectIDs to DTO")
+	return dtoIDs
+}
+
+func (s *UserConversionServiceImpl) DTOToObjectIDs(idStrings []string) ([]primitive.ObjectID, error) {
+	s.logger.Info("Converting DTO to ObjectIDs")
+	ids := make([]primitive.ObjectID, len(idStrings))
+	for i, idString := range idStrings {
+		id, err := primitive.ObjectIDFromHex(idString)
+		if err != nil {
+			s.logger.Error("Failed to convert DTO to ObjectID", err)
+			return nil, err
+		}
+		ids[i] = id
+	}
+	s.logger.Info("Successfully converted DTO to ObjectIDs")
+	return ids, nil
 }

@@ -19,32 +19,32 @@ type Services struct {
 
 func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 	// Initialize DAOs
-	agentDAO := daos.NewAgentDAO(db)
-	caseDAO := daos.NewCaseDAO(db)
-	teamDAO := daos.NewTeamDAO(db)
-	userDAO := daos.NewUserDAO(db)
-	subscriptionDAO := daos.NewSubscriptionsDAO(db)
+	agentDAO := daos.NewAgentDAO(db, logger)
+	caseDAO := daos.NewCaseDAO(db, logger)
+	teamDAO := daos.NewTeamDAO(db, logger)
+	userDAO := daos.NewUserDAO(db, logger)
+	subscriptionDAO := daos.NewSubscriptionsDAO(db, logger)
 
 	// Initialize repositories
-	agentRepo := repositories.NewAgentRepository(agentDAO, userDAO)
+	agentRepo := repositories.NewAgentRepository(agentDAO, userDAO, logger)
 	caseRepo := repositories.NewCaseRepository(caseDAO)
-	teamRepo := repositories.NewTeamRepository(teamDAO, userDAO)
+	teamRepo := repositories.NewTeamRepository(teamDAO, userDAO, logger)
 	userRepo := repositories.NewUserRepository(userDAO)
 	subscriptionRepo := repositories.NewSubscriptionRepository(subscriptionDAO)
 
 	//Initialize mappers
-	agentMapper := mappers.NewAgentConversionService()
-	caseMapper := mappers.NewCaseConversionService()
-	teamMapper := mappers.NewTeamConversionService()
-	userMapper := mappers.NewUserConversionService()
-	subscriptionMapper := mappers.NewSubscriptionConversionService()
+	agentMapper := mappers.NewAgentConversionService(logger)
+	caseMapper := mappers.NewCaseConversionService(logger)
+	teamMapper := mappers.NewTeamConversionService(logger)
+	userMapper := mappers.NewUserConversionService(logger)
+	subscriptionMapper := mappers.NewSubscriptionConversionService(logger)
 
 	// Initialize services
-	agentService := services.NewAgentService(agentRepo, agentMapper, userMapper)
-	caseService := services.NewCaseService(caseRepo, caseMapper, userRepo)
-	teamService := services.NewTeamService(teamRepo, teamMapper)
-	userService := services.NewUserService(userRepo, userMapper)
-	subscriptionService := services.NewSubscriptionService(subscriptionRepo, subscriptionMapper)
+	agentService := services.NewAgentService(agentRepo, agentMapper, userMapper, logger)
+	caseService := services.NewCaseService(caseRepo, caseMapper, userRepo, logger)
+	teamService := services.NewTeamService(teamRepo, teamMapper, logger)
+	userService := services.NewUserService(userRepo, userMapper, logger)
+	subscriptionService := services.NewSubscriptionService(subscriptionRepo, subscriptionMapper, logger)
 
 	return &Services{
 		AgentService:        agentService,

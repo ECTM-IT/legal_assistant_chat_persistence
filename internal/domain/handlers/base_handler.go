@@ -17,7 +17,7 @@ type APIError struct {
 type BaseHandler struct{}
 
 func (h *BaseHandler) RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-	response, err := json.Marshal(payload)
+	response, err := json.MarshalIndent(payload, "", " ")
 	if err != nil {
 		h.RespondWithError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
