@@ -54,7 +54,7 @@ stages:
             condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
             inputs:
               azureSubscription: 'Legal Assist - SC'
-              containerAppName: 'legal_assist_chat_persistence_staging'
+              containerAppName: 'legal-assist-chat-stage'
               resourceGroup: 'legal_assist'
               imageToDeploy: 'legalassistcr.azurecr.io/legal_assist_chat_persistence_staging:$(Build.BuildId)'      
             env:
