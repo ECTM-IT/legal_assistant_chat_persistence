@@ -26,8 +26,9 @@ type Collaborators struct {
 }
 
 type Message struct {
+	Sender       string `json:"sender" bson:"sender"`
+	Recipient    string `json:"recipient" bson:"recipient"`
 	Content      string `json:"content" bson:"content"`
-	SenderID     string `json:"sender_id" bson:"sender_id"`
-	RecipientID  string `json:"recipient_id" bson:"recipient_id"`
+	DocumentPath string `json:"document_path" bson:"document_path"`
 	FunctionCall bool   `json:"function_call" bson:"function_call"`
 }

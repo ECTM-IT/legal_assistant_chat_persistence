@@ -38,11 +38,17 @@ func (s *SubscriptionConversionServiceImpl) SubscriptionToDTO(subscription *mode
 	}
 
 	dto := &dtos.SubscriptionResponse{
-		ID:                  helpers.NewNullable(subscription.ID),
-		Plan:                helpers.NewNullable(subscription.Plan),
-		Expiry:              helpers.NewNullable(subscription.Expiry),
-		Type:                helpers.NewNullable(dtos.SubscriptionType(subscription.Type)),
-		BillingInformations: helpers.NewNullable(s.BillingInfoToDTO(subscription.BillingInformations)),
+		ID:                   helpers.NewNullable(subscription.ID),
+		UserID:               helpers.NewNullable(subscription.UserID),
+		Plan:                 helpers.NewNullable(subscription.Plan),
+		Type:                 helpers.NewNullable(dtos.SubscriptionType(subscription.Type)),
+		Status:               helpers.NewNullable(dtos.SubscriptionStatus(subscription.Status)),
+		CurrentPeriodStart:   helpers.NewNullable(subscription.CurrentPeriodStart),
+		CurrentPeriodEnd:     helpers.NewNullable(subscription.CurrentPeriodEnd),
+		CancelAtPeriodEnd:    helpers.NewNullable(subscription.CancelAtPeriodEnd),
+		StripeCustomerID:     helpers.NewNullable(subscription.StripeCustomerID),
+		StripeSubscriptionID: helpers.NewNullable(subscription.StripeSubscriptionID),
+		BillingInformations:  helpers.NewNullable(s.BillingInfoToDTO(subscription.BillingInformations)),
 	}
 	s.logger.Info("Successfully converted Subscription to DTO")
 	return dto
@@ -65,9 +71,9 @@ func (s *SubscriptionConversionServiceImpl) DTOToSubscription(req *dtos.CreateSu
 		return nil, errors.New("subscription request cannot be nil")
 	}
 
-	if !req.Plan.Present || !req.Expiry.Present || !req.Type.Present {
-		s.logger.Error("Failed to convert DTO to Subscription: plan, expiry, and type are required fields", errors.New("plan, expiry, and type are required fields"))
-		return nil, errors.New("plan, expiry, and type are required fields")
+	if !req.UserID.Present || !req.Plan.Present || !req.Type.Present {
+		s.logger.Error("Failed to convert DTO to Subscription: userID, plan, and type are required fields", errors.New("userID, plan, and type are required fields"))
+		return nil, errors.New("userID, plan, and type are required fields")
 	}
 
 	billingInfo, err := s.DTOToBillingInfo(req.BillingInformations.Value)
@@ -78,10 +84,12 @@ func (s *SubscriptionConversionServiceImpl) DTOToSubscription(req *dtos.CreateSu
 
 	subscription := &models.Subscriptions{
 		ID:                  primitive.NewObjectID(),
+		UserID:              req.UserID.Value,
 		Plan:                req.Plan.Value,
-		Expiry:              req.Expiry.Value,
 		Type:                string(req.Type.Value),
+		Status:              string(dtos.Incomplete), // Set initial status
 		BillingInformations: billingInfo,
+		// Other fields will be set when the Stripe subscription is created
 	}
 	s.logger.Info("Successfully converted DTO to Subscription")
 	return subscription, nil
@@ -94,9 +102,6 @@ func (s *SubscriptionConversionServiceImpl) UpdateSubscriptionFieldsToMap(update
 	if updateRequest.Plan.Present {
 		updateFields["plan"] = updateRequest.Plan.Value
 	}
-	if updateRequest.Expiry.Present {
-		updateFields["expiry"] = updateRequest.Expiry.Value
-	}
 	if updateRequest.Type.Present {
 		updateFields["type"] = string(updateRequest.Type.Value)
 	}
@@ -107,6 +112,9 @@ func (s *SubscriptionConversionServiceImpl) UpdateSubscriptionFieldsToMap(update
 		} else {
 			updateFields["billing_informations"] = billingInfo
 		}
+	}
+	if updateRequest.PaymentMethodID.Present {
+		updateFields["payment_method_id"] = updateRequest.PaymentMethodID.Value
 	}
 
 	s.logger.Info("Successfully converted UpdateSubscriptionRequest to map")

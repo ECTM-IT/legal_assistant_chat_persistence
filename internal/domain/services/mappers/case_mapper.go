@@ -196,9 +196,10 @@ func (s *CaseConversionServiceImpl) MessageToDTO(message models.Message) dtos.Me
 	s.logger.Info("Converting Message to DTO")
 	dto := dtos.MessageResponse{
 		Content:      helpers.NewNullable(message.Content),
-		Sender:       helpers.NewNullable(message.SenderID),
-		Recipient:    helpers.NewNullable(message.RecipientID),
+		Sender:       helpers.NewNullable(message.Sender),
+		Recipient:    helpers.NewNullable(message.Recipient),
 		FunctionCall: helpers.NewNullable(message.FunctionCall),
+		DocumentPath: helpers.NewNullable(message.DocumentPath),
 	}
 	s.logger.Info("Successfully converted Message to DTO")
 	return dto
@@ -212,9 +213,10 @@ func (s *CaseConversionServiceImpl) DTOToMessage(messageDTO dtos.MessageResponse
 	}
 	message := models.Message{
 		Content:      messageDTO.Content.Value,
-		SenderID:     messageDTO.Sender.Value,
-		RecipientID:  messageDTO.Recipient.Value,
+		Sender:       messageDTO.Sender.Value,
+		Recipient:    messageDTO.Recipient.Value,
 		FunctionCall: messageDTO.FunctionCall.OrElse(false),
+		DocumentPath: messageDTO.DocumentPath.OrElse(""),
 	}
 	s.logger.Info("Successfully converted DTO to Message")
 	return message, nil

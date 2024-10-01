@@ -12,6 +12,7 @@ type MessageResponse struct {
 	Sender       helpers.Nullable[string] `json:"sender_id" bson:"sender_id"`
 	Recipient    helpers.Nullable[string] `json:"recipient_id" bson:"recipient_id"`
 	FunctionCall helpers.Nullable[bool]   `json:"function_call" bson:"function_call"`
+	DocumentPath helpers.Nullable[string] `json:"document_path" bson:"document_path"`
 }
 
 type CollaboratorResponse struct {
