@@ -3,6 +3,7 @@ package helpers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -13,36 +14,33 @@ var (
 	ErrNullValue             = errors.New("null value")
 )
 
-// Nullable is a generic struct that holds a nullable value of any type T.
+// Nullable represents a generic nullable type for any type T.
+// It encapsulates a value and a flag indicating its presence.
 type Nullable[T any] struct {
-	Value   T
-	Present bool
+	Value   T    `json:"value,omitempty" bson:"value,omitempty"`
+	Present bool `json:"present" bson:"present"`
 }
 
-// NewNullable creates a new Nullable with the given value.
+// NewNullable creates a new Nullable instance with the provided value.
+// It determines the presence based on whether the value is the zero value for its type.
 func NewNullable[T any](value T) Nullable[T] {
-	v := reflect.ValueOf(value)
-
-	// Check if the value is the zero value for its type
-	if !v.IsValid() || (v.IsZero() && v.Kind() != reflect.Bool) {
-		return Nullable[T]{Value: value, Present: false}
-	}
-
-	return Nullable[T]{Value: value, Present: true}
+	var zero T
+	isPresent := !isZeroValue(value, zero)
+	return Nullable[T]{Value: value, Present: isPresent}
 }
 
-// Get returns the value and a boolean indicating if the value is present.
+// Get retrieves the value and a boolean indicating its presence.
 func (n Nullable[T]) Get() (T, bool) {
 	return n.Value, n.Present
 }
 
-// Set sets the value and marks it as present.
+// Set assigns a new value and marks it as present.
 func (n *Nullable[T]) Set(value T) {
 	n.Value = value
 	n.Present = true
 }
 
-// Clear clears the value and marks it as not present.
+// Clear resets the value to its zero value and marks it as not present.
 func (n *Nullable[T]) Clear() {
 	var zero T
 	n.Value = zero
@@ -68,9 +66,9 @@ func (n *Nullable[T]) UnmarshalBSON(data []byte) error {
 // MarshalBSON implements the bson.Marshaler interface.
 func (n Nullable[T]) MarshalBSON() ([]byte, error) {
 	if !n.Present {
-		return bson.Marshal(nil)
+		return bson.Marshal(bson.M{"present": false})
 	}
-	return bson.Marshal(n.Value)
+	return bson.Marshal(bson.M{"value": n.Value, "present": n.Present})
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
@@ -97,7 +95,7 @@ func (n Nullable[T]) MarshalJSON() ([]byte, error) {
 	return json.Marshal(n.Value)
 }
 
-// OrElse returns the value if present, otherwise returns the provided default value.
+// OrElse returns the value if present; otherwise, it returns the provided default value.
 func (n Nullable[T]) OrElse(defaultVal T) T {
 	if n.Present {
 		return n.Value
@@ -105,7 +103,7 @@ func (n Nullable[T]) OrElse(defaultVal T) T {
 	return defaultVal
 }
 
-// Map applies the provided function to the value if present.
+// Map applies the provided function to the value if present and returns a new Nullable.
 func (n Nullable[T]) Map(f func(T) T) Nullable[T] {
 	if !n.Present {
 		return n
@@ -121,7 +119,7 @@ func (n Nullable[T]) FlatMap(f func(T) Nullable[T]) Nullable[T] {
 	return f(n.Value)
 }
 
-// Filter returns the Nullable if the predicate is true, otherwise returns an empty Nullable.
+// Filter returns the Nullable if the predicate is true; otherwise, it returns an empty Nullable.
 func (n Nullable[T]) Filter(predicate func(T) bool) Nullable[T] {
 	if !n.Present || !predicate(n.Value) {
 		return Nullable[T]{}
@@ -129,7 +127,8 @@ func (n Nullable[T]) Filter(predicate func(T) bool) Nullable[T] {
 	return n
 }
 
-// ConvertToType is a helper function that attempts to convert the given value to type T.
+// ConvertToType attempts to convert the given value to type T.
+// It returns an error if the conversion is not supported.
 func ConvertToType[T any](value interface{}) (T, error) {
 	var zero T
 	if value == nil {
@@ -147,7 +146,7 @@ func ConvertToType[T any](value interface{}) (T, error) {
 	return zero, ErrUnsupportedConversion
 }
 
-// IsNumeric is a helper function that checks if a reflect.Kind is numeric.
+// IsNumeric checks if a reflect.Kind is numeric.
 func IsNumeric(kind reflect.Kind) bool {
 	switch kind {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
@@ -157,4 +156,18 @@ func IsNumeric(kind reflect.Kind) bool {
 	default:
 		return false
 	}
+}
+
+// String provides a string representation of the Nullable.
+func (n Nullable[T]) String() string {
+	if !n.Present {
+		return "null"
+	}
+	return fmt.Sprintf("%v", n.Value)
+}
+
+// isZeroValue checks whether the provided value is the zero value for its type.
+// This helper function improves readability and reuse.
+func isZeroValue[T any](value, zero T) bool {
+	return reflect.DeepEqual(value, zero)
 }

@@ -7,12 +7,13 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// Start of Selection
 type MessageResponse struct {
-	Content      helpers.Nullable[string] `json:"content" bson:"content"`
-	Sender       helpers.Nullable[string] `json:"sender_id" bson:"sender_id"`
-	Recipient    helpers.Nullable[string] `json:"recipient_id" bson:"recipient_id"`
-	FunctionCall helpers.Nullable[bool]   `json:"function_call" bson:"function_call"`
-	DocumentPath helpers.Nullable[string] `json:"document_path" bson:"document_path"`
+	Content      helpers.Nullable[string] `json:"content,omitempty" bson:"content"`
+	Sender       helpers.Nullable[string] `json:"sender,omitempty" bson:"sender"`
+	Recipient    helpers.Nullable[string] `json:"recipient,omitempty" bson:"recipient"`
+	FunctionCall helpers.Nullable[bool]   `json:"function_call,omitempty" bson:"function_call"`
+	DocumentPath helpers.Nullable[string] `json:"document_path,omitempty" bson:"document_path"`
 }
 
 type CollaboratorResponse struct {

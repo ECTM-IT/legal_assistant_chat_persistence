@@ -1,3 +1,4 @@
+// Start of Selection
 package mappers
 
 import (
@@ -16,7 +17,7 @@ type CaseConversionService interface {
 	DTOToCase(caseRequest dtos.CreateCaseRequest) (*models.Case, error)
 	CaseToDTO(caseModel *models.Case) *dtos.CaseResponse
 	CasesToDTO(cases []models.Case) []dtos.CaseResponse
-	UpdateCaseFieldsToMap(updateRequest dtos.UpdateCaseRequest) map[string]interface{}
+	UpdateCaseFieldsToMap(updateRequest dtos.UpdateCaseRequest) (map[string]interface{}, error)
 	CollaboratorsToDTO(collaborators []models.Collaborators) []dtos.CollaboratorResponse
 	DTOToCollaborators(collaboratorsDTO []dtos.CollaboratorResponse) ([]models.Collaborators, error)
 	MessageToDTO(message models.Message) dtos.MessageResponse
@@ -37,9 +38,11 @@ func NewCaseConversionService(logger logs.Logger) *CaseConversionServiceImpl {
 
 func (s *CaseConversionServiceImpl) DTOToCase(caseRequest dtos.CreateCaseRequest) (*models.Case, error) {
 	s.logger.Info("Converting DTO to Case")
+
 	if !caseRequest.CreatorID.Present {
-		s.logger.Error("Failed to convert DTO to Case: creator ID is required", errors.New("creator ID is required"))
-		return nil, errors.New("creator ID is required")
+		err := errors.New("creator ID is required")
+		s.logger.Error("Failed to convert DTO to Case: creator ID is required", err)
+		return nil, err
 	}
 
 	messages, err := s.DTOToMessages(caseRequest.Messages.OrElse(nil))
@@ -68,12 +71,14 @@ func (s *CaseConversionServiceImpl) DTOToCase(caseRequest dtos.CreateCaseRequest
 		Share:         caseRequest.Share.OrElse(false),
 		IsArchived:    caseRequest.IsArchived.OrElse(false),
 	}
+
 	s.logger.Info("Successfully converted DTO to Case")
 	return caseModel, nil
 }
 
 func (s *CaseConversionServiceImpl) CaseToDTO(caseModel *models.Case) *dtos.CaseResponse {
 	s.logger.Info("Converting Case to DTO")
+
 	if caseModel == nil {
 		s.logger.Warn("Attempted to convert nil Case to DTO")
 		return nil
@@ -92,27 +97,32 @@ func (s *CaseConversionServiceImpl) CaseToDTO(caseModel *models.Case) *dtos.Case
 		Share:         helpers.NewNullable(caseModel.Share),
 		IsArchived:    helpers.NewNullable(caseModel.IsArchived),
 	}
+
 	s.logger.Info("Successfully converted Case to DTO")
 	return dto
 }
 
 func (s *CaseConversionServiceImpl) CasesToDTO(cases []models.Case) []dtos.CaseResponse {
 	s.logger.Info("Converting multiple Cases to DTOs")
-	if cases == nil {
-		s.logger.Warn("Attempted to convert nil Cases slice to DTOs")
-		return nil
+
+	if len(cases) == 0 {
+		s.logger.Warn("No Cases provided for conversion")
+		return []dtos.CaseResponse{}
 	}
+
 	caseDTOs := make([]dtos.CaseResponse, 0, len(cases))
 	for _, caseModel := range cases {
-		if dto := s.CaseToDTO(&caseModel); dto != nil {
+		dto := s.CaseToDTO(&caseModel)
+		if dto != nil {
 			caseDTOs = append(caseDTOs, *dto)
 		}
 	}
+
 	s.logger.Info("Successfully converted multiple Cases to DTOs")
 	return caseDTOs
 }
 
-func (s *CaseConversionServiceImpl) UpdateCaseFieldsToMap(updateRequest dtos.UpdateCaseRequest) map[string]interface{} {
+func (s *CaseConversionServiceImpl) UpdateCaseFieldsToMap(updateRequest dtos.UpdateCaseRequest) (map[string]interface{}, error) {
 	s.logger.Info("Converting UpdateCaseRequest to map")
 	updateFields := make(map[string]interface{})
 
@@ -120,18 +130,20 @@ func (s *CaseConversionServiceImpl) UpdateCaseFieldsToMap(updateRequest dtos.Upd
 		updateFields["name"] = updateRequest.Name.Value
 	}
 	if updateRequest.Messages.Present {
-		if messages, err := s.DTOToMessages(updateRequest.Messages.Value); err == nil {
-			updateFields["messages"] = messages
-		} else {
+		messages, err := s.DTOToMessages(updateRequest.Messages.Value)
+		if err != nil {
 			s.logger.Error("Failed to convert messages for update", err)
+			return nil, fmt.Errorf("error converting messages: %w", err)
 		}
+		updateFields["messages"] = messages
 	}
 	if updateRequest.Collaborators.Present {
-		if collaborators, err := s.DTOToCollaborators(updateRequest.Collaborators.Value); err == nil {
-			updateFields["collaborators"] = collaborators
-		} else {
+		collaborators, err := s.DTOToCollaborators(updateRequest.Collaborators.Value)
+		if err != nil {
 			s.logger.Error("Failed to convert collaborators for update", err)
+			return nil, fmt.Errorf("error converting collaborators: %w", err)
 		}
+		updateFields["collaborators"] = collaborators
 	}
 	if updateRequest.Action.Present {
 		updateFields["action"] = updateRequest.Action.Value
@@ -149,14 +161,15 @@ func (s *CaseConversionServiceImpl) UpdateCaseFieldsToMap(updateRequest dtos.Upd
 	updateFields["last_edit"] = time.Now()
 
 	s.logger.Info("Successfully converted UpdateCaseRequest to map")
-	return updateFields
+	return updateFields, nil
 }
 
 func (s *CaseConversionServiceImpl) CollaboratorsToDTO(collaborators []models.Collaborators) []dtos.CollaboratorResponse {
 	s.logger.Info("Converting Collaborators to DTOs")
-	if collaborators == nil {
-		s.logger.Warn("Attempted to convert nil Collaborators slice to DTOs")
-		return nil
+
+	if len(collaborators) == 0 {
+		s.logger.Warn("No Collaborators provided for conversion")
+		return []dtos.CollaboratorResponse{}
 	}
 
 	collaboratorDTOs := make([]dtos.CollaboratorResponse, 0, len(collaborators))
@@ -166,34 +179,39 @@ func (s *CaseConversionServiceImpl) CollaboratorsToDTO(collaborators []models.Co
 			Edit: helpers.NewNullable(collaborator.Edit),
 		})
 	}
+
 	s.logger.Info("Successfully converted Collaborators to DTOs")
 	return collaboratorDTOs
 }
 
 func (s *CaseConversionServiceImpl) DTOToCollaborators(collaboratorsDTO []dtos.CollaboratorResponse) ([]models.Collaborators, error) {
 	s.logger.Info("Converting DTOs to Collaborators")
-	if collaboratorsDTO == nil {
-		s.logger.Warn("Attempted to convert nil CollaboratorResponse slice to Collaborators")
-		return nil, nil
+
+	if len(collaboratorsDTO) == 0 {
+		s.logger.Warn("No CollaboratorResponses provided for conversion")
+		return []models.Collaborators{}, nil
 	}
 
 	collaborators := make([]models.Collaborators, 0, len(collaboratorsDTO))
 	for _, dto := range collaboratorsDTO {
 		if !dto.ID.Present {
-			s.logger.Error("Failed to convert DTO to Collaborator: collaborator ID is required", errors.New("collaborator ID is required"))
-			return nil, errors.New("collaborator ID is required")
+			err := errors.New("collaborator ID is required")
+			s.logger.Error("Failed to convert DTO to Collaborator: collaborator ID is required", err)
+			return nil, err
 		}
 		collaborators = append(collaborators, models.Collaborators{
 			ID:   dto.ID.Value,
 			Edit: dto.Edit.OrElse(false),
 		})
 	}
+
 	s.logger.Info("Successfully converted DTOs to Collaborators")
 	return collaborators, nil
 }
 
 func (s *CaseConversionServiceImpl) MessageToDTO(message models.Message) dtos.MessageResponse {
 	s.logger.Info("Converting Message to DTO")
+
 	dto := dtos.MessageResponse{
 		Content:      helpers.NewNullable(message.Content),
 		Sender:       helpers.NewNullable(message.Sender),
@@ -201,16 +219,22 @@ func (s *CaseConversionServiceImpl) MessageToDTO(message models.Message) dtos.Me
 		FunctionCall: helpers.NewNullable(message.FunctionCall),
 		DocumentPath: helpers.NewNullable(message.DocumentPath),
 	}
+
 	s.logger.Info("Successfully converted Message to DTO")
 	return dto
 }
 
 func (s *CaseConversionServiceImpl) DTOToMessage(messageDTO dtos.MessageResponse) (models.Message, error) {
 	s.logger.Info("Converting DTO to Message")
+
+	s.logger.Info(messageDTO.Content.String() + messageDTO.Recipient.String() + messageDTO.Sender.String())
+
 	if !messageDTO.Content.Present || !messageDTO.Sender.Present || !messageDTO.Recipient.Present {
-		s.logger.Error("Failed to convert DTO to Message: content, sender, and recipient are required", errors.New("content, sender, and recipient are required"))
-		return models.Message{}, errors.New("content, sender, and recipient are required")
+		err := errors.New("content, sender, and recipient are required")
+		s.logger.Error("Failed to convert DTO to Message: content, sender, and recipient are required", err)
+		return models.Message{}, err
 	}
+
 	message := models.Message{
 		Content:      messageDTO.Content.Value,
 		Sender:       messageDTO.Sender.Value,
@@ -218,30 +242,36 @@ func (s *CaseConversionServiceImpl) DTOToMessage(messageDTO dtos.MessageResponse
 		FunctionCall: messageDTO.FunctionCall.OrElse(false),
 		DocumentPath: messageDTO.DocumentPath.OrElse(""),
 	}
+
 	s.logger.Info("Successfully converted DTO to Message")
 	return message, nil
 }
 
 func (s *CaseConversionServiceImpl) MessagesToDTO(messages []models.Message) []dtos.MessageResponse {
 	s.logger.Info("Converting multiple Messages to DTOs")
-	if messages == nil {
-		s.logger.Warn("Attempted to convert nil Messages slice to DTOs")
-		return nil
+
+	if len(messages) == 0 {
+		s.logger.Warn("No Messages provided for conversion")
+		return []dtos.MessageResponse{}
 	}
-	messageDTOs := make([]dtos.MessageResponse, len(messages))
-	for i, message := range messages {
-		messageDTOs[i] = s.MessageToDTO(message)
+
+	messageDTOs := make([]dtos.MessageResponse, 0, len(messages))
+	for _, message := range messages {
+		messageDTOs = append(messageDTOs, s.MessageToDTO(message))
 	}
+
 	s.logger.Info("Successfully converted multiple Messages to DTOs")
 	return messageDTOs
 }
 
 func (s *CaseConversionServiceImpl) DTOToMessages(messagesDTO []dtos.MessageResponse) ([]models.Message, error) {
 	s.logger.Info("Converting DTOs to Messages")
-	if messagesDTO == nil {
-		s.logger.Warn("Attempted to convert nil MessageResponse slice to Messages")
-		return nil, nil
+
+	if len(messagesDTO) == 0 {
+		s.logger.Warn("No MessageResponses provided for conversion")
+		return []models.Message{}, nil
 	}
+
 	messages := make([]models.Message, 0, len(messagesDTO))
 	for _, dto := range messagesDTO {
 		message, err := s.DTOToMessage(dto)
@@ -251,6 +281,7 @@ func (s *CaseConversionServiceImpl) DTOToMessages(messagesDTO []dtos.MessageResp
 		}
 		messages = append(messages, message)
 	}
+
 	s.logger.Info("Successfully converted DTOs to Messages")
 	return messages, nil
 }
