@@ -4,39 +4,53 @@ import (
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/daos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/repositories"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services/mappers"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/logs"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Services struct {
-	AgentService *services.AgentService
-	CaseService  *services.CaseService
-	TeamService  *services.TeamService
-	UserService  *services.UserServiceImpl
+	AgentService        *services.AgentServiceImpl
+	CaseService         *services.CaseServiceImpl
+	TeamService         *services.TeamServiceImpl
+	UserService         *services.UserServiceImpl
+	SubscriptionService *services.SubscriptionServiceImpl
 }
 
-func InitializeServices(db *mongo.Database) *Services {
+func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 	// Initialize DAOs
-	agentDAO := daos.NewAgentDAO(db)
-	caseDAO := daos.NewCaseDAO(db)
-	teamDAO := daos.NewTeamDAO(db)
-	userDAO := daos.NewUserDAO(db)
+	agentDAO := daos.NewAgentDAO(db, logger)
+	caseDAO := daos.NewCaseDAO(db, logger)
+	teamDAO := daos.NewTeamDAO(db, logger)
+	userDAO := daos.NewUserDAO(db, logger)
+	subscriptionDAO := daos.NewSubscriptionsDAO(db, logger)
 
 	// Initialize repositories
-	agentRepo := repositories.NewAgentRepository(agentDAO, userDAO)
+	agentRepo := repositories.NewAgentRepository(agentDAO, userDAO, logger)
 	caseRepo := repositories.NewCaseRepository(caseDAO)
-	teamRepo := repositories.NewTeamRepository(teamDAO, userDAO)
+	teamRepo := repositories.NewTeamRepository(teamDAO, userDAO, logger)
 	userRepo := repositories.NewUserRepository(userDAO)
+	subscriptionRepo := repositories.NewSubscriptionRepository(subscriptionDAO)
+
+	//Initialize mappers
+	agentMapper := mappers.NewAgentConversionService(logger)
+	caseMapper := mappers.NewCaseConversionService(logger)
+	teamMapper := mappers.NewTeamConversionService(logger)
+	userMapper := mappers.NewUserConversionService(logger)
+	subscriptionMapper := mappers.NewSubscriptionConversionService(logger)
 
 	// Initialize services
-	agentService := services.NewAgentService(agentRepo)
-	caseService := services.NewCaseService(caseRepo)
-	teamService := services.NewTeamService(teamRepo)
-	userService := services.NewUserService(userRepo)
+	agentService := services.NewAgentService(agentRepo, agentMapper, userMapper, logger)
+	caseService := services.NewCaseService(caseRepo, caseMapper, userMapper, userRepo, logger)
+	teamService := services.NewTeamService(teamRepo, teamMapper, logger)
+	userService := services.NewUserService(userRepo, userMapper, logger)
+	subscriptionService := services.NewSubscriptionService(subscriptionRepo, subscriptionMapper, logger)
 
 	return &Services{
-		AgentService: agentService,
-		CaseService:  caseService,
-		TeamService:  teamService,
-		UserService:  userService,
+		AgentService:        agentService,
+		CaseService:         caseService,
+		TeamService:         teamService,
+		UserService:         userService,
+		SubscriptionService: subscriptionService,
 	}
 }

@@ -1,13 +1,33 @@
-version: '3.8'
-
 services:
   go:
-    build: .
-    container_name: golang
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: golang_app
     ports:
       - "4444:4444"
+    environment:
+      - GO_ENV=production
+    volumes:
+      - ./app:/app
+      - go-modules:/go/pkg/mod
     networks:
       - backend
-      
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4444/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 512M
+
 networks:
   backend:
+    driver: bridge
+
+volumes:
+  go-modules:

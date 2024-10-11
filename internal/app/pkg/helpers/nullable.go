@@ -1,47 +1,56 @@
 package helpers
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var (
-	// ErrUnsupportedConversion is an error that occurs when attempting to convert a value to an unsupported type.
-	// This typically happens when Scan is called with a value that cannot be converted to the target type T.
 	ErrUnsupportedConversion = errors.New("unsupported type conversion")
+	ErrNullValue             = errors.New("null value")
 )
 
-// Nullable is a generic struct that holds a nullable value of any type T.
-// It keeps track of the value (Val), a flag (Valid) indicating whether the value has been set and a flag (Present)
-// indicating if the value is in the struct.
-// This allows for better handling of nullable and undefined values, ensuring proper value management and serialization.
+// Nullable represents a generic nullable type for any type T.
+// It encapsulates a value and a flag indicating its presence.
 type Nullable[T any] struct {
-	Val     T
-	Valid   bool
-	Present bool
+	Value   T    `json:"value,omitempty" bson:"value,omitempty"`
+	Present bool `json:"present" bson:"present"`
 }
 
-// NewNullable creates a new Nullable with the given value and sets Valid to true.
-// This is useful when you want to create a Nullable with an initial value, explicitly marking it as set.
+// NewNullable creates a new Nullable instance with the provided value.
+// It determines the presence based on whether the value is the zero value for its type.
 func NewNullable[T any](value T) Nullable[T] {
-	return Nullable[T]{Val: value, Valid: true, Present: true}
+	var zero T
+	isPresent := !isZeroValue(value, zero)
+	return Nullable[T]{Value: value, Present: isPresent}
 }
 
-// Scan implements the bson.Unmarshaler interface for Nullable, allowing it to be used as a nullable field in MongoDB operations.
-// It is responsible for properly setting the Valid flag and converting the scanned value to the target type T.
-// This enables seamless integration with go.mongodb.org/mongo-driver when working with nullable values.
-func (n *Nullable[T]) UnmarshalBSON(data []byte) error {
-	n.Present = true
+// Get retrieves the value and a boolean indicating its presence.
+func (n Nullable[T]) Get() (T, bool) {
+	return n.Value, n.Present
+}
 
+// Set assigns a new value and marks it as present.
+func (n *Nullable[T]) Set(value T) {
+	n.Value = value
+	n.Present = true
+}
+
+// Clear resets the value to its zero value and marks it as not present.
+func (n *Nullable[T]) Clear() {
+	var zero T
+	n.Value = zero
+	n.Present = false
+}
+
+// UnmarshalBSON implements the bson.Unmarshaler interface.
+func (n *Nullable[T]) UnmarshalBSON(data []byte) error {
 	if len(data) == 0 {
-		n.Val = zeroValue[T]()
-		n.Valid = false
+		n.Clear()
 		return nil
 	}
 
@@ -50,28 +59,22 @@ func (n *Nullable[T]) UnmarshalBSON(data []byte) error {
 		return err
 	}
 
-	n.Val = value
-	n.Valid = true
+	n.Set(value)
 	return nil
 }
 
-// Value implements the bson.Marshaler interface for Nullable, enabling it to be used as a nullable field in MongoDB operations.
-// This method ensures that the correct value is returned for serialization, handling unset Nullable values by returning nil.
+// MarshalBSON implements the bson.Marshaler interface.
 func (n Nullable[T]) MarshalBSON() ([]byte, error) {
-	if !n.Valid {
-		return nil, nil
+	if !n.Present {
+		return bson.Marshal(bson.M{"present": false})
 	}
-
-	return bson.Marshal(n.Val)
+	return bson.Marshal(bson.M{"value": n.Value, "present": n.Present})
 }
 
-// UnmarshalJSON implements the json.Unmarshaler interface for Nullable, allowing it to be used as a nullable field in JSON operations.
-// This method ensures proper unmarshalling of JSON data into the Nullable value, correctly setting the Valid flag based on the JSON data.
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (n *Nullable[T]) UnmarshalJSON(data []byte) error {
-	n.Present = true
-
 	if string(data) == "null" {
-		n.Valid = false
+		n.Clear()
 		return nil
 	}
 
@@ -80,57 +83,62 @@ func (n *Nullable[T]) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	n.Val = value
-	n.Valid = true
+	n.Set(value)
 	return nil
 }
 
-// MarshalJSON implements the json.Marshaler interface for Nullable, enabling it to be used as a nullable field in JSON operations.
-// This method ensures proper marshalling of Nullable values into JSON data, representing unset values as null in the serialized output.
+// MarshalJSON implements the json.Marshaler interface.
 func (n Nullable[T]) MarshalJSON() ([]byte, error) {
-	if !n.Valid {
-		return []byte("null"), nil
+	if !n.Present {
+		return json.Marshal(nil)
 	}
-
-	return json.Marshal(n.Val)
+	return json.Marshal(n.Value)
 }
 
-// OrElse returns the underlying Val if valid otherwise returns the provided defaultVal
+// OrElse returns the value if present; otherwise, it returns the provided default value.
 func (n Nullable[T]) OrElse(defaultVal T) T {
-	if n.Valid {
-		return n.Val
-	} else {
-		return defaultVal
+	if n.Present {
+		return n.Value
 	}
+	return defaultVal
 }
 
-// zeroValue is a helper function that returns the zero value for the generic type T.
-// It is used to set the zero value for the Val field of the Nullable struct when the value is nil.
-func zeroValue[T any]() T {
-	var zero T
-	return zero
+// Map applies the provided function to the value if present and returns a new Nullable.
+func (n Nullable[T]) Map(f func(T) T) Nullable[T] {
+	if !n.Present {
+		return n
+	}
+	return NewNullable(f(n.Value))
 }
 
-// convertToType is a helper function that attempts to convert the given value to type T.
-// This function is used by Scan to properly handle value conversion, ensuring that Nullable values are always of the correct type.
-func ConvertToType[T any](value any) (T, error) {
+// FlatMap applies the provided function to the value if present, returning a new Nullable.
+func (n Nullable[T]) FlatMap(f func(T) Nullable[T]) Nullable[T] {
+	if !n.Present {
+		return n
+	}
+	return f(n.Value)
+}
+
+// Filter returns the Nullable if the predicate is true; otherwise, it returns an empty Nullable.
+func (n Nullable[T]) Filter(predicate func(T) bool) Nullable[T] {
+	if !n.Present || !predicate(n.Value) {
+		return Nullable[T]{}
+	}
+	return n
+}
+
+// ConvertToType attempts to convert the given value to type T.
+// It returns an error if the conversion is not supported.
+func ConvertToType[T any](value interface{}) (T, error) {
 	var zero T
 	if value == nil {
-		return zero, nil
+		return zero, ErrNullValue
 	}
 
 	valueType := reflect.TypeOf(value)
 	targetType := reflect.TypeOf(zero)
-	if valueType == targetType {
-		return value.(T), nil
-	}
 
-	isNumeric := func(kind reflect.Kind) bool {
-		return kind >= reflect.Int && kind <= reflect.Float64
-	}
-
-	// Check if the value is a numeric type and if T is also a numeric type.
-	if isNumeric(valueType.Kind()) && isNumeric(targetType.Kind()) {
+	if valueType.ConvertibleTo(targetType) {
 		convertedValue := reflect.ValueOf(value).Convert(targetType)
 		return convertedValue.Interface().(T), nil
 	}
@@ -138,50 +146,28 @@ func ConvertToType[T any](value any) (T, error) {
 	return zero, ErrUnsupportedConversion
 }
 
-// FindOne is a generic function that finds a single document in the specified MongoDB collection that matches the given filter.
-// It returns the found document as a Nullable value of type T.
-// This function incorporates security measures by using context and supporting BSON types.
-func FindOne[T any](ctx context.Context, collection *mongo.Collection, filter interface{}) (Nullable[T], error) {
-	var result T
-	err := collection.FindOne(ctx, filter).Decode(&result)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return Nullable[T]{}, nil
-		}
-		return Nullable[T]{}, err
+// IsNumeric checks if a reflect.Kind is numeric.
+func IsNumeric(kind reflect.Kind) bool {
+	switch kind {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64:
+		return true
+	default:
+		return false
 	}
-	return NewNullable(result), nil
 }
 
-// InsertOne is a generic function that inserts a single document of type T into the specified MongoDB collection.
-// It returns the ID of the inserted document as a Nullable value.
-// This function incorporates security measures by using context and supporting BSON types.
-func InsertOne[T any](ctx context.Context, collection *mongo.Collection, document T) (Nullable[primitive.ObjectID], error) {
-	result, err := collection.InsertOne(ctx, document)
-	if err != nil {
-		return Nullable[primitive.ObjectID]{}, err
+// String provides a string representation of the Nullable.
+func (n Nullable[T]) String() string {
+	if !n.Present {
+		return "null"
 	}
-	return NewNullable[primitive.ObjectID](result.InsertedID.(primitive.ObjectID)), nil
+	return fmt.Sprintf("%v", n.Value)
 }
 
-// UpdateOne is a generic function that updates a single document in the specified MongoDB collection that matches the given filter.
-// It applies the provided update to the document and returns the number of modified documents.
-// This function incorporates security measures by using context and supporting BSON types.
-func UpdateOne[T any](ctx context.Context, collection *mongo.Collection, filter interface{}, update interface{}) (int64, error) {
-	result, err := collection.UpdateOne(ctx, filter, update)
-	if err != nil {
-		return 0, err
-	}
-	return result.ModifiedCount, nil
-}
-
-// DeleteOne is a generic function that deletes a single document in the specified MongoDB collection that matches the given filter.
-// It returns the number of deleted documents.
-// This function incorporates security measures by using context and supporting BSON types.
-func DeleteOne(ctx context.Context, collection *mongo.Collection, filter interface{}) (int64, error) {
-	result, err := collection.DeleteOne(ctx, filter)
-	if err != nil {
-		return 0, err
-	}
-	return result.DeletedCount, nil
+// isZeroValue checks whether the provided value is the zero value for its type.
+// This helper function improves readability and reuse.
+func isZeroValue[T any](value, zero T) bool {
+	return reflect.DeepEqual(value, zero)
 }
