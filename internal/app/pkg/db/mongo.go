@@ -35,7 +35,7 @@ func Connect(uri string, timeout time.Duration, logger logs.Logger) (*mongo.Clie
 
 // pingDatabase pings the MongoDB database to ensure the connection is established.
 func pingDatabase(ctx context.Context, client *mongo.Client, logger logs.Logger) error {
-	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	if err := client.Database("admin").RunCommand(ctx, bson.D{{Key: "ping", Value: 1}}).Err(); err != nil {
