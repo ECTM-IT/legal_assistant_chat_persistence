@@ -6,8 +6,8 @@ trigger:
     exclude:
       - stage/*
 
-# variables:
-#   - group: ContainerRegisteryConnectionName
+variables:
+  - group: ContainerRegisteryConnectionName
 
 pool: Ubuntu2204-PrivatePool-04
 
