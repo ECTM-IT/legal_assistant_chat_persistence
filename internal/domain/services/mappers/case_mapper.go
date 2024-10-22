@@ -145,7 +145,7 @@ func (s *CaseConversionServiceImpl) UpdateCaseFieldsToMap(existingCase models.Ca
 			return nil, fmt.Errorf("error converting collaborators: %w", err)
 		}
 		// Add new collaborators to the existing ones.
-		updateFields["collaborators"] = append(existingCase.Collaborator, collaborators...)
+		updateFields["collaborators"] = append(existingCase.Collaborators, collaborators...)
 	}
 	if updateRequest.Action.Present {
 		updateFields["action"] = updateRequest.Action.Value
