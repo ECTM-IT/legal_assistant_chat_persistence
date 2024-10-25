@@ -122,7 +122,7 @@ func (s *CaseConversionServiceImpl) CasesToDTO(cases []models.Case) []dtos.CaseR
 	return caseDTOs
 }
 
-func (s *CaseConversionServiceImpl) UpdateCaseFieldsToMap(existingCase models.Case, updateRequest dtos.UpdateCaseRequest) (map[string]interface{}, error) {
+func (s *CaseConversionServiceImpl) UpdateCaseFieldsToMap(updateRequest dtos.UpdateCaseRequest) (map[string]interface{}, error) {
 	s.logger.Info("Converting UpdateCaseRequest to map")
 	updateFields := make(map[string]interface{})
 
@@ -135,8 +135,7 @@ func (s *CaseConversionServiceImpl) UpdateCaseFieldsToMap(existingCase models.Ca
 			s.logger.Error("Failed to convert messages for update", err)
 			return nil, fmt.Errorf("error converting messages: %w", err)
 		}
-		// Add new messages to the existing ones.
-		updateFields["messages"] = append(existingCase.Messages, messages...)
+		updateFields["messages"] = messages
 	}
 	if updateRequest.Collaborators.Present {
 		collaborators, err := s.DTOToCollaborators(updateRequest.Collaborators.Value)
@@ -144,8 +143,7 @@ func (s *CaseConversionServiceImpl) UpdateCaseFieldsToMap(existingCase models.Ca
 			s.logger.Error("Failed to convert collaborators for update", err)
 			return nil, fmt.Errorf("error converting collaborators: %w", err)
 		}
-		// Add new collaborators to the existing ones.
-		updateFields["collaborators"] = append(existingCase.Collaborators, collaborators...)
+		updateFields["collaborators"] = collaborators
 	}
 	if updateRequest.Action.Present {
 		updateFields["action"] = updateRequest.Action.Value
