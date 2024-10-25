@@ -120,12 +120,7 @@ func (s *CaseServiceImpl) CreateCase(ctx context.Context, caseRequest dtos.Creat
 // UpdateCase updates an existing case.
 func (s *CaseServiceImpl) UpdateCase(ctx context.Context, id primitive.ObjectID, updates dtos.UpdateCaseRequest) (*dtos.CaseResponse, error) {
 	s.logger.Info("Service Level: Attempting to update case")
-	existingCase, err := s.caseRepo.GetCaseByID(ctx, id)
-	if err != nil {
-		s.logger.Error("Service Level: Failed to get case by ID", err)
-		return nil, err
-	}
-	updateCaseMap, err := s.mapper.UpdateCaseFieldsToMap(existingCase, updates)
+	updateCaseMap, err := s.mapper.UpdateCaseFieldsToMap(updates)
 	if err != nil {
 		s.logger.Error("Service Level: Failed to map case", err)
 		return nil, err
