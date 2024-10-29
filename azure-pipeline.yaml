@@ -6,7 +6,7 @@ trigger:
       - main/*
 
 variables:
-  - group: ContainerRegisteryConnectionName
+  - group: ContainerRegisteryConnectionNameProd
 
 pool: Ubuntu2204-PrivatePool-04
 
@@ -41,7 +41,7 @@ stages:
 
           - task: Docker@2
             displayName: 'Push Docker image to registry'
-            condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
+            # condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
             inputs:
               containerRegistry: $(containerRegistry)
               repository: 'legal_assist_chat_persistence'
@@ -49,11 +49,11 @@ stages:
               tags: $(Build.BuildId)
 
           - task: AzureContainerApps@1
-            condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
+            # condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
             inputs:
               azureSubscription: 'Legal Assist - SC'
               containerAppName: 'legal-assist-chat-prod'
-              resourceGroup: 'legal_assist'
-              imageToDeploy: 'legalassistcr.azurecr.io/legal_assist_chat_persistence:$(Build.BuildId)' 
+              resourceGroup: 'legal-assist-italy'
+              imageToDeploy: 'legalassistcrproduction.azurecr.io/legal_assist_chat_persistence:$(Build.BuildId)' 
             env:
               AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)
