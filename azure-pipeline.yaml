@@ -53,7 +53,7 @@ stages:
             inputs:
               azureSubscription: 'Legal Assist - SC'
               containerAppName: 'legal-assist-chat-prod'
-              resourceGroup: 'legal-assist-italy'
+              resourceGroup: 'legal-assist-italy-prod'
               imageToDeploy: 'legalassistcrproduction.azurecr.io/legal_assist_chat_persistence:$(Build.BuildId)' 
             env:
               AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)
