@@ -36,7 +36,7 @@ stages:
             displayName: 'Build Docker image'
             inputs:
               containerRegistry: $(containerRegistry)
-              repository: 'legal_assist_chat_persistence_staging'
+              repository: 'legal_assist_chat_persistence_stage'
               command: 'build'
               Dockerfile: 'DockerFile'
               tags: $(Build.BuildId)  
