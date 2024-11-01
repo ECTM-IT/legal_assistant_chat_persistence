@@ -1,5 +1,3 @@
-// handlers/user_handler.go
-
 package handlers
 
 import (
