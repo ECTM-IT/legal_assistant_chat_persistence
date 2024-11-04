@@ -50,3 +50,11 @@ func (r *CaseRepository) AddCollaboratorToCase(ctx context.Context, id primitive
 func (r *CaseRepository) RemoveCollaboratorFromCase(ctx context.Context, id primitive.ObjectID, collaboratorID primitive.ObjectID) (*mongo.UpdateResult, error) {
 	return r.caseDAO.RemoveCollaborator(ctx, id, collaboratorID)
 }
+
+func (r *CaseRepository) AddFeedbackToMessage(ctx context.Context, feedback models.Feedback) (*mongo.UpdateResult, error) {
+	return r.caseDAO.AddFeedback(ctx, feedback.CaseID, feedback.MessageID, feedback)
+}
+
+func (r *CaseRepository) GetFeedbackByUserAndMessage(ctx context.Context, creatorID, messageID primitive.ObjectID) ([]models.Feedback, error) {
+	return r.caseDAO.GetFeedbackByUserAndMessage(ctx, creatorID, messageID)
+}

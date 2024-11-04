@@ -9,11 +9,12 @@ import (
 
 // Start of Selection
 type MessageResponse struct {
-	Content      helpers.Nullable[string] `json:"content,omitempty" bson:"content"`
-	Sender       helpers.Nullable[string] `json:"sender,omitempty" bson:"sender"`
-	Recipient    helpers.Nullable[string] `json:"recipient,omitempty" bson:"recipient"`
-	FunctionCall helpers.Nullable[bool]   `json:"function_call,omitempty" bson:"function_call"`
-	DocumentPath helpers.Nullable[string] `json:"document_path,omitempty" bson:"document_path"`
+	Content      helpers.Nullable[string]     `json:"content,omitempty" bson:"content"`
+	Sender       helpers.Nullable[string]     `json:"sender,omitempty" bson:"sender"`
+	Recipient    helpers.Nullable[string]     `json:"recipient,omitempty" bson:"recipient"`
+	FunctionCall helpers.Nullable[bool]       `json:"function_call,omitempty" bson:"function_call"`
+	DocumentPath helpers.Nullable[string]     `json:"document_path,omitempty" bson:"document_path"`
+	Feedbacks    helpers.Nullable[[]Feedback] `json:"feedbacks,omitempty" bson:"feedbacks"`
 }
 
 type CollaboratorResponse struct {
@@ -64,4 +65,25 @@ type AddCollaboratorToCase struct {
 }
 type DeleteCaseRequest struct {
 	ID helpers.Nullable[primitive.ObjectID] `json:"id" bson:"_id"`
+}
+
+type Feedback struct {
+	ID           helpers.Nullable[primitive.ObjectID] `json:"id" bson:"_id,omitempty"`
+	CaseID       helpers.Nullable[primitive.ObjectID] `json:"case_id" bson:"case_id" validate:"required"`
+	MessageID    helpers.Nullable[primitive.ObjectID] `json:"message_id" bson:"message_id,omitempty"`
+	CreatorID    helpers.Nullable[primitive.ObjectID] `json:"creator_id" bson:"creator_id,omitempty"`
+	Score        helpers.Nullable[string]             `json:"score" bson:"score,omitempty"`
+	Reasons      helpers.Nullable[[]string]           `json:"reasons" bson:"reasons,omitempty"`
+	Comment      helpers.Nullable[string]             `json:"comment" bson:"comment,omitempty"`
+	CreationDate helpers.Nullable[time.Time]          `json:"creation_date" bson:"creation_date,omitempty"`
+}
+
+type AddFeedbackRequest struct {
+	CaseID       primitive.ObjectID `json:"case_id" bson:"case_id" validate:"required"`
+	MessageID    primitive.ObjectID `json:"message_id" bson:"message_id" validate:"required"`
+	CreatorID    primitive.ObjectID `json:"creator_id" bson:"creator_id" validate:"required"`
+	Score        string             `json:"score" bson:"score" validate:"required"`
+	Reasons      []string           `json:"reasons" bson:"reasons"`
+	Comment      string             `json:"comment" bson:"comment"`
+	CreationDate time.Time          `json:"creation_date" bson:"creation_date"`
 }

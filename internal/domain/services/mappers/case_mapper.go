@@ -212,12 +212,26 @@ func (s *CaseConversionServiceImpl) DTOToCollaborators(collaboratorsDTO []dtos.C
 func (s *CaseConversionServiceImpl) MessageToDTO(message models.Message) dtos.MessageResponse {
 	s.logger.Info("Converting Message to DTO")
 
+	feedbacks := make([]dtos.Feedback, len(message.Feedbacks))
+	for _, f := range message.Feedbacks {
+		feedbacks = append(feedbacks, dtos.Feedback{
+			ID:           helpers.NewNullable(f.ID),
+			MessageID:    helpers.NewNullable(f.MessageID),
+			CreatorID:    helpers.NewNullable(f.CreatorID),
+			Score:        helpers.NewNullable(f.Score),
+			Reasons:      helpers.NewNullable(f.Reasons),
+			Comment:      helpers.NewNullable(f.Comment),
+			CreationDate: helpers.NewNullable(f.CreationDate),
+		})
+	}
+
 	dto := dtos.MessageResponse{
 		Content:      helpers.NewNullable(message.Content),
 		Sender:       helpers.NewNullable(message.Sender),
 		Recipient:    helpers.NewNullable(message.Recipient),
 		FunctionCall: helpers.NewNullable(message.FunctionCall),
 		DocumentPath: helpers.NewNullable(message.DocumentPath),
+		Feedbacks:    helpers.NewNullable(feedbacks),
 	}
 
 	s.logger.Info("Successfully converted Message to DTO")
@@ -235,12 +249,26 @@ func (s *CaseConversionServiceImpl) DTOToMessage(messageDTO dtos.MessageResponse
 		return models.Message{}, err
 	}
 
+	feedbacks := make([]models.Feedback, len(messageDTO.Feedbacks.Value))
+	for _, f := range messageDTO.Feedbacks.Value {
+		feedbacks = append(feedbacks, models.Feedback{
+			ID:           f.ID.Value,
+			MessageID:    f.MessageID.Value,
+			CreatorID:    f.CreatorID.Value,
+			Score:        f.Score.Value,
+			Reasons:      f.Reasons.Value,
+			Comment:      f.Comment.Value,
+			CreationDate: f.CreationDate.Value,
+		})
+	}
+
 	message := models.Message{
 		Content:      messageDTO.Content.Value,
 		Sender:       messageDTO.Sender.Value,
 		Recipient:    messageDTO.Recipient.Value,
 		FunctionCall: messageDTO.FunctionCall.OrElse(false),
 		DocumentPath: messageDTO.DocumentPath.OrElse(""),
+		Feedbacks:    feedbacks,
 	}
 
 	s.logger.Info("Successfully converted DTO to Message")
