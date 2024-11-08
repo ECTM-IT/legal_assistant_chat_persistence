@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -18,6 +19,8 @@ type CaseHanler interface {
 	DeleteCase(ctx context.Context, id primitive.ObjectID) (*dtos.CaseResponse, error)
 	AddCollaboratorToCase(ctx context.Context, caseID, collaboratorID primitive.ObjectID) (*dtos.CaseResponse, error)
 	RemoveCollaboratorFromCase(ctx context.Context, caseID, collaboratorID primitive.ObjectID) (*dtos.CaseResponse, error)
+	AddDocumentToCase(ctx context.Context, caseID primitive.ObjectID, document *models.Document) (*dtos.CaseResponse, error)
+	DeleteDocumentFromCase(ctx context.Context, caseID, documentID primitive.ObjectID) (*dtos.CaseResponse, error)
 }
 
 type CaseHandler struct {
@@ -164,5 +167,55 @@ func (h *CaseHandler) RemoveCollaboratorFromCase(w http.ResponseWriter, r *http.
 		h.RespondWithError(w, http.StatusInternalServerError, "Failed to remove collaborator from case")
 		return
 	}
+	h.RespondWithJSON(w, http.StatusOK, updatedCase)
+}
+
+func (h *CaseHandler) AddDocumentToCase(w http.ResponseWriter, r *http.Request) {
+	caseID, err := h.ParseObjectID(r, "id", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
+		return
+	}
+
+	var doc dtos.AddDocumentToCase // Assuming a DTO to parse the incoming JSON payload
+	if err := h.DecodeJSONBody(r, &doc); err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	document := &models.Document{
+		FileName:    doc.FileName,
+		FileType:    doc.FileType,
+		FileContent: doc.FileContent,
+	}
+
+	updatedCase, err := h.service.AddDocumentToCase(r.Context(), caseID, document)
+	if err != nil {
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to add document to case")
+		return
+	}
+
+	h.RespondWithJSON(w, http.StatusOK, updatedCase)
+}
+
+func (h *CaseHandler) DeleteDocumentFromCase(w http.ResponseWriter, r *http.Request) {
+	caseID, err := h.ParseObjectID(r, "id", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
+		return
+	}
+
+	documentID, err := h.ParseObjectID(r, "documentID", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid document ID")
+		return
+	}
+
+	updatedCase, err := h.service.DeleteDocumentFromCase(r.Context(), caseID, documentID)
+	if err != nil {
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to delete document from case")
+		return
+	}
+
 	h.RespondWithJSON(w, http.StatusOK, updatedCase)
 }

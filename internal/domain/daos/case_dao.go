@@ -3,6 +3,7 @@ package daos
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/logs"
@@ -151,5 +152,46 @@ func (dao *CaseDAO) RemoveCollaborator(ctx context.Context, caseID, collaborator
 		return nil, err
 	}
 	dao.logger.Info("DAO Level: Successfully removed collaborator from case")
+	return result, nil
+}
+
+// AddDocument adds a document to a case in the database
+func (dao *CaseDAO) AddDocument(ctx context.Context, caseID primitive.ObjectID, document *models.Document) (*mongo.UpdateResult, error) {
+	dao.logger.Info("DAO Level: Attempting to add document to case")
+
+	// Set the upload date for the document
+	document.UploadDate = time.Now()
+
+	// Update the case by adding the document to the documents array
+	result, err := dao.collection.UpdateOne(
+		ctx,
+		bson.M{"_id": caseID},
+		bson.M{"$push": bson.M{"documents": document}},
+	)
+
+	if err != nil {
+		dao.logger.Error("DAO Level: Failed to add document to case", err)
+		return nil, err
+	}
+	dao.logger.Info("DAO Level: Successfully added document to case")
+	return result, nil
+}
+
+// DeleteDocument removes a document from a case in the database
+func (dao *CaseDAO) DeleteDocument(ctx context.Context, caseID, documentID primitive.ObjectID) (*mongo.UpdateResult, error) {
+	dao.logger.Info("DAO Level: Attempting to delete document from case")
+
+	// Update the case by removing the document with the given documentID from the documents array
+	result, err := dao.collection.UpdateOne(
+		ctx,
+		bson.M{"_id": caseID},
+		bson.M{"$pull": bson.M{"documents": bson.M{"_id": documentID}}},
+	)
+
+	if err != nil {
+		dao.logger.Error("DAO Level: Failed to delete document from case", err)
+		return nil, err
+	}
+	dao.logger.Info("DAO Level: Successfully deleted document from case")
 	return result, nil
 }

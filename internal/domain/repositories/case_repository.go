@@ -50,3 +50,11 @@ func (r *CaseRepository) AddCollaboratorToCase(ctx context.Context, id primitive
 func (r *CaseRepository) RemoveCollaboratorFromCase(ctx context.Context, id primitive.ObjectID, collaboratorID primitive.ObjectID) (*mongo.UpdateResult, error) {
 	return r.caseDAO.RemoveCollaborator(ctx, id, collaboratorID)
 }
+
+func (r *CaseRepository) AddDocument(ctx context.Context, caseID primitive.ObjectID, document *models.Document) (*mongo.UpdateResult, error) {
+	return r.caseDAO.AddDocument(ctx, caseID, document)
+}
+
+func (r *CaseRepository) DeleteDocument(ctx context.Context, caseID, documentID primitive.ObjectID) (*mongo.UpdateResult, error) {
+	return r.caseDAO.DeleteDocument(ctx, caseID, documentID)
+}

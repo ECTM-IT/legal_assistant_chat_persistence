@@ -24,6 +24,7 @@ type CaseConversionService interface {
 	DTOToMessage(messageDTO dtos.MessageResponse) (models.Message, error)
 	MessagesToDTO(messages []models.Message) []dtos.MessageResponse
 	DTOToMessages(messagesDTO []dtos.MessageResponse) ([]models.Message, error)
+	DocumentsToDocumentsResponse(docs []models.Document) []dtos.DocumentResponse
 }
 
 type CaseConversionServiceImpl struct {
@@ -90,6 +91,7 @@ func (s *CaseConversionServiceImpl) CaseToDTO(caseModel *models.Case) *dtos.Case
 		CreatorID:     helpers.NewNullable(caseModel.CreatorID),
 		Messages:      helpers.NewNullable(s.MessagesToDTO(caseModel.Messages)),
 		Collaborators: helpers.NewNullable(s.CollaboratorsToDTO(caseModel.Collaborators)),
+		Documents:     helpers.NewNullable(s.DocumentsToDocumentsResponse(caseModel.Documents)),
 		Action:        helpers.NewNullable(caseModel.Action),
 		AgentID:       helpers.NewNullable(caseModel.AgentID),
 		LastEdit:      helpers.NewNullable(caseModel.LastEdit),
@@ -284,4 +286,18 @@ func (s *CaseConversionServiceImpl) DTOToMessages(messagesDTO []dtos.MessageResp
 
 	s.logger.Info("Successfully converted DTOs to Messages")
 	return messages, nil
+}
+
+// MapDocuments converts a list of Document models to DocumentResponse DTOs
+func (m *CaseConversionServiceImpl) DocumentsToDocumentsResponse(docs []models.Document) []dtos.DocumentResponse {
+	var docResponses []dtos.DocumentResponse
+	for _, doc := range docs {
+		docResponses = append(docResponses, dtos.DocumentResponse{
+			ID:         helpers.NewNullable(doc.ID),
+			FileName:   helpers.NewNullable(doc.FileName),
+			FileType:   helpers.NewNullable(doc.FileType),
+			UploadDate: helpers.NewNullable(doc.UploadDate),
+		})
+	}
+	return docResponses
 }
