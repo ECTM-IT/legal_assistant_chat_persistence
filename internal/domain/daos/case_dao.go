@@ -166,7 +166,7 @@ func (dao *CaseDAO) AddDocument(ctx context.Context, caseID primitive.ObjectID, 
 	result, err := dao.collection.UpdateOne(
 		ctx,
 		bson.M{"_id": caseID},
-		bson.M{"$push": bson.M{"documents": document}},
+		bson.M{"$addToSet": bson.M{"documents": document}},
 	)
 
 	if err != nil {
