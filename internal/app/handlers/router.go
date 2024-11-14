@@ -70,6 +70,8 @@ func registerCaseRoutes(router *mux.Router, handler *handlers.CaseHandler) {
 	router.HandleFunc("/cases/{id}/", handler.DeleteCase).Methods(http.MethodDelete)
 	router.HandleFunc("/case-add-user/{id}/", handler.AddCollaboratorToCase).Methods(http.MethodPost)
 	router.HandleFunc("/case-remove-user/{id}/{userID}/", handler.RemoveCollaboratorFromCase).Methods(http.MethodDelete)
+	router.HandleFunc("/case-add-agent-skill/{id}/", handler.AddAgentSkillToCase).Methods(http.MethodPost)
+	router.HandleFunc("/case-remove-agent-skill/{id}/{agentSkillID}/", handler.RemoveAgentSkillFromCase).Methods(http.MethodDelete)
 }
 
 func registerTeamRoutes(router *mux.Router, handler *handlers.TeamHandler) {

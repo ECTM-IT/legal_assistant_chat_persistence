@@ -50,3 +50,11 @@ func (r *CaseRepository) AddCollaboratorToCase(ctx context.Context, id primitive
 func (r *CaseRepository) RemoveCollaboratorFromCase(ctx context.Context, id primitive.ObjectID, collaboratorID primitive.ObjectID) (*mongo.UpdateResult, error) {
 	return r.caseDAO.RemoveCollaborator(ctx, id, collaboratorID)
 }
+
+func (r *CaseRepository) AddAgentSkillToCase(ctx context.Context, id primitive.ObjectID, agentSkill map[string]interface{}) (*mongo.UpdateResult, error) {
+	return r.caseDAO.AddAgentSkillToCase(ctx, id, agentSkill)
+}
+
+func (r *CaseRepository) RemoveAgentSkillFromCase(ctx context.Context, id primitive.ObjectID, agentSkillID primitive.ObjectID) (*mongo.UpdateResult, error) {
+	return r.caseDAO.RemoveAgentSkillFromCase(ctx, id, agentSkillID)
+}
