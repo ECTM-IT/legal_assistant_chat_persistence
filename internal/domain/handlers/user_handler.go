@@ -64,6 +64,11 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
+	_, err := h.service.GetUserByEmail(r.Context(), req.Email.Value)
+	if err == nil {
+		h.RespondWithError(w, http.StatusConflict, "User already exists")
+		return
+	}
 
 	createdUser, err := h.service.CreateUser(r.Context(), &req)
 	if err != nil {

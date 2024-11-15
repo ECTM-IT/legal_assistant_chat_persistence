@@ -141,13 +141,13 @@ func (s *UserServiceImpl) CreateUser(ctx context.Context, userDTO *dtos.CreateUs
 		return nil, errors.NewDatabaseError("failed to convert DTO to user", "conversion_error")
 	}
 	// Encrypt username and email
-	encryptedName, err := s.encrypt.Encrypt(mappedUser.EncryptedEmail)
+	encryptedName, err := s.encrypt.Encrypt(mappedUser.FirstName)
 	if err != nil {
 		s.logger.Error("Service Level: Failed to encrypt name", err)
 		return nil, errors.NewDatabaseError("failed to encrypt name", "encryption_error")
 	}
 
-	encryptedEmail, err := s.encrypt.Encrypt(mappedUser.EncryptedEmail)
+	encryptedEmail, err := s.encrypt.Encrypt(mappedUser.Email)
 	if err != nil {
 		s.logger.Error("Service Level: Failed to encrypt email", err)
 		return nil, errors.NewDatabaseError("failed to encrypt email", "encryption_error")
@@ -155,6 +155,7 @@ func (s *UserServiceImpl) CreateUser(ctx context.Context, userDTO *dtos.CreateUs
 
 	mappedUser.EncryptedName = encryptedName
 	mappedUser.EncryptedEmail = encryptedEmail
+	mappedUser.Email = ""
 
 	createdUser, err := s.userRepo.CreateUser(ctx, mappedUser)
 	if err != nil {

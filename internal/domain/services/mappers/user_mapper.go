@@ -95,6 +95,7 @@ func (s *UserConversionServiceImpl) DTOToUser(userDTO *dtos.CreateUserRequest) (
 		ID:             primitive.NewObjectID(),
 		EncryptedName:  userDTO.EncryptedName.Value,
 		EncryptedEmail: userDTO.EncryptedEmail.Value,
+		Email:          userDTO.Email.OrElse(""),
 		Image:          userDTO.Image.OrElse(""),
 		FirstName:      userDTO.FirstName.OrElse(""),
 		LastName:       userDTO.LastName.OrElse(""),
