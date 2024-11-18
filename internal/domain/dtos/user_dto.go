@@ -10,7 +10,6 @@ import (
 type CreateUserRequest struct {
 	EncryptedName  helpers.Nullable[string]               `json:"encrypted_name" bson:"encrypted_name"`
 	EncryptedEmail helpers.Nullable[string]               `json:"encrypted_email" bson:"encrypted_email"`
-	Email          helpers.Nullable[string]               `json:"email" bson:"email"`
 	Image          helpers.Nullable[string]               `json:"image" bson:"image"`
 	FirstName      helpers.Nullable[string]               `json:"first_name" bson:"first_name"`
 	LastName       helpers.Nullable[string]               `json:"last_name" bson:"last_name"`
@@ -29,7 +28,6 @@ type UserResponse struct {
 	ID             helpers.Nullable[primitive.ObjectID]   `json:"id" bson:"_id,omitempty"`
 	EncryptedName  helpers.Nullable[string]               `json:"encrypted_name" bson:"encrypted_name"`
 	EncryptedEmail helpers.Nullable[string]               `json:"encrypted_email" bson:"encrypted_email"`
-	Email          helpers.Nullable[string]               `json:"email" bson:"email"`
 	Image          helpers.Nullable[string]               `json:"image" bson:"image"`
 	FirstName      helpers.Nullable[string]               `json:"first_name" bson:"first_name"`
 	LastName       helpers.Nullable[string]               `json:"last_name" bson:"last_name"`
@@ -47,7 +45,6 @@ type UserResponse struct {
 type UpdateUserRequest struct {
 	EncryptedName  helpers.Nullable[string]               `json:"encrypted_name" bson:"encrypted_name,omitempty"`
 	EncryptedEmail helpers.Nullable[string]               `json:"encrypted_email" bson:"encrypted_email,omitempty"`
-	Email          helpers.Nullable[string]               `json:"email" bson:"email,omitempty"`
 	Image          helpers.Nullable[string]               `json:"image" bson:"image,omitempty"`
 	FirstName      helpers.Nullable[string]               `json:"first_name" bson:"first_name,omitempty"`
 	LastName       helpers.Nullable[string]               `json:"last_name" bson:"last_name,omitempty"`

@@ -10,7 +10,6 @@ type User struct {
 	ID             primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
 	EncryptedName  string               `json:"encrypted_name" bson:"encrypted_name"`
 	EncryptedEmail string               `json:"encrypted_email" bson:"encrypted_email"`
-	Email          string               `json:"email" bson:"email"`
 	Image          string               `json:"image" bson:"image"`
 	FirstName      string               `json:"first_name" bson:"first_name"`
 	LastName       string               `json:"last_name" bson:"last_name"`
