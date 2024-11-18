@@ -22,11 +22,18 @@ type CollaboratorResponse struct {
 	Edit helpers.Nullable[bool]               `json:"edit" bson:"edit"`
 }
 
+type AgentSkillResponse struct {
+	ID      helpers.Nullable[primitive.ObjectID] `json:"id" bson:"_id,omitempty"`
+	AgentID helpers.Nullable[primitive.ObjectID] `json:"agent_id" bson:"agent_id"`
+	Name    helpers.Nullable[string]             `json:"name" bson:"name,omitempty"`
+}
+
 type CreateCaseRequest struct {
 	Name          helpers.Nullable[string]                 `json:"name" bson:"name"`
 	CreatorID     helpers.Nullable[primitive.ObjectID]     `json:"creator_id" bson:"creator_id"`
 	Messages      helpers.Nullable[[]MessageResponse]      `json:"messages" bson:"messages"`
 	Collaborators helpers.Nullable[[]CollaboratorResponse] `json:"collaborators" bson:"collaborators"`
+	AgentSkills   helpers.Nullable[[]AgentSkillResponse]   `json:"agent_skills" bson:"agent_skills"`
 	Documents     helpers.Nullable[[]DocumentResponse]     `json:"documents" bson:"documents"`
 	Action        helpers.Nullable[string]                 `json:"action" bson:"action"`
 	AgentID       helpers.Nullable[primitive.ObjectID]     `json:"agent_id" bson:"agent_id"`
@@ -41,6 +48,7 @@ type CaseResponse struct {
 	CreatorID     helpers.Nullable[primitive.ObjectID]     `json:"creator_id" bson:"creator_id"`
 	Messages      helpers.Nullable[[]MessageResponse]      `json:"messages" bson:"messages"`
 	Collaborators helpers.Nullable[[]CollaboratorResponse] `json:"collaborators" bson:"collaborators"`
+	AgentSkills   helpers.Nullable[[]AgentSkillResponse]   `json:"agent_skills" bson:"agent_skills"`
 	Documents     helpers.Nullable[[]DocumentResponse]     `json:"documents" bson:"documents"`
 	Action        helpers.Nullable[string]                 `json:"action" bson:"action"`
 	AgentID       helpers.Nullable[primitive.ObjectID]     `json:"agent_id" bson:"agent_id"`
@@ -54,6 +62,7 @@ type UpdateCaseRequest struct {
 	Name          helpers.Nullable[string]                 `json:"name" bson:"name,omitempty"`
 	Messages      helpers.Nullable[[]MessageResponse]      `json:"messages" bson:"messages,omitempty"`
 	Collaborators helpers.Nullable[[]CollaboratorResponse] `json:"collaborators" bson:"collaborators,omitempty"`
+	AgentSkills   helpers.Nullable[[]AgentSkillResponse]   `json:"agent_skills" bson:"agent_skills"`
 	Action        helpers.Nullable[string]                 `json:"action" bson:"action,omitempty"`
 	AgentID       helpers.Nullable[primitive.ObjectID]     `json:"agent_id" bson:"agent_id,omitempty"`
 	LastEdit      helpers.Nullable[time.Time]              `json:"last_edit" bson:"last_edit,omitempty"`
@@ -67,6 +76,12 @@ type AddCollaboratorToCase struct {
 }
 type DeleteCaseRequest struct {
 	ID helpers.Nullable[primitive.ObjectID] `json:"id" bson:"_id"`
+}
+
+type AddAgentSkillToCaseRequest struct {
+	ID      helpers.Nullable[primitive.ObjectID] `json:"id" bson:"_id,omitempty"`
+	AgentID helpers.Nullable[primitive.ObjectID] `json:"agent_id" bson:"agent_id"`
+	Name    helpers.Nullable[string]             `json:"name" bson:"name,omitempty"`
 }
 
 type DocumentResponse struct {

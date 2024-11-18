@@ -22,6 +22,8 @@ type CaseDAOInterface interface {
 	Delete(ctx context.Context, id primitive.ObjectID) error
 	AddCollaborator(ctx context.Context, caseID primitive.ObjectID, collaborator map[string]interface{}) (*mongo.UpdateResult, error)
 	RemoveCollaborator(ctx context.Context, caseID, collaboratorID primitive.ObjectID) (*mongo.UpdateResult, error)
+	AddAgentSkillToCase(ctx context.Context, caseID primitive.ObjectID, agentSkill map[string]interface{}) (*mongo.UpdateResult, error)
+	RemoveAgentSkillFromCase(ctx context.Context, caseID, agentSkillID primitive.ObjectID) (*mongo.UpdateResult, error)
 }
 
 // CaseDAO implements the CaseDAOInterface
@@ -258,4 +260,28 @@ func (dao *CaseDAO) GetFeedbackByUserAndMessage(ctx context.Context, creatorID, 
 	}
 
 	return feedbacks, nil
+}
+
+// AddAgentSkillToCase adds a agentSkill to a case in the database
+func (dao *CaseDAO) AddAgentSkillToCase(ctx context.Context, caseID primitive.ObjectID, agentSkill map[string]interface{}) (*mongo.UpdateResult, error) {
+	dao.logger.Info("DAO Level: Attempting to add agent skill to case")
+	result, err := dao.collection.UpdateOne(ctx, bson.M{"_id": caseID}, bson.M{"$addToSet": bson.M{"agent_skill": agentSkill}})
+	if err != nil {
+		dao.logger.Error("DAO Level: Failed to add agent skill to case", err)
+		return nil, err
+	}
+	dao.logger.Info("DAO Level: Successfully added agent skill to case")
+	return result, nil
+}
+
+// RemoveAgentSkillFromCase removes a agentSkill from a case in the database
+func (dao *CaseDAO) RemoveAgentSkillFromCase(ctx context.Context, caseID, agentSkillID primitive.ObjectID) (*mongo.UpdateResult, error) {
+	dao.logger.Info("DAO Level: Attempting to remove agent skill from case")
+	result, err := dao.collection.UpdateOne(ctx, bson.M{"_id": caseID}, bson.M{"$pull": bson.M{"agent_skill": agentSkillID}})
+	if err != nil {
+		dao.logger.Error("DAO Level: Failed to remove agent skill from case", err)
+		return nil, err
+	}
+	dao.logger.Info("DAO Level: Successfully removed agent skill from case")
+	return result, nil
 }

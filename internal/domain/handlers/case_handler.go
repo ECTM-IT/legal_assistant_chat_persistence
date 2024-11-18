@@ -21,6 +21,8 @@ type CaseHanler interface {
 	RemoveCollaboratorFromCase(ctx context.Context, caseID, collaboratorID primitive.ObjectID) (*dtos.CaseResponse, error)
 	AddDocumentToCase(ctx context.Context, caseID primitive.ObjectID, document *models.Document) (*dtos.CaseResponse, error)
 	DeleteDocumentFromCase(ctx context.Context, caseID, documentID primitive.ObjectID) (*dtos.CaseResponse, error)
+	AddAgentSkillToCase(ctx context.Context, caseID primitive.ObjectID, agentSkill *dtos.AddAgentSkillToCaseRequest) (*dtos.CaseResponse, error)
+	DeleteAgentSkillFromCase(ctx context.Context, caseID, agentSkillID primitive.ObjectID) (*dtos.CaseResponse, error)
 }
 
 type CaseHandler struct {
@@ -289,4 +291,41 @@ func (h *CaseHandler) GetFeedbackByUserAndMessageHandler(w http.ResponseWriter, 
 
 	// Respond with the feedback
 	h.RespondWithJSON(w, http.StatusOK, feedbacks)
+}
+
+func (h *CaseHandler) AddAgentSkillToCase(w http.ResponseWriter, r *http.Request) {
+	caseID, err := h.ParseObjectID(r, "id", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
+		return
+	}
+	var req dtos.AddAgentSkillToCaseRequest
+	if err := h.DecodeJSONBody(r, &req); err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	newUser, err := h.service.AddAgentSkillToCase(r.Context(), caseID, req)
+	if err != nil {
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to add agent skill to case")
+		return
+	}
+	h.RespondWithJSON(w, http.StatusOK, newUser)
+}
+func (h *CaseHandler) RemoveAgentSkillFromCase(w http.ResponseWriter, r *http.Request) {
+	caseID, err := h.ParseObjectID(r, "id", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
+		return
+	}
+	agentSkillID, err := h.ParseObjectID(r, "agentSkillID", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid agent skill ID")
+		return
+	}
+	updatedCase, err := h.service.RemoveAgentSkillFromCase(r.Context(), caseID, agentSkillID)
+	if err != nil {
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to remove agent skill from case")
+		return
+	}
+	h.RespondWithJSON(w, http.StatusOK, updatedCase)
 }
