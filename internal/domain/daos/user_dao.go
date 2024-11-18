@@ -57,7 +57,7 @@ func (dao *UserDAO) GetUserByID(ctx context.Context, id primitive.ObjectID) (*mo
 func (dao *UserDAO) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	dao.logger.Info("DAO Level: Attempting to retrieve user by email")
 	var user models.User
-	err := dao.collection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	err := dao.collection.FindOne(ctx, bson.M{"encrypted_email": email}).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			dao.logger.Warn("User not found")
