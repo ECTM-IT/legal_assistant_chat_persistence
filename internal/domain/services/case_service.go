@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/repositories"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services/mappers"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/logs"
@@ -197,10 +198,98 @@ func (s *CaseServiceImpl) RemoveCollaboratorFromCase(ctx context.Context, id, co
 	return updatedCase, nil
 }
 
+// AddDocumentToCase adds a document to a case.
+func (s *CaseServiceImpl) AddDocumentToCase(ctx context.Context, caseID primitive.ObjectID, document *models.Document) (*dtos.CaseResponse, error) {
+	s.logger.Info("Service Level: Attempting to add document to case")
+
+	_, err := s.caseRepo.AddDocument(ctx, caseID, document)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to add document to case", err)
+		return nil, err
+	}
+
+	updatedCase, err := s.GetCaseByID(ctx, caseID)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to retrieve updated case", err)
+		return nil, err
+	}
+
+	s.logger.Info("Service Level: Successfully added document to case")
+	return updatedCase, nil
+}
+
+// DeleteDocumentFromCase removes a document from a case.
+func (s *CaseServiceImpl) DeleteDocumentFromCase(ctx context.Context, caseID, documentID primitive.ObjectID) (*dtos.CaseResponse, error) {
+	s.logger.Info("Service Level: Attempting to delete document from case")
+
+	_, err := s.caseRepo.DeleteDocument(ctx, caseID, documentID)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to delete document from case", err)
+		return nil, err
+	}
+
+	updatedCase, err := s.GetCaseByID(ctx, caseID)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to retrieve updated case", err)
+		return nil, err
+	}
+
+	s.logger.Info("Service Level: Successfully deleted document from case")
+	return updatedCase, nil
+}
+
+// AddFeedbackToMessage adds feedback to a message within a case.
+func (s *CaseServiceImpl) AddFeedbackToMessage(ctx context.Context, req *dtos.AddFeedbackRequest) (*models.Feedback, error) {
+	s.logger.Info("Service Level: Attempting to add feedback to message in case")
+
+	// Ensure the creator exists (assuming there's a userRepo for this purpose)
+	creator, err := s.userRepo.FindUserByID(ctx, req.CreatorID)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to find feedback creator", err)
+		return nil, err
+	}
+
+	// Construct the feedback model from the request
+	feedback := models.Feedback{
+		ID:           primitive.NewObjectID(),
+		CaseID:       req.CaseID,
+		MessageID:    req.MessageID,
+		CreatorID:    creator.ID,
+		Score:        req.Score,
+		Reasons:      req.Reasons,
+		Comment:      req.Comment,
+		CreationDate: req.CreationDate,
+	}
+
+	// Add the feedback to the message in the case
+	_, err = s.caseRepo.AddFeedbackToMessage(ctx, feedback)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to add feedback to message in case", err)
+		return nil, err
+	}
+
+	s.logger.Info("Service Level: Successfully added feedback to message in case")
+	return &feedback, nil
+}
+
+// GetFeedbackByUserAndMessage retrieves feedback provided by a specific user for a specific message.
+func (s *CaseServiceImpl) GetFeedbackByUserAndMessage(ctx context.Context, creatorID, messageID primitive.ObjectID) ([]models.Feedback, error) {
+	s.logger.Info("Service Level: Attempting to retrieve feedback by user and message")
+
+	// Call repository layer to get feedback
+	feedbacks, err := s.caseRepo.GetFeedbackByUserAndMessage(ctx, creatorID, messageID)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to retrieve feedback by user and message", err)
+		return nil, err
+	}
+
+	s.logger.Info("Service Level: Successfully retrieved feedback by user and message")
+	return feedbacks, nil
+}
+
 // AddAgentSkillToCase adds a agent skill to a case.
 func (s *CaseServiceImpl) AddAgentSkillToCase(ctx context.Context, id primitive.ObjectID, agentSkillRequest dtos.AddAgentSkillToCaseRequest) (*dtos.CaseResponse, error) {
 	s.logger.Info("Service Level: Attempting to add agent skill to case")
-
 	updates := map[string]interface{}{
 		"id":       agentSkillRequest.ID,
 		"agent_id": agentSkillRequest.AgentID,

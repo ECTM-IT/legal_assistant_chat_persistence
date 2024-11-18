@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -18,6 +19,8 @@ type CaseHanler interface {
 	DeleteCase(ctx context.Context, id primitive.ObjectID) (*dtos.CaseResponse, error)
 	AddCollaboratorToCase(ctx context.Context, caseID, collaboratorID primitive.ObjectID) (*dtos.CaseResponse, error)
 	RemoveCollaboratorFromCase(ctx context.Context, caseID, collaboratorID primitive.ObjectID) (*dtos.CaseResponse, error)
+	AddDocumentToCase(ctx context.Context, caseID primitive.ObjectID, document *models.Document) (*dtos.CaseResponse, error)
+	DeleteDocumentFromCase(ctx context.Context, caseID, documentID primitive.ObjectID) (*dtos.CaseResponse, error)
 	AddAgentSkillToCase(ctx context.Context, caseID primitive.ObjectID, agentSkill *dtos.AddAgentSkillToCaseRequest) (*dtos.CaseResponse, error)
 	DeleteAgentSkillFromCase(ctx context.Context, caseID, agentSkillID primitive.ObjectID) (*dtos.CaseResponse, error)
 }
@@ -169,19 +172,138 @@ func (h *CaseHandler) RemoveCollaboratorFromCase(w http.ResponseWriter, r *http.
 	h.RespondWithJSON(w, http.StatusOK, updatedCase)
 }
 
-func (h *CaseHandler) AddAgentSkillToCase(w http.ResponseWriter, r *http.Request) {
+func (h *CaseHandler) AddDocumentToCase(w http.ResponseWriter, r *http.Request) {
 	caseID, err := h.ParseObjectID(r, "id", false)
 	if err != nil {
 		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
 		return
 	}
 
-	var req dtos.AddAgentSkillToCaseRequest
+	var doc dtos.AddDocumentToCase // Assuming a DTO to parse the incoming JSON payload
+	if err := h.DecodeJSONBody(r, &doc); err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	document := &models.Document{
+		FileName:    doc.FileName,
+		FileType:    doc.FileType,
+		FileContent: doc.FileContent,
+	}
+
+	updatedCase, err := h.service.AddDocumentToCase(r.Context(), caseID, document)
+	if err != nil {
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to add document to case")
+		return
+	}
+
+	h.RespondWithJSON(w, http.StatusOK, updatedCase)
+}
+
+func (h *CaseHandler) DeleteDocumentFromCase(w http.ResponseWriter, r *http.Request) {
+	caseID, err := h.ParseObjectID(r, "id", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
+		return
+	}
+
+	documentID, err := h.ParseObjectID(r, "documentID", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid document ID")
+		return
+	}
+
+	updatedCase, err := h.service.DeleteDocumentFromCase(r.Context(), caseID, documentID)
+	if err != nil {
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to delete document from case")
+		return
+	}
+
+	h.RespondWithJSON(w, http.StatusOK, updatedCase)
+}
+
+func (h *CaseHandler) AddFeedbackToMessage(w http.ResponseWriter, r *http.Request) {
+	// Parse caseID from the URL
+	caseID, err := h.ParseObjectID(r, "id", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
+		return
+	}
+
+	// Parse messageID from the URL
+	messageID, err := h.ParseObjectID(r, "messageId", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid message ID")
+		return
+	}
+
+	// Decode the request body into AddFeedbackRequest DTO
+	var req dtos.AddFeedbackRequest
 	if err := h.DecodeJSONBody(r, &req); err != nil {
 		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
+	// Set caseID and messageID in request to ensure they are passed correctly
+	req.CaseID = caseID
+	req.MessageID = messageID
+
+	// Call the service layer to add feedback to the message
+	feedback, err := h.service.AddFeedbackToMessage(r.Context(), &req)
+	if err != nil {
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to add feedback to message")
+		return
+	}
+
+	// Respond with the created feedback
+	h.RespondWithJSON(w, http.StatusCreated, feedback)
+}
+
+// GetFeedbackByUserAndMessageHandler handles the HTTP request to retrieve feedback for a specific user and message.
+func (h *CaseHandler) GetFeedbackByUserAndMessageHandler(w http.ResponseWriter, r *http.Request) {
+	// Parse creatorID from the URL or query parameters
+	_, err := h.ParseObjectID(r, "id", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
+		return
+	}
+
+	// Parse creatorID from the URL or query parameters
+	creatorID, err := h.ParseObjectID(r, "creatorId", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid creator ID")
+		return
+	}
+
+	// Parse messageID from the URL or query parameters
+	messageID, err := h.ParseObjectID(r, "messageId", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid message ID")
+		return
+	}
+
+	// Call the service layer to get the feedback
+	feedbacks, err := h.service.GetFeedbackByUserAndMessage(r.Context(), creatorID, messageID)
+	if err != nil {
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to retrieve feedback")
+		return
+	}
+
+	// Respond with the feedback
+	h.RespondWithJSON(w, http.StatusOK, feedbacks)
+}
+
+func (h *CaseHandler) AddAgentSkillToCase(w http.ResponseWriter, r *http.Request) {
+	caseID, err := h.ParseObjectID(r, "id", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
+		return
+	}
+	var req dtos.AddAgentSkillToCaseRequest
+	if err := h.DecodeJSONBody(r, &req); err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
 	newUser, err := h.service.AddAgentSkillToCase(r.Context(), caseID, req)
 	if err != nil {
 		h.RespondWithError(w, http.StatusInternalServerError, "Failed to add agent skill to case")
@@ -189,20 +311,17 @@ func (h *CaseHandler) AddAgentSkillToCase(w http.ResponseWriter, r *http.Request
 	}
 	h.RespondWithJSON(w, http.StatusOK, newUser)
 }
-
 func (h *CaseHandler) RemoveAgentSkillFromCase(w http.ResponseWriter, r *http.Request) {
 	caseID, err := h.ParseObjectID(r, "id", false)
 	if err != nil {
 		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
 		return
 	}
-
 	agentSkillID, err := h.ParseObjectID(r, "agentSkillID", false)
 	if err != nil {
 		h.RespondWithError(w, http.StatusBadRequest, "Invalid agent skill ID")
 		return
 	}
-
 	updatedCase, err := h.service.RemoveAgentSkillFromCase(r.Context(), caseID, agentSkillID)
 	if err != nil {
 		h.RespondWithError(w, http.StatusInternalServerError, "Failed to remove agent skill from case")
