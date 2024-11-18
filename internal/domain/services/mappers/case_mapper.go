@@ -24,6 +24,8 @@ type CaseConversionService interface {
 	DTOToMessage(messageDTO dtos.MessageResponse) (models.Message, error)
 	MessagesToDTO(messages []models.Message) []dtos.MessageResponse
 	DTOToMessages(messagesDTO []dtos.MessageResponse) ([]models.Message, error)
+	DocumentsToDocumentsResponse(docs []models.Document) []dtos.DocumentResponse
+	DTOToDocuments(documentsDTO []dtos.DocumentResponse) ([]models.Document, error)
 }
 
 type CaseConversionServiceImpl struct {
@@ -57,6 +59,12 @@ func (s *CaseConversionServiceImpl) DTOToCase(caseRequest dtos.CreateCaseRequest
 		return nil, fmt.Errorf("error converting collaborators: %w", err)
 	}
 
+	documents, err := s.DTOToDocuments(caseRequest.Documents.OrElse(nil))
+	if err != nil {
+		s.logger.Error("Failed to convert documents", err)
+		return nil, fmt.Errorf("error converting documents: %w", err)
+	}
+
 	now := time.Now()
 	caseModel := &models.Case{
 		ID:            primitive.NewObjectID(),
@@ -64,6 +72,7 @@ func (s *CaseConversionServiceImpl) DTOToCase(caseRequest dtos.CreateCaseRequest
 		CreatorID:     caseRequest.CreatorID.Value,
 		Messages:      messages,
 		Collaborators: collaborators,
+		Documents:     documents,
 		Action:        caseRequest.Action.OrElse("summarize"),
 		AgentID:       caseRequest.AgentID.OrElse(primitive.NilObjectID),
 		LastEdit:      caseRequest.LastEdit.OrElse(now),
@@ -90,6 +99,7 @@ func (s *CaseConversionServiceImpl) CaseToDTO(caseModel *models.Case) *dtos.Case
 		CreatorID:     helpers.NewNullable(caseModel.CreatorID),
 		Messages:      helpers.NewNullable(s.MessagesToDTO(caseModel.Messages)),
 		Collaborators: helpers.NewNullable(s.CollaboratorsToDTO(caseModel.Collaborators)),
+		Documents:     helpers.NewNullable(s.DocumentsToDocumentsResponse(caseModel.Documents)),
 		Action:        helpers.NewNullable(caseModel.Action),
 		AgentID:       helpers.NewNullable(caseModel.AgentID),
 		LastEdit:      helpers.NewNullable(caseModel.LastEdit),
@@ -312,4 +322,51 @@ func (s *CaseConversionServiceImpl) DTOToMessages(messagesDTO []dtos.MessageResp
 
 	s.logger.Info("Successfully converted DTOs to Messages")
 	return messages, nil
+}
+
+// MapDocuments converts a list of Document models to DocumentResponse DTOs
+func (s *CaseConversionServiceImpl) DocumentsToDocumentsResponse(docs []models.Document) []dtos.DocumentResponse {
+	s.logger.Info("Converting Documents to DTOs")
+
+	var docResponses []dtos.DocumentResponse
+	for _, doc := range docs {
+		docResponses = append(docResponses, dtos.DocumentResponse{
+			ID:          helpers.NewNullable(doc.ID),
+			FileName:    helpers.NewNullable(doc.FileName),
+			FileType:    helpers.NewNullable(doc.FileType),
+			FileContent: helpers.NewNullable(doc.FileContent),
+			UploadDate:  helpers.NewNullable(doc.UploadDate),
+		})
+	}
+
+	s.logger.Info("Successfully converted Documents to DTOs")
+	return docResponses
+}
+
+func (s *CaseConversionServiceImpl) DTOToDocuments(documentsDTO []dtos.DocumentResponse) ([]models.Document, error) {
+	s.logger.Info("Converting DTOs to Documents")
+
+	if len(documentsDTO) == 0 {
+		s.logger.Warn("No DocumentResponses provided for conversion")
+		return []models.Document{}, nil
+	}
+
+	documents := make([]models.Document, 0, len(documentsDTO))
+	for _, dto := range documentsDTO {
+		if !dto.ID.Present {
+			err := errors.New("document ID is required")
+			s.logger.Error("Failed to convert DTO to Document: document ID is required", err)
+			return nil, err
+		}
+		documents = append(documents, models.Document{
+			ID:          dto.ID.Value,
+			FileName:    dto.FileName.OrElse(""),
+			FileType:    dto.FileType.OrElse(""),
+			FileContent: dto.FileContent.OrElse([]byte{}),
+			UploadDate:  dto.UploadDate.OrElse(time.Now()),
+		})
+	}
+
+	s.logger.Info("Successfully converted DTOs to Documents")
+	return documents, nil
 }

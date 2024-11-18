@@ -196,6 +196,46 @@ func (s *CaseServiceImpl) RemoveCollaboratorFromCase(ctx context.Context, id, co
 	return updatedCase, nil
 }
 
+// AddDocumentToCase adds a document to a case.
+func (s *CaseServiceImpl) AddDocumentToCase(ctx context.Context, caseID primitive.ObjectID, document *models.Document) (*dtos.CaseResponse, error) {
+	s.logger.Info("Service Level: Attempting to add document to case")
+
+	_, err := s.caseRepo.AddDocument(ctx, caseID, document)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to add document to case", err)
+		return nil, err
+	}
+
+	updatedCase, err := s.GetCaseByID(ctx, caseID)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to retrieve updated case", err)
+		return nil, err
+	}
+
+	s.logger.Info("Service Level: Successfully added document to case")
+	return updatedCase, nil
+}
+
+// DeleteDocumentFromCase removes a document from a case.
+func (s *CaseServiceImpl) DeleteDocumentFromCase(ctx context.Context, caseID, documentID primitive.ObjectID) (*dtos.CaseResponse, error) {
+	s.logger.Info("Service Level: Attempting to delete document from case")
+
+	_, err := s.caseRepo.DeleteDocument(ctx, caseID, documentID)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to delete document from case", err)
+		return nil, err
+	}
+
+	updatedCase, err := s.GetCaseByID(ctx, caseID)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to retrieve updated case", err)
+		return nil, err
+	}
+
+	s.logger.Info("Service Level: Successfully deleted document from case")
+	return updatedCase, nil
+}
+
 // AddFeedbackToMessage adds feedback to a message within a case.
 func (s *CaseServiceImpl) AddFeedbackToMessage(ctx context.Context, req *dtos.AddFeedbackRequest) (*models.Feedback, error) {
 	s.logger.Info("Service Level: Attempting to add feedback to message in case")

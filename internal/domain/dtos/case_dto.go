@@ -27,6 +27,7 @@ type CreateCaseRequest struct {
 	CreatorID     helpers.Nullable[primitive.ObjectID]     `json:"creator_id" bson:"creator_id"`
 	Messages      helpers.Nullable[[]MessageResponse]      `json:"messages" bson:"messages"`
 	Collaborators helpers.Nullable[[]CollaboratorResponse] `json:"collaborators" bson:"collaborators"`
+	Documents     helpers.Nullable[[]DocumentResponse]     `json:"documents" bson:"documents"`
 	Action        helpers.Nullable[string]                 `json:"action" bson:"action"`
 	AgentID       helpers.Nullable[primitive.ObjectID]     `json:"agent_id" bson:"agent_id"`
 	LastEdit      helpers.Nullable[time.Time]              `json:"last_edit" bson:"last_edit"`
@@ -40,6 +41,7 @@ type CaseResponse struct {
 	CreatorID     helpers.Nullable[primitive.ObjectID]     `json:"creator_id" bson:"creator_id"`
 	Messages      helpers.Nullable[[]MessageResponse]      `json:"messages" bson:"messages"`
 	Collaborators helpers.Nullable[[]CollaboratorResponse] `json:"collaborators" bson:"collaborators"`
+	Documents     helpers.Nullable[[]DocumentResponse]     `json:"documents" bson:"documents"`
 	Action        helpers.Nullable[string]                 `json:"action" bson:"action"`
 	AgentID       helpers.Nullable[primitive.ObjectID]     `json:"agent_id" bson:"agent_id"`
 	CreationDate  helpers.Nullable[time.Time]              `json:"creation_date" bson:"creation_date"`
@@ -65,6 +67,20 @@ type AddCollaboratorToCase struct {
 }
 type DeleteCaseRequest struct {
 	ID helpers.Nullable[primitive.ObjectID] `json:"id" bson:"_id"`
+}
+
+type DocumentResponse struct {
+	ID          helpers.Nullable[primitive.ObjectID] `json:"id" bson:"_id,omitempty"`
+	FileName    helpers.Nullable[string]             `json:"file_name" bson:"file_name"`
+	FileType    helpers.Nullable[string]             `json:"file_type" bson:"file_type"`
+	FileContent helpers.Nullable[[]byte]             `json:"file_content" bson:"file_content"`
+	UploadDate  helpers.Nullable[time.Time]          `json:"upload_date" bson:"upload_date"`
+}
+
+type AddDocumentToCase struct {
+	FileName    string `json:"file_name" validate:"required"`
+	FileType    string `json:"file_type" validate:"required"`    // e.g., "pdf", "docx", "xlsx"
+	FileContent []byte `json:"file_content" validate:"required"` // The actual file content (e.g., in base64 format if sending as JSON)
 }
 
 type Feedback struct {
