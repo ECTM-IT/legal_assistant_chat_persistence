@@ -166,3 +166,74 @@ func (h *CaseHandler) RemoveCollaboratorFromCase(w http.ResponseWriter, r *http.
 	}
 	h.RespondWithJSON(w, http.StatusOK, updatedCase)
 }
+
+func (h *CaseHandler) AddFeedbackToMessage(w http.ResponseWriter, r *http.Request) {
+	// Parse caseID from the URL
+	caseID, err := h.ParseObjectID(r, "id", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
+		return
+	}
+
+	// Parse messageID from the URL
+	messageID, err := h.ParseObjectID(r, "messageId", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid message ID")
+		return
+	}
+
+	// Decode the request body into AddFeedbackRequest DTO
+	var req dtos.AddFeedbackRequest
+	if err := h.DecodeJSONBody(r, &req); err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	// Set caseID and messageID in request to ensure they are passed correctly
+	req.CaseID = caseID
+	req.MessageID = messageID
+
+	// Call the service layer to add feedback to the message
+	feedback, err := h.service.AddFeedbackToMessage(r.Context(), &req)
+	if err != nil {
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to add feedback to message")
+		return
+	}
+
+	// Respond with the created feedback
+	h.RespondWithJSON(w, http.StatusCreated, feedback)
+}
+
+// GetFeedbackByUserAndMessageHandler handles the HTTP request to retrieve feedback for a specific user and message.
+func (h *CaseHandler) GetFeedbackByUserAndMessageHandler(w http.ResponseWriter, r *http.Request) {
+	// Parse creatorID from the URL or query parameters
+	_, err := h.ParseObjectID(r, "id", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
+		return
+	}
+
+	// Parse creatorID from the URL or query parameters
+	creatorID, err := h.ParseObjectID(r, "creatorId", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid creator ID")
+		return
+	}
+
+	// Parse messageID from the URL or query parameters
+	messageID, err := h.ParseObjectID(r, "messageId", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid message ID")
+		return
+	}
+
+	// Call the service layer to get the feedback
+	feedbacks, err := h.service.GetFeedbackByUserAndMessage(r.Context(), creatorID, messageID)
+	if err != nil {
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to retrieve feedback")
+		return
+	}
+
+	// Respond with the feedback
+	h.RespondWithJSON(w, http.StatusOK, feedbacks)
+}

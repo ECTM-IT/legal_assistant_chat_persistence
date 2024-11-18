@@ -26,9 +26,22 @@ type Collaborators struct {
 }
 
 type Message struct {
-	Sender       string `json:"sender" bson:"sender"`
-	Recipient    string `json:"recipient" bson:"recipient"`
-	Content      string `json:"content" bson:"content"`
-	DocumentPath string `json:"document_path" bson:"document_path"`
-	FunctionCall bool   `json:"function_call" bson:"function_call"`
+	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Sender       string             `json:"sender" bson:"sender"`
+	Recipient    string             `json:"recipient" bson:"recipient"`
+	Content      string             `json:"content" bson:"content"`
+	DocumentPath string             `json:"document_path" bson:"document_path"`
+	FunctionCall bool               `json:"function_call" bson:"function_call"`
+	Feedbacks    []Feedback         `json:"feedbacks" bson:"feedbacks"`
+}
+
+type Feedback struct {
+	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	CaseID       primitive.ObjectID `json:"case_id" bson:"case_id" validate:"required"`
+	MessageID    primitive.ObjectID `json:"message_id" bson:"message_id"`
+	CreatorID    primitive.ObjectID `json:"creator_id" bson:"creator_id"`
+	Score        string             `json:"score" bson:"score"`
+	Reasons      []string           `json:"reasons" bson:"reasons"`
+	Comment      string             `json:"comment" bson:"comment"`
+	CreationDate time.Time          `json:"creation_date" bson:"creation_date"`
 }

@@ -153,3 +153,67 @@ func (dao *CaseDAO) RemoveCollaborator(ctx context.Context, caseID, collaborator
 	dao.logger.Info("DAO Level: Successfully removed collaborator from case")
 	return result, nil
 }
+
+// AddFeedback adds a feedback entry to a specific message within a case in the database
+func (dao *CaseDAO) AddFeedback(ctx context.Context, caseID, messageID primitive.ObjectID, feedback models.Feedback) (*mongo.UpdateResult, error) {
+	dao.logger.Info("DAO Level: Attempting to add feedback to message in case")
+
+	// Prepare the filter to find the specific message within the case
+	filter := bson.M{
+		"_id":          caseID,
+		"messages._id": messageID,
+	}
+
+	// Prepare the update to add the feedback to the message's feedback array
+	update := bson.M{
+		"$push": bson.M{"messages.$.feedbacks": feedback},
+	}
+
+	// Perform the update
+	result, err := dao.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		dao.logger.Error("DAO Level: Failed to add feedback to message in case", err)
+		return nil, err
+	}
+
+	dao.logger.Info("DAO Level: Successfully added feedback to message in case")
+	return result, nil
+}
+
+// GetFeedbackByUserAndMessage retrieves feedback from a specific user for a specific message in a case.
+func (dao *CaseDAO) GetFeedbackByUserAndMessage(ctx context.Context, creatorID, messageID primitive.ObjectID) ([]models.Feedback, error) {
+	dao.logger.Info("DAO Level: Attempting to retrieve feedback by user and message")
+
+	// Define the filter for feedbacks matching the user and message IDs
+	filter := bson.M{
+		"messages.feedbacks": bson.M{
+			"$elemMatch": bson.M{
+				"creator_id": creatorID,
+				"message_id": messageID,
+			},
+		},
+	}
+
+	// Find the case containing the specified feedback
+	var caseDoc models.Case
+	err := dao.collection.FindOne(ctx, filter).Decode(&caseDoc)
+	if err != nil {
+		dao.logger.Error("DAO Level: Failed to retrieve feedback by user and message", err)
+		return nil, err
+	}
+
+	// Extract and return the feedbacks that match
+	var feedbacks []models.Feedback
+	for _, msg := range caseDoc.Messages {
+		if msg.ID == messageID {
+			for _, fb := range msg.Feedbacks {
+				if fb.CreatorID == creatorID {
+					feedbacks = append(feedbacks, fb)
+				}
+			}
+			break
+		}
+	}
+
+	return feedbacks, nil
+}
