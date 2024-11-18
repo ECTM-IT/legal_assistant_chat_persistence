@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 
-	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/pkg/security"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/repositories"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services/mappers"
@@ -28,16 +27,14 @@ type UserServiceImpl struct {
 	userRepo *repositories.UserRepositoryImpl
 	mapper   *mappers.UserConversionServiceImpl
 	logger   logs.Logger
-	encrypt  security.EncryptionService
 }
 
 // NewUserService creates a new instance of the user service.
-func NewUserService(repo *repositories.UserRepositoryImpl, mapper *mappers.UserConversionServiceImpl, logger logs.Logger, encrypt security.EncryptionService) *UserServiceImpl {
+func NewUserService(repo *repositories.UserRepositoryImpl, mapper *mappers.UserConversionServiceImpl, logger logs.Logger) *UserServiceImpl {
 	return &UserServiceImpl{
 		userRepo: repo,
 		mapper:   mapper,
 		logger:   logger,
-		encrypt:  encrypt,
 	}
 }
 
@@ -53,23 +50,6 @@ func (s *UserServiceImpl) GetUserByID(ctx context.Context, userID primitive.Obje
 		s.logger.Error("Service Level: Failed to get user", err)
 		return nil, errors.NewDatabaseError("Service Level: Failed to get user", "get_user_failed")
 	}
-
-	// Decrypt name and email
-	decryptedName, err := s.encrypt.Decrypt(user.EncryptedName)
-	if err != nil {
-		s.logger.Error("Service Level: Failed to decrypt name", err)
-		return nil, errors.NewDatabaseError("failed to decrypt name", "decrypt error")
-	}
-
-	decryptedEmail, err := s.encrypt.Decrypt(user.EncryptedEmail)
-	if err != nil {
-		s.logger.Error("Service Level: Failed to decrypt email", err)
-		return nil, errors.NewDatabaseError("failed to decrypt email", "encryption_error")
-	}
-
-	user.EncryptedName = decryptedName
-	user.EncryptedEmail = decryptedEmail
-
 	s.logger.Info("Service Level: Successfully retrieved user by ID")
 	return s.mapper.UserToDTO(user), nil
 }
@@ -77,15 +57,7 @@ func (s *UserServiceImpl) GetUserByID(ctx context.Context, userID primitive.Obje
 // GetUserByEmail retrieves a user by their email.
 func (s *UserServiceImpl) GetUserByEmail(ctx context.Context, email string) (*dtos.UserResponse, error) {
 	s.logger.Info("Service Level: Attempting to retrieve user by email")
-
-	// Encrypt the email to match the stored encrypted email
-	encryptedEmail, err := s.encrypt.Encrypt(email)
-	if err != nil {
-		s.logger.Error("Service Level: Failed to encrypt email for search", err)
-		return nil, errors.NewDatabaseError("failed to encrypt email", "encrypt error")
-	}
-
-	user, err := s.userRepo.FindUserByEmail(ctx, encryptedEmail)
+	user, err := s.userRepo.FindUserByEmail(ctx, email)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			s.logger.Warn("User not found")
@@ -94,23 +66,6 @@ func (s *UserServiceImpl) GetUserByEmail(ctx context.Context, email string) (*dt
 		s.logger.Error("Service Level: Failed to get user", err)
 		return nil, errors.NewDatabaseError("Service Level: Failed to get user", "get_user_failed")
 	}
-
-	// Decrypt name and email
-	decryptedName, err := s.encrypt.Decrypt(user.EncryptedName)
-	if err != nil {
-		s.logger.Error("Service Level: Failed to decrypt name", err)
-		return nil, errors.NewDatabaseError("failed to decrypt name", "encryption_error")
-	}
-
-	decryptedEmail, err := s.encrypt.Decrypt(user.EncryptedEmail)
-	if err != nil {
-		s.logger.Error("Service Level: Failed to decrypt email", err)
-		return nil, errors.NewDatabaseError("failed to decrypt email", "encryption_error")
-	}
-
-	user.EncryptedName = decryptedName
-	user.EncryptedEmail = decryptedEmail
-
 	s.logger.Info("Service Level: Successfully retrieved user by email")
 	return s.mapper.UserToDTO(user), nil
 }
@@ -131,32 +86,16 @@ func (s *UserServiceImpl) GetUserByCaseID(ctx context.Context, caseID primitive.
 	return s.mapper.UserToDTO(user), nil
 }
 
-// CreateUser creates a new user with encrypted name and email.
+// CreateUser creates a new user.
 func (s *UserServiceImpl) CreateUser(ctx context.Context, userDTO *dtos.CreateUserRequest) (*dtos.UserResponse, error) {
 	s.logger.Info("Service Level: Attempting to create new user")
-
-	mappedUser, err := s.mapper.DTOToUser(userDTO)
+	user, err := s.mapper.DTOToUser(userDTO)
 	if err != nil {
 		s.logger.Error("Service Level: Failed to convert DTO to user", err)
-		return nil, errors.NewDatabaseError("failed to convert DTO to user", "conversion_error")
-	}
-	// Encrypt username and email
-	encryptedName, err := s.encrypt.Encrypt(mappedUser.EncryptedEmail)
-	if err != nil {
-		s.logger.Error("Service Level: Failed to encrypt name", err)
-		return nil, errors.NewDatabaseError("failed to encrypt name", "encryption_error")
+		return nil, err
 	}
 
-	encryptedEmail, err := s.encrypt.Encrypt(mappedUser.EncryptedEmail)
-	if err != nil {
-		s.logger.Error("Service Level: Failed to encrypt email", err)
-		return nil, errors.NewDatabaseError("failed to encrypt email", "encryption_error")
-	}
-
-	mappedUser.EncryptedName = encryptedName
-	mappedUser.EncryptedEmail = encryptedEmail
-
-	createdUser, err := s.userRepo.CreateUser(ctx, mappedUser)
+	createdUser, err := s.userRepo.CreateUser(ctx, user)
 	if err != nil {
 		s.logger.Error("Service Level: Failed to create user", err)
 		return nil, errors.NewDatabaseError("Service Level: Failed to create user", "create_user_failed")
@@ -166,57 +105,16 @@ func (s *UserServiceImpl) CreateUser(ctx context.Context, userDTO *dtos.CreateUs
 	return s.mapper.UserToDTO(createdUser), nil
 }
 
-// UpdateUser updates an existing user with encrypted fields.
+// UpdateUser updates an existing user.
 func (s *UserServiceImpl) UpdateUser(ctx context.Context, userID primitive.ObjectID, userDTO *dtos.UpdateUserRequest) (*dtos.UserResponse, error) {
 	s.logger.Info("Service Level: Attempting to update user")
-
-	updateFields := make(map[string]interface{})
-
-	if userDTO.EncryptedName.Present {
-		encryptedName, err := s.encrypt.Encrypt(userDTO.EncryptedName.Value)
-		if err != nil {
-			s.logger.Error("Service Level: Failed to encrypt name during update", err)
-			return nil, errors.NewDatabaseError("failed to encrypt name", "encryption_error")
-		}
-		updateFields["encrypted_name"] = encryptedName
-	}
-
-	if userDTO.EncryptedEmail.Present {
-		encryptedEmail, err := s.encrypt.Encrypt(userDTO.EncryptedEmail.Value)
-		if err != nil {
-			s.logger.Error("Service Level: Failed to encrypt email during update", err)
-			return nil, errors.NewDatabaseError("failed to encrypt email", "encryption_error")
-		}
-		updateFields["encrypted_email"] = encryptedEmail
-	}
-
-	// Process other fields
-	otherUpdates := s.mapper.UpdateUserFieldsToMap(*userDTO)
-	for k, v := range otherUpdates {
-		updateFields[k] = v
-	}
+	updateFields := s.mapper.UpdateUserFieldsToMap(*userDTO)
 
 	updatedUser, err := s.userRepo.UpdateUser(ctx, userID, updateFields)
 	if err != nil {
 		s.logger.Error("Service Level: Failed to update user", err)
 		return nil, errors.NewDatabaseError("Service Level: Failed to update user", "update_user_failed")
 	}
-
-	// Decrypt name and email
-	decryptedName, err := s.encrypt.Decrypt(updatedUser.EncryptedName)
-	if err != nil {
-		s.logger.Error("Service Level: Failed to decrypt name after update", err)
-		return nil, errors.NewDatabaseError("failed to decrypt name after update", "encrypt_error")
-	}
-
-	decryptedEmail, err := s.encrypt.Decrypt(updatedUser.EncryptedEmail)
-	if err != nil {
-		s.logger.Error("Service Level: Failed to decrypt email after update", err)
-		return nil, errors.NewDatabaseError("failed to decrypt email after update", "encryption_error")
-	}
-
-	updatedUser.EncryptedName = decryptedName
-	updatedUser.EncryptedEmail = decryptedEmail
 
 	s.logger.Info("Service Level: Successfully updated user")
 	return s.mapper.UserToDTO(updatedUser), nil

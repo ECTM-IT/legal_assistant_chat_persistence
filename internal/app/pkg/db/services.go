@@ -1,7 +1,6 @@
 package db
 
 import (
-	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/pkg/security" // Importing the security package
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/daos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/repositories"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
@@ -16,19 +15,9 @@ type Services struct {
 	TeamService         *services.TeamServiceImpl
 	UserService         *services.UserServiceImpl
 	SubscriptionService *services.SubscriptionServiceImpl
-	EncryptionService   *security.EncryptionService
 }
 
 func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
-
-	// Initialize the EnvironmentKeyManager
-	keyManager := security.NewEnvironmentKeyManager("ENV_AES_256_KEY")
-
-	// Initialize EncryptionService
-	encryptionService, err := security.NewAES256EncryptionService(keyManager)
-	if err != nil {
-		logger.Error("error in encryption service", err)
-	}
 	// Initialize DAOs
 	agentDAO := daos.NewAgentDAO(db, logger)
 	caseDAO := daos.NewCaseDAO(db, logger)
@@ -54,7 +43,7 @@ func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 	agentService := services.NewAgentService(agentRepo, agentMapper, userMapper, logger)
 	caseService := services.NewCaseService(caseRepo, caseMapper, userMapper, userRepo, logger)
 	teamService := services.NewTeamService(teamRepo, teamMapper, logger)
-	userService := services.NewUserService(userRepo, userMapper, logger, encryptionService) // Pass encryptionService to UserService
+	userService := services.NewUserService(userRepo, userMapper, logger)
 	subscriptionService := services.NewSubscriptionService(subscriptionRepo, subscriptionMapper, logger)
 
 	return &Services{
