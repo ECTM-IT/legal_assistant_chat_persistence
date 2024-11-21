@@ -71,7 +71,7 @@ func (r *CaseRepository) AddFeedbackToMessage(ctx context.Context, feedback mode
 	return r.caseDAO.AddFeedback(ctx, feedback.CaseID, feedback.MessageID, feedback)
 }
 
-func (r *CaseRepository) GetFeedbackByUserAndMessage(ctx context.Context, creatorID, messageID primitive.ObjectID) ([]models.Feedback, error) {
+func (r *CaseRepository) GetFeedbackByUserAndMessage(ctx context.Context, creatorID primitive.ObjectID, messageID string) ([]models.Feedback, error) {
 	return r.caseDAO.GetFeedbackByUserAndMessage(ctx, creatorID, messageID)
 }
 

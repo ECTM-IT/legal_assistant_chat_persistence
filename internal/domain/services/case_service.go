@@ -313,7 +313,7 @@ func (s *CaseServiceImpl) AddFeedbackToMessage(ctx context.Context, req *dtos.Ad
 }
 
 // GetFeedbackByUserAndMessage retrieves feedback provided by a specific user for a specific message.
-func (s *CaseServiceImpl) GetFeedbackByUserAndMessage(ctx context.Context, creatorID, messageID primitive.ObjectID) ([]models.Feedback, error) {
+func (s *CaseServiceImpl) GetFeedbackByUserAndMessage(ctx context.Context, creatorID primitive.ObjectID, messageID string) ([]models.Feedback, error) {
 	s.logger.Info("Service Level: Attempting to retrieve feedback by user and message")
 
 	// Call repository layer to get feedback

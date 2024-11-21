@@ -256,7 +256,7 @@ func (dao *CaseDAO) DeleteDocument(ctx context.Context, caseID, documentID primi
 }
 
 // AddFeedback adds a feedback entry to a specific message within a case in the database
-func (dao *CaseDAO) AddFeedback(ctx context.Context, caseID, messageID primitive.ObjectID, feedback models.Feedback) (*mongo.UpdateResult, error) {
+func (dao *CaseDAO) AddFeedback(ctx context.Context, caseID primitive.ObjectID, messageID string, feedback models.Feedback) (*mongo.UpdateResult, error) {
 	dao.logger.Info("DAO Level: Attempting to add feedback to message in case")
 
 	// Prepare the filter to find the specific message within the case
@@ -282,7 +282,7 @@ func (dao *CaseDAO) AddFeedback(ctx context.Context, caseID, messageID primitive
 }
 
 // GetFeedbackByUserAndMessage retrieves feedback from a specific user for a specific message in a case.
-func (dao *CaseDAO) GetFeedbackByUserAndMessage(ctx context.Context, creatorID, messageID primitive.ObjectID) ([]models.Feedback, error) {
+func (dao *CaseDAO) GetFeedbackByUserAndMessage(ctx context.Context, creatorID primitive.ObjectID, messageID string) ([]models.Feedback, error) {
 	dao.logger.Info("DAO Level: Attempting to retrieve feedback by user and message")
 
 	// Define the filter for feedbacks matching the user and message IDs

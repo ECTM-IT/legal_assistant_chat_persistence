@@ -318,7 +318,7 @@ func (h *CaseHandler) AddFeedbackToMessage(w http.ResponseWriter, r *http.Reques
 
 	// Set caseID and messageID in request to ensure they are passed correctly
 	req.CaseID = caseID
-	req.MessageID = messageID
+	req.MessageID = messageID.String()
 
 	// Call the service layer to add feedback to the message
 	feedback, err := h.service.AddFeedbackToMessage(r.Context(), &req)
@@ -355,7 +355,7 @@ func (h *CaseHandler) GetFeedbackByUserAndMessageHandler(w http.ResponseWriter, 
 	}
 
 	// Call the service layer to get the feedback
-	feedbacks, err := h.service.GetFeedbackByUserAndMessage(r.Context(), creatorID, messageID)
+	feedbacks, err := h.service.GetFeedbackByUserAndMessage(r.Context(), creatorID, messageID.String())
 	if err != nil {
 		h.RespondWithError(w, http.StatusInternalServerError, "Failed to retrieve feedback")
 		return

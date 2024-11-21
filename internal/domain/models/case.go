@@ -34,13 +34,13 @@ type AgentSkillResponse struct {
 }
 
 type Message struct {
-	ID           primitive.ObjectID `json:"messageID" bson:"messageID,omitempty"`
-	Sender       string             `json:"sender" bson:"sender"`
-	Recipient    string             `json:"recipient" bson:"recipient"`
-	Content      string             `json:"content" bson:"content"`
-	DocumentPath string             `json:"document_path" bson:"document_path"`
-	FunctionCall bool               `json:"function_call" bson:"function_call"`
-	Feedbacks    []Feedback         `json:"feedbacks" bson:"feedbacks"`
+	ID           string     `json:"messageID" bson:"messageID,omitempty"`
+	Sender       string     `json:"sender" bson:"sender"`
+	Recipient    string     `json:"recipient" bson:"recipient"`
+	Content      string     `json:"content" bson:"content"`
+	DocumentPath string     `json:"document_path" bson:"document_path"`
+	FunctionCall bool       `json:"function_call" bson:"function_call"`
+	Feedbacks    []Feedback `json:"feedbacks" bson:"feedbacks"`
 
 	Skills []MessageSkillResponse `json:"skill" bson:"agent_skills"`
 	Agent  string                 `json:"agent" bson:"agent_id"`
@@ -55,7 +55,7 @@ type MessageSkillResponse struct {
 type Feedback struct {
 	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	CaseID       primitive.ObjectID `json:"case_id" bson:"case_id" validate:"required"`
-	MessageID    primitive.ObjectID `json:"message_id" bson:"message_id"`
+	MessageID    string             `json:"message_id" bson:"message_id"`
 	CreatorID    primitive.ObjectID `json:"creator_id" bson:"creator_id"`
 	Score        string             `json:"score" bson:"score"`
 	Reasons      []string           `json:"reasons" bson:"reasons"`
