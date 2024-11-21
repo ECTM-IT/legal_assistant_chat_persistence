@@ -388,7 +388,7 @@ func (s *CaseConversionServiceImpl) DTOToDocuments(documentsDTO []dtos.DocumentR
 			ID:          dto.ID.Value,
 			FileName:    dto.FileName.OrElse(""),
 			FileType:    dto.FileType.OrElse(""),
-			FileContent: dto.FileContent.OrElse([]byte{}),
+			FileContent: dto.FileContent.OrElse(""),
 			UploadDate:  dto.UploadDate.OrElse(time.Now()),
 		})
 	}

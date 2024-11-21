@@ -68,7 +68,7 @@ type Document struct {
 	Sender                string                 `json:"sender" bson:"sender"`
 	FileName              string                 `json:"file_name" bson:"file_name"`
 	FileType              string                 `json:"file_type" bson:"file_type"` // e.g., pdf, docx, xls
-	FileContent           []byte                 `json:"file_content" bson:"file_content"`
+	FileContent           string                 `json:"file_content" bson:"file_content"`
 	DocumentCollaborators []DocumentCollaborator `json:"collaborators" bson:"collaborators"`
 	UploadDate            time.Time              `json:"upload_date" bson:"upload_date"`
 }

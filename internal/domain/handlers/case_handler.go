@@ -190,7 +190,7 @@ func (h *CaseHandler) AddDocumentToCase(w http.ResponseWriter, r *http.Request) 
 		Sender:      doc.Sender.OrElse(""),
 		FileName:    doc.FileName.OrElse(""),
 		FileType:    doc.FileType.OrElse(""),
-		FileContent: doc.FileContent.OrElse([]byte{}),
+		FileContent: doc.FileContent.OrElse(""),
 	}
 
 	updatedCase, err := h.service.AddDocumentToCase(r.Context(), caseID, document)
@@ -224,7 +224,7 @@ func (h *CaseHandler) UpdateDocument(w http.ResponseWriter, r *http.Request) {
 	document := &models.Document{
 		FileName:    doc.FileName.OrElse(""),
 		FileType:    doc.FileType.OrElse(""),
-		FileContent: doc.FileContent.OrElse([]byte{}),
+		FileContent: doc.FileContent.OrElse(""),
 	}
 
 	updatedCase, err := h.service.UpdateDocument(r.Context(), caseID, documentID, document)

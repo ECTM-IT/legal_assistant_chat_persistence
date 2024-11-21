@@ -98,7 +98,7 @@ type DocumentResponse struct {
 	ID          helpers.Nullable[primitive.ObjectID] `json:"id" bson:"_id,omitempty"`
 	FileName    helpers.Nullable[string]             `json:"file_name" bson:"file_name"`
 	FileType    helpers.Nullable[string]             `json:"file_type" bson:"file_type"`
-	FileContent helpers.Nullable[[]byte]             `json:"file_content" bson:"file_content"`
+	FileContent helpers.Nullable[string]             `json:"file_content" bson:"file_content"`
 	UploadDate  helpers.Nullable[time.Time]          `json:"upload_date" bson:"upload_date"`
 }
 
@@ -106,13 +106,13 @@ type AddDocumentToCase struct {
 	Sender      helpers.Nullable[string] `json:"sender,omitempty" bson:"sender"`
 	FileName    helpers.Nullable[string] `json:"file_name" validate:"required"`
 	FileType    helpers.Nullable[string] `json:"file_type" validate:"required"`    // e.g., "pdf", "docx", "xlsx"
-	FileContent helpers.Nullable[[]byte] `json:"file_content" validate:"required"` // The actual file content (e.g., in base64 format if sending as JSON)
+	FileContent helpers.Nullable[string] `json:"file_content" validate:"required"` // The actual file content (e.g., in base64 format if sending as JSON)
 }
 
 type UpdateDocument struct {
 	FileName    helpers.Nullable[string] `json:"file_name" validate:"required"`
 	FileType    helpers.Nullable[string] `json:"file_type" validate:"required"`    // e.g., "pdf", "docx", "xlsx"
-	FileContent helpers.Nullable[[]byte] `json:"file_content" validate:"required"` // The actual file content (e.g., in base64 format if sending as JSON)
+	FileContent helpers.Nullable[string] `json:"file_content" validate:"required"` // The actual file content (e.g., in base64 format if sending as JSON)
 }
 
 type DocumentCollaboratorRequest struct {
