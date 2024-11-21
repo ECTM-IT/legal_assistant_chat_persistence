@@ -218,6 +218,46 @@ func (s *CaseServiceImpl) AddDocumentToCase(ctx context.Context, caseID primitiv
 	return updatedCase, nil
 }
 
+// UpdateDocument updates a document to a case.
+func (s *CaseServiceImpl) UpdateDocument(ctx context.Context, caseID primitive.ObjectID, documentID primitive.ObjectID, document *models.Document) (*dtos.CaseResponse, error) {
+	s.logger.Info("Service Level: Attempting to update document to case")
+
+	_, err := s.caseRepo.UpdateDocument(ctx, caseID, documentID, document)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to update document to case", err)
+		return nil, err
+	}
+
+	updatedCase, err := s.GetCaseByID(ctx, caseID)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to retrieve updated case", err)
+		return nil, err
+	}
+
+	s.logger.Info("Service Level: Successfully updated document to case")
+	return updatedCase, nil
+}
+
+// UpdateDocument updates a document to a case.
+func (s *CaseServiceImpl) AddDocumentCollaborator(ctx context.Context, caseID primitive.ObjectID, documentID primitive.ObjectID, collaborator *models.DocumentCollaborator) (*dtos.CaseResponse, error) {
+	s.logger.Info("Service Level: Attempting to update document to case")
+
+	_, err := s.caseRepo.AddDocumentCollaborator(ctx, caseID, documentID, collaborator)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to update document to case", err)
+		return nil, err
+	}
+
+	updatedCase, err := s.GetCaseByID(ctx, caseID)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to retrieve updated case", err)
+		return nil, err
+	}
+
+	s.logger.Info("Service Level: Successfully updated document to case")
+	return updatedCase, nil
+}
+
 // DeleteDocumentFromCase removes a document from a case.
 func (s *CaseServiceImpl) DeleteDocumentFromCase(ctx context.Context, caseID, documentID primitive.ObjectID) (*dtos.CaseResponse, error) {
 	s.logger.Info("Service Level: Attempting to delete document from case")

@@ -20,6 +20,7 @@ type CaseHanler interface {
 	AddCollaboratorToCase(ctx context.Context, caseID, collaboratorID primitive.ObjectID) (*dtos.CaseResponse, error)
 	RemoveCollaboratorFromCase(ctx context.Context, caseID, collaboratorID primitive.ObjectID) (*dtos.CaseResponse, error)
 	AddDocumentToCase(ctx context.Context, caseID primitive.ObjectID, document *models.Document) (*dtos.CaseResponse, error)
+	UpdateDocument(ctx context.Context, caseID primitive.ObjectID, documentID primitive.ObjectID, document *models.Document) (*dtos.CaseResponse, error)
 	DeleteDocumentFromCase(ctx context.Context, caseID, documentID primitive.ObjectID) (*dtos.CaseResponse, error)
 	AddAgentSkillToCase(ctx context.Context, caseID primitive.ObjectID, agentSkill *dtos.AddAgentSkillToCaseRequest) (*dtos.CaseResponse, error)
 	DeleteAgentSkillFromCase(ctx context.Context, caseID, agentSkillID primitive.ObjectID) (*dtos.CaseResponse, error)
@@ -186,14 +187,85 @@ func (h *CaseHandler) AddDocumentToCase(w http.ResponseWriter, r *http.Request) 
 	}
 
 	document := &models.Document{
-		FileName:    doc.FileName,
-		FileType:    doc.FileType,
-		FileContent: doc.FileContent,
+		Sender:      doc.Sender.OrElse(""),
+		FileName:    doc.FileName.OrElse(""),
+		FileType:    doc.FileType.OrElse(""),
+		FileContent: doc.FileContent.OrElse([]byte{}),
 	}
 
 	updatedCase, err := h.service.AddDocumentToCase(r.Context(), caseID, document)
 	if err != nil {
 		h.RespondWithError(w, http.StatusInternalServerError, "Failed to add document to case")
+		return
+	}
+
+	h.RespondWithJSON(w, http.StatusOK, updatedCase)
+}
+
+func (h *CaseHandler) UpdateDocument(w http.ResponseWriter, r *http.Request) {
+	caseID, err := h.ParseObjectID(r, "id", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
+		return
+	}
+
+	documentID, err := h.ParseObjectID(r, "documentID", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid document ID")
+		return
+	}
+
+	var doc dtos.UpdateDocument // Assuming a DTO to parse the incoming JSON payload
+	if err := h.DecodeJSONBody(r, &doc); err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	document := &models.Document{
+		FileName:    doc.FileName.OrElse(""),
+		FileType:    doc.FileType.OrElse(""),
+		FileContent: doc.FileContent.OrElse([]byte{}),
+	}
+
+	updatedCase, err := h.service.UpdateDocument(r.Context(), caseID, documentID, document)
+	if err != nil {
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to add document to case")
+		return
+	}
+
+	h.RespondWithJSON(w, http.StatusOK, updatedCase)
+}
+
+// AddDocumentCollaborator handles adding a collaborator to a specific document in a case
+func (h *CaseHandler) AddDocumentCollaborator(w http.ResponseWriter, r *http.Request) {
+	caseID, err := h.ParseObjectID(r, "id", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
+		return
+	}
+
+	documentID, err := h.ParseObjectID(r, "documentID", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid document ID")
+		return
+	}
+
+	var collaborator dtos.DocumentCollaboratorRequest
+	if err := h.DecodeJSONBody(r, &collaborator); err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	// Create a new collaborator model
+	newCollaborator := &models.DocumentCollaborator{
+		Email: collaborator.Email.OrElse(""),
+		Edit:  collaborator.Edit.OrElse(false),
+	}
+
+	// Call the service layer to add the collaborator
+	updatedCase, err := h.service.AddDocumentCollaborator(r.Context(), caseID, documentID, newCollaborator)
+	if err != nil {
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to add collaborator to document")
 		return
 	}
 

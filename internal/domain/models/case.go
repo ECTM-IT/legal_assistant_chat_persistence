@@ -34,13 +34,22 @@ type AgentSkillResponse struct {
 }
 
 type Message struct {
-	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	ID           primitive.ObjectID `json:"messageID" bson:"messageID,omitempty"`
 	Sender       string             `json:"sender" bson:"sender"`
 	Recipient    string             `json:"recipient" bson:"recipient"`
 	Content      string             `json:"content" bson:"content"`
 	DocumentPath string             `json:"document_path" bson:"document_path"`
 	FunctionCall bool               `json:"function_call" bson:"function_call"`
 	Feedbacks    []Feedback         `json:"feedbacks" bson:"feedbacks"`
+
+	Skills []MessageSkillResponse `json:"skill" bson:"agent_skills"`
+	Agent  string                 `json:"agent" bson:"agent_id"`
+}
+
+type MessageSkillResponse struct {
+	ID    primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Agent string             `json:"agent" bson:"agent_id"`
+	Name  string             `json:"name" bson:"name,omitempty"`
 }
 
 type Feedback struct {
@@ -55,9 +64,16 @@ type Feedback struct {
 }
 
 type Document struct {
-	ID          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	FileName    string             `json:"file_name" bson:"file_name"`
-	FileType    string             `json:"file_type" bson:"file_type"` // e.g., pdf, docx, xls
-	FileContent []byte             `json:"file_content" bson:"file_content"`
-	UploadDate  time.Time          `json:"upload_date" bson:"upload_date"`
+	ID                    primitive.ObjectID     `json:"id" bson:"_id,omitempty"`
+	Sender                string                 `json:"sender" bson:"sender"`
+	FileName              string                 `json:"file_name" bson:"file_name"`
+	FileType              string                 `json:"file_type" bson:"file_type"` // e.g., pdf, docx, xls
+	FileContent           []byte                 `json:"file_content" bson:"file_content"`
+	DocumentCollaborators []DocumentCollaborator `json:"collaborators" bson:"collaborators"`
+	UploadDate            time.Time              `json:"upload_date" bson:"upload_date"`
+}
+
+type DocumentCollaborator struct {
+	Email string `json:"email" bson:"_email,omitempty"`
+	Edit  bool   `json:"edit" bson:"edit"`
 }

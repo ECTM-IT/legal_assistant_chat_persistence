@@ -9,12 +9,22 @@ import (
 
 // Start of Selection
 type MessageResponse struct {
-	Content      helpers.Nullable[string]     `json:"content,omitempty" bson:"content"`
-	Sender       helpers.Nullable[string]     `json:"sender,omitempty" bson:"sender"`
-	Recipient    helpers.Nullable[string]     `json:"recipient,omitempty" bson:"recipient"`
-	FunctionCall helpers.Nullable[bool]       `json:"function_call,omitempty" bson:"function_call"`
-	DocumentPath helpers.Nullable[string]     `json:"document_path,omitempty" bson:"document_path"`
-	Feedbacks    helpers.Nullable[[]Feedback] `json:"feedbacks,omitempty" bson:"feedbacks"`
+	MessageID    helpers.Nullable[primitive.ObjectID] `json:"messageID" bson:"messageID,omitempty"`
+	Content      helpers.Nullable[string]             `json:"content,omitempty" bson:"content"`
+	Sender       helpers.Nullable[string]             `json:"sender,omitempty" bson:"sender"`
+	Recipient    helpers.Nullable[string]             `json:"recipient,omitempty" bson:"recipient"`
+	FunctionCall helpers.Nullable[bool]               `json:"function_call,omitempty" bson:"function_call"`
+	DocumentPath helpers.Nullable[string]             `json:"document_path,omitempty" bson:"document_path"`
+	Feedbacks    helpers.Nullable[[]Feedback]         `json:"feedbacks,omitempty" bson:"feedbacks"`
+
+	Skills helpers.Nullable[[]MessageSkillResponse] `json:"skill" bson:"agent_skills"`
+	Agent  helpers.Nullable[string]                 `json:"agent" bson:"agent_id"`
+}
+
+type MessageSkillResponse struct {
+	ID    helpers.Nullable[primitive.ObjectID] `json:"id" bson:"_id,omitempty"`
+	Agent helpers.Nullable[string]             `json:"agent" bson:"agent_id"`
+	Name  helpers.Nullable[string]             `json:"name" bson:"name,omitempty"`
 }
 
 type CollaboratorResponse struct {
@@ -93,9 +103,21 @@ type DocumentResponse struct {
 }
 
 type AddDocumentToCase struct {
-	FileName    string `json:"file_name" validate:"required"`
-	FileType    string `json:"file_type" validate:"required"`    // e.g., "pdf", "docx", "xlsx"
-	FileContent []byte `json:"file_content" validate:"required"` // The actual file content (e.g., in base64 format if sending as JSON)
+	Sender      helpers.Nullable[string] `json:"sender,omitempty" bson:"sender"`
+	FileName    helpers.Nullable[string] `json:"file_name" validate:"required"`
+	FileType    helpers.Nullable[string] `json:"file_type" validate:"required"`    // e.g., "pdf", "docx", "xlsx"
+	FileContent helpers.Nullable[[]byte] `json:"file_content" validate:"required"` // The actual file content (e.g., in base64 format if sending as JSON)
+}
+
+type UpdateDocument struct {
+	FileName    helpers.Nullable[string] `json:"file_name" validate:"required"`
+	FileType    helpers.Nullable[string] `json:"file_type" validate:"required"`    // e.g., "pdf", "docx", "xlsx"
+	FileContent helpers.Nullable[[]byte] `json:"file_content" validate:"required"` // The actual file content (e.g., in base64 format if sending as JSON)
+}
+
+type DocumentCollaboratorRequest struct {
+	Email helpers.Nullable[string] `json:"email" bson:"email,omitempty"`
+	Edit  helpers.Nullable[bool]   `json:"edit" bson:"edit,omitempty"`
 }
 
 type Feedback struct {

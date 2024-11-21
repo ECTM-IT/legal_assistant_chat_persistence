@@ -179,6 +179,63 @@ func (dao *CaseDAO) AddDocument(ctx context.Context, caseID primitive.ObjectID, 
 	return result, nil
 }
 
+// UpdateDocument updates a document in a case by its document ID
+func (dao *CaseDAO) UpdateDocument(ctx context.Context, caseID primitive.ObjectID, documentID primitive.ObjectID, updatedDocument *models.Document) (*mongo.UpdateResult, error) {
+	dao.logger.Info("DAO Level: Attempting to update document in case")
+
+	// Set the modified date for the document
+	// updatedDocument.ModifiedDate = time.Now()
+
+	// Build the query to match the case ID and the document ID within the documents array
+	filter := bson.M{
+		"_id":           caseID,
+		"documents._id": documentID,
+	}
+
+	// Build the update operation to set the new document values
+	update := bson.M{
+		"$set": bson.M{
+			"documents.$": updatedDocument,
+		},
+	}
+
+	// Perform the update operation
+	result, err := dao.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		dao.logger.Error("DAO Level: Failed to update document in case", err)
+		return nil, err
+	}
+	dao.logger.Info("DAO Level: Successfully updated document in case")
+	return result, nil
+}
+
+// AddDocumentCollaborator adds a collaborator to a document in a case
+func (dao *CaseDAO) AddDocumentCollaborator(ctx context.Context, caseID primitive.ObjectID, documentID primitive.ObjectID, collaborator *models.DocumentCollaborator) (*mongo.UpdateResult, error) {
+	dao.logger.Info("DAO Level: Attempting to add collaborator to document in case")
+
+	// Build the query to match the case ID and the specific document ID
+	filter := bson.M{
+		"_id":           caseID,
+		"documents._id": documentID,
+	}
+
+	// Build the update operation to add the collaborator to the document's collaborators array
+	update := bson.M{
+		"$addToSet": bson.M{
+			"documents.$.collaborators": collaborator,
+		},
+	}
+
+	// Perform the update operation
+	result, err := dao.collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		dao.logger.Error("DAO Level: Failed to add collaborator to document in case", err)
+		return nil, err
+	}
+	dao.logger.Info("DAO Level: Successfully added collaborator to document in case")
+	return result, nil
+}
+
 // DeleteDocument removes a document from a case in the database
 func (dao *CaseDAO) DeleteDocument(ctx context.Context, caseID, documentID primitive.ObjectID) (*mongo.UpdateResult, error) {
 	dao.logger.Info("DAO Level: Attempting to delete document from case")

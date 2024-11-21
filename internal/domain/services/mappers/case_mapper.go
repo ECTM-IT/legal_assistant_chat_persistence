@@ -235,13 +235,26 @@ func (s *CaseConversionServiceImpl) MessageToDTO(message models.Message) dtos.Me
 		})
 	}
 
+	skills := make([]dtos.MessageSkillResponse, len(message.Skills))
+	for _, s := range message.Skills {
+		skills = append(skills, dtos.MessageSkillResponse{
+			ID:    helpers.NewNullable(s.ID),
+			Agent: helpers.NewNullable(s.Agent),
+			Name:  helpers.NewNullable(s.Name),
+		})
+	}
+
 	dto := dtos.MessageResponse{
+		MessageID:    helpers.NewNullable(message.ID),
 		Content:      helpers.NewNullable(message.Content),
 		Sender:       helpers.NewNullable(message.Sender),
 		Recipient:    helpers.NewNullable(message.Recipient),
 		FunctionCall: helpers.NewNullable(message.FunctionCall),
 		DocumentPath: helpers.NewNullable(message.DocumentPath),
 		Feedbacks:    helpers.NewNullable(feedbacks),
+
+		Skills: helpers.NewNullable(skills),
+		Agent:  helpers.NewNullable(message.Agent),
 	}
 
 	s.logger.Info("Successfully converted Message to DTO")
@@ -272,13 +285,26 @@ func (s *CaseConversionServiceImpl) DTOToMessage(messageDTO dtos.MessageResponse
 		})
 	}
 
+	skills := make([]models.MessageSkillResponse, len(messageDTO.Skills.Value))
+	for _, s := range messageDTO.Skills.Value {
+		skills = append(skills, models.MessageSkillResponse{
+			ID:    s.ID.Value,
+			Agent: s.Agent.Value,
+			Name:  s.Name.Value,
+		})
+	}
+
 	message := models.Message{
+		ID:           messageDTO.MessageID.Value,
 		Content:      messageDTO.Content.Value,
 		Sender:       messageDTO.Sender.Value,
 		Recipient:    messageDTO.Recipient.Value,
 		FunctionCall: messageDTO.FunctionCall.OrElse(false),
 		DocumentPath: messageDTO.DocumentPath.OrElse(""),
 		Feedbacks:    feedbacks,
+
+		Skills: skills,
+		Agent:  messageDTO.Agent.OrElse(""),
 	}
 
 	s.logger.Info("Successfully converted DTO to Message")
