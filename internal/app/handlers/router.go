@@ -74,8 +74,8 @@ func registerCaseRoutes(router *mux.Router, handler *handlers.CaseHandler) {
 	router.HandleFunc("/case-update-document/{id}/document/{documentID}/", handler.UpdateDocument).Methods(http.MethodPatch)
 	router.HandleFunc("/case-add-document-collaborator/{id}/document/{documentID}/", handler.AddDocumentCollaborator).Methods(http.MethodPost)
 	router.HandleFunc("/case-remove-document/{id}/{documentID}/", handler.DeleteDocumentFromCase).Methods(http.MethodDelete)
-	router.HandleFunc("/case-add-feedback-to-message/{id}/{messageId}", handler.AddFeedbackToMessage).Methods(http.MethodPost)
-	router.HandleFunc("/case-get-feedback-from-message/{id}/{creatorId}/{messageId}", handler.GetCaseByID).Methods(http.MethodGet)
+	router.HandleFunc("/case-add-feedback-to-message/{id}/{messageId}/", handler.AddFeedbackToMessage).Methods(http.MethodPost)
+	router.HandleFunc("/case-get-feedback-from-message/{id}/{creatorId}/{messageId}/", handler.GetCaseByID).Methods(http.MethodGet)
 	router.HandleFunc("/case-add-agent-skill/{id}/", handler.AddAgentSkillToCase).Methods(http.MethodPost)
 	router.HandleFunc("/case-remove-agent-skill/{id}/{agentSkillID}/", handler.RemoveAgentSkillFromCase).Methods(http.MethodDelete)
 }

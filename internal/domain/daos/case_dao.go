@@ -261,8 +261,8 @@ func (dao *CaseDAO) AddFeedback(ctx context.Context, caseID primitive.ObjectID, 
 
 	// Prepare the filter to find the specific message within the case
 	filter := bson.M{
-		"_id":          caseID,
-		"messages._id": messageID,
+		"_id":                caseID,
+		"messages.messageID": messageID,
 	}
 
 	// Prepare the update to add the feedback to the message's feedback array
