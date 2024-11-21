@@ -3,6 +3,8 @@ package daos
 import (
 	"context"
 	"errors"
+	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
@@ -22,8 +24,6 @@ type CaseDAOInterface interface {
 	Delete(ctx context.Context, id primitive.ObjectID) error
 	AddCollaborator(ctx context.Context, caseID primitive.ObjectID, collaborator map[string]interface{}) (*mongo.UpdateResult, error)
 	RemoveCollaborator(ctx context.Context, caseID, collaboratorID primitive.ObjectID) (*mongo.UpdateResult, error)
-	AddAgentSkillToCase(ctx context.Context, caseID primitive.ObjectID, agentSkill map[string]interface{}) (*mongo.UpdateResult, error)
-	RemoveAgentSkillFromCase(ctx context.Context, caseID, agentSkillID primitive.ObjectID) (*mongo.UpdateResult, error)
 }
 
 // CaseDAO implements the CaseDAOInterface
@@ -161,8 +161,12 @@ func (dao *CaseDAO) RemoveCollaborator(ctx context.Context, caseID, collaborator
 func (dao *CaseDAO) AddDocument(ctx context.Context, caseID primitive.ObjectID, document *models.Document) (*mongo.UpdateResult, error) {
 	dao.logger.Info("DAO Level: Attempting to add document to case")
 
+	// Generate new ID for the document
+	document.ID = primitive.NewObjectID()
+
 	// Set the upload date for the document
 	document.UploadDate = time.Now()
+	document.ModifiedDate = time.Now()
 
 	// Update the case by adding the document to the documents array
 	result, err := dao.collection.UpdateOne(
@@ -179,12 +183,11 @@ func (dao *CaseDAO) AddDocument(ctx context.Context, caseID primitive.ObjectID, 
 	return result, nil
 }
 
-// UpdateDocument updates a document in a case by its document ID
 func (dao *CaseDAO) UpdateDocument(ctx context.Context, caseID primitive.ObjectID, documentID primitive.ObjectID, updatedDocument *models.Document) (*mongo.UpdateResult, error) {
 	dao.logger.Info("DAO Level: Attempting to update document in case")
 
 	// Set the modified date for the document
-	// updatedDocument.ModifiedDate = time.Now()
+	updatedDocument.ModifiedDate = time.Now()
 
 	// Build the query to match the case ID and the document ID within the documents array
 	filter := bson.M{
@@ -192,11 +195,40 @@ func (dao *CaseDAO) UpdateDocument(ctx context.Context, caseID primitive.ObjectI
 		"documents._id": documentID,
 	}
 
-	// Build the update operation to set the new document values
+	// Dynamically construct the update document based on non-empty fields in `updatedDocument`
+	updateFields := bson.M{}
+	docValue := reflect.ValueOf(*updatedDocument)
+	docType := reflect.TypeOf(*updatedDocument)
+
+	for i := 0; i < docValue.NumField(); i++ {
+		field := docType.Field(i)
+		bsonTag := field.Tag.Get("bson")
+
+		// Skip fields with no bson tag or `omitempty` that are zero-valued
+		if bsonTag == "" || bsonTag == "-" {
+			continue
+		}
+
+		fieldValue := docValue.Field(i)
+		zeroValue := reflect.Zero(field.Type)
+
+		// Check if the field is zero (handles slices, structs, etc.)
+		if isZeroValue(fieldValue, zeroValue) {
+			continue
+		}
+
+		// Add non-zero value to the update fields map
+		updateFields["documents.$."+bsonTag] = fieldValue.Interface()
+	}
+
+	if len(updateFields) == 0 {
+		dao.logger.Warn("DAO Level: No fields to update")
+		return nil, fmt.Errorf("no fields to update")
+	}
+
+	// Build the update operation
 	update := bson.M{
-		"$set": bson.M{
-			"documents.$": updatedDocument,
-		},
+		"$set": updateFields,
 	}
 
 	// Perform the update operation
@@ -319,26 +351,16 @@ func (dao *CaseDAO) GetFeedbackByUserAndMessage(ctx context.Context, creatorID p
 	return feedbacks, nil
 }
 
-// AddAgentSkillToCase adds a agentSkill to a case in the database
-func (dao *CaseDAO) AddAgentSkillToCase(ctx context.Context, caseID primitive.ObjectID, agentSkill map[string]interface{}) (*mongo.UpdateResult, error) {
-	dao.logger.Info("DAO Level: Attempting to add agent skill to case")
-	result, err := dao.collection.UpdateOne(ctx, bson.M{"_id": caseID}, bson.M{"$addToSet": bson.M{"agent_skill": agentSkill}})
-	if err != nil {
-		dao.logger.Error("DAO Level: Failed to add agent skill to case", err)
-		return nil, err
+// Helper function to check if a field value is zero
+func isZeroValue(value, zero reflect.Value) bool {
+	switch value.Kind() {
+	case reflect.Slice, reflect.Map, reflect.Array:
+		return value.Len() == 0 // Zero if the length is 0
+	case reflect.Struct:
+		return reflect.DeepEqual(value.Interface(), zero.Interface()) // Compare structs deeply
+	case reflect.Ptr, reflect.Interface:
+		return value.IsNil() // Zero if the pointer or interface is nil
+	default:
+		return value.Interface() == zero.Interface() // Default comparison for other types
 	}
-	dao.logger.Info("DAO Level: Successfully added agent skill to case")
-	return result, nil
-}
-
-// RemoveAgentSkillFromCase removes a agentSkill from a case in the database
-func (dao *CaseDAO) RemoveAgentSkillFromCase(ctx context.Context, caseID, agentSkillID primitive.ObjectID) (*mongo.UpdateResult, error) {
-	dao.logger.Info("DAO Level: Attempting to remove agent skill from case")
-	result, err := dao.collection.UpdateOne(ctx, bson.M{"_id": caseID}, bson.M{"$pull": bson.M{"agent_skill": agentSkillID}})
-	if err != nil {
-		dao.logger.Error("DAO Level: Failed to remove agent skill from case", err)
-		return nil, err
-	}
-	dao.logger.Info("DAO Level: Successfully removed agent skill from case")
-	return result, nil
 }

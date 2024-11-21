@@ -74,11 +74,3 @@ func (r *CaseRepository) AddFeedbackToMessage(ctx context.Context, feedback mode
 func (r *CaseRepository) GetFeedbackByUserAndMessage(ctx context.Context, creatorID primitive.ObjectID, messageID string) ([]models.Feedback, error) {
 	return r.caseDAO.GetFeedbackByUserAndMessage(ctx, creatorID, messageID)
 }
-
-func (r *CaseRepository) AddAgentSkillToCase(ctx context.Context, id primitive.ObjectID, agentSkill map[string]interface{}) (*mongo.UpdateResult, error) {
-	return r.caseDAO.AddAgentSkillToCase(ctx, id, agentSkill)
-}
-
-func (r *CaseRepository) RemoveAgentSkillFromCase(ctx context.Context, id primitive.ObjectID, agentSkillID primitive.ObjectID) (*mongo.UpdateResult, error) {
-	return r.caseDAO.RemoveAgentSkillFromCase(ctx, id, agentSkillID)
-}

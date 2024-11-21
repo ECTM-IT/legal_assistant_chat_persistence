@@ -22,8 +22,6 @@ type CaseHanler interface {
 	AddDocumentToCase(ctx context.Context, caseID primitive.ObjectID, document *models.Document) (*dtos.CaseResponse, error)
 	UpdateDocument(ctx context.Context, caseID primitive.ObjectID, documentID primitive.ObjectID, document *models.Document) (*dtos.CaseResponse, error)
 	DeleteDocumentFromCase(ctx context.Context, caseID, documentID primitive.ObjectID) (*dtos.CaseResponse, error)
-	AddAgentSkillToCase(ctx context.Context, caseID primitive.ObjectID, agentSkill *dtos.AddAgentSkillToCaseRequest) (*dtos.CaseResponse, error)
-	DeleteAgentSkillFromCase(ctx context.Context, caseID, agentSkillID primitive.ObjectID) (*dtos.CaseResponse, error)
 }
 
 type CaseHandler struct {
@@ -126,7 +124,7 @@ func (h *CaseHandler) DeleteCase(w http.ResponseWriter, r *http.Request) {
 	deletedCase, err := h.service.DeleteCase(r.Context(), id)
 	if err != nil {
 		h.RespondWithError(w, http.StatusInternalServerError, "Failed to delete case")
-		return
+		// returnSender
 	}
 	h.RespondWithJSON(w, http.StatusOK, deletedCase)
 }
@@ -188,6 +186,7 @@ func (h *CaseHandler) AddDocumentToCase(w http.ResponseWriter, r *http.Request) 
 
 	document := &models.Document{
 		Sender:      doc.Sender.OrElse(""),
+		CreatedBy:   doc.CreatedBy.Value,
 		FileName:    doc.FileName.OrElse(""),
 		FileType:    doc.FileType.OrElse(""),
 		FileContent: doc.FileContent.OrElse(""),
@@ -222,6 +221,8 @@ func (h *CaseHandler) UpdateDocument(w http.ResponseWriter, r *http.Request) {
 	}
 
 	document := &models.Document{
+		Sender:      doc.Sender.OrElse(""),
+		CreatedBy:   doc.CreatedBy.Value,
 		FileName:    doc.FileName.OrElse(""),
 		FileType:    doc.FileType.OrElse(""),
 		FileContent: doc.FileContent.OrElse(""),
@@ -363,41 +364,4 @@ func (h *CaseHandler) GetFeedbackByUserAndMessageHandler(w http.ResponseWriter, 
 
 	// Respond with the feedback
 	h.RespondWithJSON(w, http.StatusOK, feedbacks)
-}
-
-func (h *CaseHandler) AddAgentSkillToCase(w http.ResponseWriter, r *http.Request) {
-	caseID, err := h.ParseObjectID(r, "id", false)
-	if err != nil {
-		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
-		return
-	}
-	var req dtos.AddAgentSkillToCaseRequest
-	if err := h.DecodeJSONBody(r, &req); err != nil {
-		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-	newUser, err := h.service.AddAgentSkillToCase(r.Context(), caseID, req)
-	if err != nil {
-		h.RespondWithError(w, http.StatusInternalServerError, "Failed to add agent skill to case")
-		return
-	}
-	h.RespondWithJSON(w, http.StatusOK, newUser)
-}
-func (h *CaseHandler) RemoveAgentSkillFromCase(w http.ResponseWriter, r *http.Request) {
-	caseID, err := h.ParseObjectID(r, "id", false)
-	if err != nil {
-		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
-		return
-	}
-	agentSkillID, err := h.ParseObjectID(r, "agentSkillID", false)
-	if err != nil {
-		h.RespondWithError(w, http.StatusBadRequest, "Invalid agent skill ID")
-		return
-	}
-	updatedCase, err := h.service.RemoveAgentSkillFromCase(r.Context(), caseID, agentSkillID)
-	if err != nil {
-		h.RespondWithError(w, http.StatusInternalServerError, "Failed to remove agent skill from case")
-		return
-	}
-	h.RespondWithJSON(w, http.StatusOK, updatedCase)
 }

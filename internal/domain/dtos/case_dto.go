@@ -17,7 +17,7 @@ type MessageResponse struct {
 	DocumentPath helpers.Nullable[string]     `json:"document_path,omitempty" bson:"document_path"`
 	Feedbacks    helpers.Nullable[[]Feedback] `json:"feedbacks,omitempty" bson:"feedbacks"`
 
-	Skills helpers.Nullable[[]MessageSkillResponse] `json:"skill" bson:"agent_skills"`
+	Skills helpers.Nullable[[]MessageSkillResponse] `json:"skills" bson:"skills"`
 	Agent  helpers.Nullable[string]                 `json:"agent" bson:"agent_id"`
 }
 
@@ -32,8 +32,7 @@ type CollaboratorResponse struct {
 	Edit helpers.Nullable[bool]               `json:"edit" bson:"edit"`
 }
 
-type AgentSkillResponse struct {
-	ID      helpers.Nullable[primitive.ObjectID] `json:"id" bson:"_id,omitempty"`
+type SkillResponse struct {
 	AgentID helpers.Nullable[primitive.ObjectID] `json:"agent_id" bson:"agent_id"`
 	Name    helpers.Nullable[string]             `json:"name" bson:"name,omitempty"`
 }
@@ -43,7 +42,7 @@ type CreateCaseRequest struct {
 	CreatorID     helpers.Nullable[primitive.ObjectID]     `json:"creator_id" bson:"creator_id"`
 	Messages      helpers.Nullable[[]MessageResponse]      `json:"messages" bson:"messages"`
 	Collaborators helpers.Nullable[[]CollaboratorResponse] `json:"collaborators" bson:"collaborators"`
-	AgentSkills   helpers.Nullable[[]AgentSkillResponse]   `json:"agent_skills" bson:"agent_skills"`
+	Skills        helpers.Nullable[[]SkillResponse]        `json:"skills" bson:"skills"`
 	Documents     helpers.Nullable[[]DocumentResponse]     `json:"documents" bson:"documents"`
 	Action        helpers.Nullable[string]                 `json:"action" bson:"action"`
 	AgentID       helpers.Nullable[primitive.ObjectID]     `json:"agent_id" bson:"agent_id"`
@@ -58,7 +57,7 @@ type CaseResponse struct {
 	CreatorID     helpers.Nullable[primitive.ObjectID]     `json:"creator_id" bson:"creator_id"`
 	Messages      helpers.Nullable[[]MessageResponse]      `json:"messages" bson:"messages"`
 	Collaborators helpers.Nullable[[]CollaboratorResponse] `json:"collaborators" bson:"collaborators"`
-	AgentSkills   helpers.Nullable[[]AgentSkillResponse]   `json:"agent_skills" bson:"agent_skills"`
+	Skills        helpers.Nullable[[]SkillResponse]        `json:"skills" bson:"skills"`
 	Documents     helpers.Nullable[[]DocumentResponse]     `json:"documents" bson:"documents"`
 	Action        helpers.Nullable[string]                 `json:"action" bson:"action"`
 	AgentID       helpers.Nullable[primitive.ObjectID]     `json:"agent_id" bson:"agent_id"`
@@ -72,7 +71,8 @@ type UpdateCaseRequest struct {
 	Name          helpers.Nullable[string]                 `json:"name" bson:"name,omitempty"`
 	Messages      helpers.Nullable[[]MessageResponse]      `json:"messages" bson:"messages,omitempty"`
 	Collaborators helpers.Nullable[[]CollaboratorResponse] `json:"collaborators" bson:"collaborators,omitempty"`
-	AgentSkills   helpers.Nullable[[]AgentSkillResponse]   `json:"agent_skills" bson:"agent_skills"`
+	Documents     helpers.Nullable[[]DocumentResponse]     `json:"documents" bson:"documents,omitempty"`
+	Skills        helpers.Nullable[[]SkillResponse]        `json:"skills" bson:"skills"`
 	Action        helpers.Nullable[string]                 `json:"action" bson:"action,omitempty"`
 	AgentID       helpers.Nullable[primitive.ObjectID]     `json:"agent_id" bson:"agent_id,omitempty"`
 	LastEdit      helpers.Nullable[time.Time]              `json:"last_edit" bson:"last_edit,omitempty"`
@@ -88,31 +88,37 @@ type DeleteCaseRequest struct {
 	ID helpers.Nullable[primitive.ObjectID] `json:"id" bson:"_id"`
 }
 
-type AddAgentSkillToCaseRequest struct {
-	ID      helpers.Nullable[primitive.ObjectID] `json:"id" bson:"_id,omitempty"`
-	AgentID helpers.Nullable[primitive.ObjectID] `json:"agent_id" bson:"agent_id"`
-	Name    helpers.Nullable[string]             `json:"name" bson:"name,omitempty"`
+type DocumentResponse struct {
+	ID                    helpers.Nullable[primitive.ObjectID]             `json:"id" bson:"_id,omitempty"`
+	CreatedBy             helpers.Nullable[primitive.ObjectID]             `json:"created_by" bson:"created_by,omitempty"`
+	Sender                helpers.Nullable[string]                         `json:"sender" bson:"sender"`
+	FileName              helpers.Nullable[string]                         `json:"file_name" bson:"file_name"`
+	FileType              helpers.Nullable[string]                         `json:"file_type" bson:"file_type"`
+	FileContent           helpers.Nullable[string]                         `json:"file_content" bson:"file_content"`
+	DocumentCollaborators helpers.Nullable[[]DocumentCollaboratorResponse] `json:"collaborators" bson:"collaborators"`
+	UploadDate            helpers.Nullable[time.Time]                      `json:"upload_date" bson:"upload_date"`
+	ModifiedDate          helpers.Nullable[time.Time]                      `json:"modified_date" bson:"modified_date"`
 }
 
-type DocumentResponse struct {
-	ID          helpers.Nullable[primitive.ObjectID] `json:"id" bson:"_id,omitempty"`
-	FileName    helpers.Nullable[string]             `json:"file_name" bson:"file_name"`
-	FileType    helpers.Nullable[string]             `json:"file_type" bson:"file_type"`
-	FileContent helpers.Nullable[string]             `json:"file_content" bson:"file_content"`
-	UploadDate  helpers.Nullable[time.Time]          `json:"upload_date" bson:"upload_date"`
+type DocumentCollaboratorResponse struct {
+	Email helpers.Nullable[string] `json:"email" bson:"_email,omitempty"`
+	Edit  helpers.Nullable[bool]   `json:"edit" bson:"edit"`
 }
 
 type AddDocumentToCase struct {
-	Sender      helpers.Nullable[string] `json:"sender,omitempty" bson:"sender"`
-	FileName    helpers.Nullable[string] `json:"file_name" validate:"required"`
-	FileType    helpers.Nullable[string] `json:"file_type" validate:"required"`    // e.g., "pdf", "docx", "xlsx"
-	FileContent helpers.Nullable[string] `json:"file_content" validate:"required"` // The actual file content (e.g., in base64 format if sending as JSON)
+	Sender      helpers.Nullable[string]             `json:"sender,omitempty" bson:"sender"`
+	CreatedBy   helpers.Nullable[primitive.ObjectID] `json:"created_by" bson:"created_by,omitempty"`
+	FileName    helpers.Nullable[string]             `json:"file_name" validate:"required"`
+	FileType    helpers.Nullable[string]             `json:"file_type" validate:"required"`    // e.g., "pdf", "docx", "xlsx"
+	FileContent helpers.Nullable[string]             `json:"file_content" validate:"required"` // The actual file content (e.g., in base64 format if sending as JSON)
 }
 
 type UpdateDocument struct {
-	FileName    helpers.Nullable[string] `json:"file_name" validate:"required"`
-	FileType    helpers.Nullable[string] `json:"file_type" validate:"required"`    // e.g., "pdf", "docx", "xlsx"
-	FileContent helpers.Nullable[string] `json:"file_content" validate:"required"` // The actual file content (e.g., in base64 format if sending as JSON)
+	Sender      helpers.Nullable[string]             `json:"sender,omitempty" bson:"sender"`
+	CreatedBy   helpers.Nullable[primitive.ObjectID] `json:"created_by" bson:"created_by,omitempty"`
+	FileName    helpers.Nullable[string]             `json:"file_name" validate:"required"`
+	FileType    helpers.Nullable[string]             `json:"file_type" validate:"required"`    // e.g., "pdf", "docx", "xlsx"
+	FileContent helpers.Nullable[string]             `json:"file_content" validate:"required"` // The actual file content (e.g., in base64 format if sending as JSON)
 }
 
 type DocumentCollaboratorRequest struct {

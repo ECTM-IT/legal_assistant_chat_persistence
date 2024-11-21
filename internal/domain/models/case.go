@@ -7,19 +7,19 @@ import (
 )
 
 type Case struct {
-	ID            primitive.ObjectID   `json:"id" bson:"_id,omitempty"`
-	Name          string               `json:"name" bson:"name"`
-	CreatorID     primitive.ObjectID   `json:"creator_id" bson:"creator_id"`
-	Messages      []Message            `json:"messages" bson:"messages"`
-	Collaborators []Collaborators      `json:"collaborators" bson:"collaborators"`
-	AgentSkills   []AgentSkillResponse `json:"agent_skills" bson:"agent_skills"`
-	Documents     []Document           `json:"documents" bson:"documents"`
-	Action        string               `json:"action" bson:"action"`
-	AgentID       primitive.ObjectID   `json:"agent_id" bson:"agent_id"`
-	CreationDate  time.Time            `json:"creation_date" bson:"creation_date"`
-	LastEdit      time.Time            `json:"last_edit" bson:"last_edit"`
-	Share         bool                 `json:"share" bson:"share"`
-	IsArchived    bool                 `json:"is_archived" bson:"is_archived"`
+	ID            primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Name          string             `json:"name" bson:"name"`
+	CreatorID     primitive.ObjectID `json:"creator_id" bson:"creator_id"`
+	Messages      []Message          `json:"messages" bson:"messages"`
+	Collaborators []Collaborators    `json:"collaborators" bson:"collaborators"`
+	Skills        []Skill            `json:"skills" bson:"skills"`
+	Documents     []Document         `json:"documents" bson:"documents"`
+	Action        string             `json:"action" bson:"action"`
+	AgentID       primitive.ObjectID `json:"agent_id" bson:"agent_id"`
+	CreationDate  time.Time          `json:"creation_date" bson:"creation_date"`
+	LastEdit      time.Time          `json:"last_edit" bson:"last_edit"`
+	Share         bool               `json:"share" bson:"share"`
+	IsArchived    bool               `json:"is_archived" bson:"is_archived"`
 }
 
 type Collaborators struct {
@@ -27,8 +27,7 @@ type Collaborators struct {
 	Edit bool               `json:"edit" bson:"edit"`
 }
 
-type AgentSkillResponse struct {
-	ID      primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+type Skill struct {
 	AgentID primitive.ObjectID `json:"agent_id" bson:"agent_id"`
 	Name    string             `json:"name" bson:"name,omitempty"`
 }
@@ -42,11 +41,11 @@ type Message struct {
 	FunctionCall bool       `json:"function_call" bson:"function_call"`
 	Feedbacks    []Feedback `json:"feedbacks" bson:"feedbacks"`
 
-	Skills []MessageSkillResponse `json:"skill" bson:"agent_skills"`
-	Agent  string                 `json:"agent" bson:"agent_id"`
+	Skills []MessageSkill `json:"skill" bson:"skills"`
+	Agent  string         `json:"agent" bson:"agent_id"`
 }
 
-type MessageSkillResponse struct {
+type MessageSkill struct {
 	ID    primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	Agent string             `json:"agent" bson:"agent_id"`
 	Name  string             `json:"name" bson:"name,omitempty"`
@@ -65,12 +64,14 @@ type Feedback struct {
 
 type Document struct {
 	ID                    primitive.ObjectID     `json:"id" bson:"_id,omitempty"`
+	CreatedBy             primitive.ObjectID     `json:"created_by" bson:"created_by,omitempty"`
 	Sender                string                 `json:"sender" bson:"sender"`
 	FileName              string                 `json:"file_name" bson:"file_name"`
 	FileType              string                 `json:"file_type" bson:"file_type"` // e.g., pdf, docx, xls
 	FileContent           string                 `json:"file_content" bson:"file_content"`
 	DocumentCollaborators []DocumentCollaborator `json:"collaborators" bson:"collaborators"`
 	UploadDate            time.Time              `json:"upload_date" bson:"upload_date"`
+	ModifiedDate          time.Time              `json:"modified_date" bson:"modified_date"`
 }
 
 type DocumentCollaborator struct {

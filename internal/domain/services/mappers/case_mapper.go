@@ -65,6 +65,12 @@ func (s *CaseConversionServiceImpl) DTOToCase(caseRequest dtos.CreateCaseRequest
 		return nil, fmt.Errorf("error converting documents: %w", err)
 	}
 
+	skills, err := s.DTOToSkills(caseRequest.Skills.OrElse(nil))
+	if err != nil {
+		s.logger.Error("Failed to convert skills", err)
+		return nil, fmt.Errorf("error converting skills: %w", err)
+	}
+
 	now := time.Now()
 	caseModel := &models.Case{
 		ID:            primitive.NewObjectID(),
@@ -73,6 +79,7 @@ func (s *CaseConversionServiceImpl) DTOToCase(caseRequest dtos.CreateCaseRequest
 		Messages:      messages,
 		Collaborators: collaborators,
 		Documents:     documents,
+		Skills:        skills,
 		Action:        caseRequest.Action.OrElse("summarize"),
 		AgentID:       caseRequest.AgentID.OrElse(primitive.NilObjectID),
 		LastEdit:      caseRequest.LastEdit.OrElse(now),
@@ -99,7 +106,8 @@ func (s *CaseConversionServiceImpl) CaseToDTO(caseModel *models.Case) *dtos.Case
 		CreatorID:     helpers.NewNullable(caseModel.CreatorID),
 		Messages:      helpers.NewNullable(s.MessagesToDTO(caseModel.Messages)),
 		Collaborators: helpers.NewNullable(s.CollaboratorsToDTO(caseModel.Collaborators)),
-		Documents:     helpers.NewNullable(s.DocumentsToDocumentsResponse(caseModel.Documents)),
+		Documents:     helpers.NewNullable(s.DocumentsToDTO(caseModel.Documents)),
+		Skills:        helpers.NewNullable(s.SkillsToDTO(caseModel.Skills)),
 		Action:        helpers.NewNullable(caseModel.Action),
 		AgentID:       helpers.NewNullable(caseModel.AgentID),
 		LastEdit:      helpers.NewNullable(caseModel.LastEdit),
@@ -154,6 +162,22 @@ func (s *CaseConversionServiceImpl) UpdateCaseFieldsToMap(updateRequest dtos.Upd
 			return nil, fmt.Errorf("error converting collaborators: %w", err)
 		}
 		updateFields["collaborators"] = collaborators
+	}
+	if updateRequest.Documents.Present {
+		documents, err := s.DTOToDocuments(updateRequest.Documents.Value)
+		if err != nil {
+			s.logger.Error("Failed to convert documents for update", err)
+			return nil, fmt.Errorf("error converting documents: %w", err)
+		}
+		updateFields["documents"] = documents
+	}
+	if updateRequest.Skills.Present {
+		skills, err := s.DTOToSkills(updateRequest.Skills.Value)
+		if err != nil {
+			s.logger.Error("Failed to convert skills for update", err)
+			return nil, fmt.Errorf("error converting skills: %w", err)
+		}
+		updateFields["skills"] = skills
 	}
 	if updateRequest.Action.Present {
 		updateFields["action"] = updateRequest.Action.Value
@@ -285,9 +309,9 @@ func (s *CaseConversionServiceImpl) DTOToMessage(messageDTO dtos.MessageResponse
 		})
 	}
 
-	skills := make([]models.MessageSkillResponse, len(messageDTO.Skills.Value))
+	skills := make([]models.MessageSkill, len(messageDTO.Skills.Value))
 	for _, s := range messageDTO.Skills.Value {
-		skills = append(skills, models.MessageSkillResponse{
+		skills = append(skills, models.MessageSkill{
 			ID:    s.ID.Value,
 			Agent: s.Agent.Value,
 			Name:  s.Name.Value,
@@ -350,23 +374,39 @@ func (s *CaseConversionServiceImpl) DTOToMessages(messagesDTO []dtos.MessageResp
 	return messages, nil
 }
 
-// MapDocuments converts a list of Document models to DocumentResponse DTOs
-func (s *CaseConversionServiceImpl) DocumentsToDocumentsResponse(docs []models.Document) []dtos.DocumentResponse {
+func (s *CaseConversionServiceImpl) DocumentsToDTO(documents []models.Document) []dtos.DocumentResponse {
 	s.logger.Info("Converting Documents to DTOs")
 
-	var docResponses []dtos.DocumentResponse
-	for _, doc := range docs {
-		docResponses = append(docResponses, dtos.DocumentResponse{
-			ID:          helpers.NewNullable(doc.ID),
-			FileName:    helpers.NewNullable(doc.FileName),
-			FileType:    helpers.NewNullable(doc.FileType),
-			FileContent: helpers.NewNullable(doc.FileContent),
-			UploadDate:  helpers.NewNullable(doc.UploadDate),
+	if len(documents) == 0 {
+		s.logger.Warn("No Documents provided for conversion")
+		return []dtos.DocumentResponse{}
+	}
+
+	documentDTOs := make([]dtos.DocumentResponse, 0, len(documents))
+	for _, document := range documents {
+		collaborators := make([]dtos.DocumentCollaboratorResponse, len(document.DocumentCollaborators))
+		for _, dc := range document.DocumentCollaborators {
+			collaborators = append(collaborators, dtos.DocumentCollaboratorResponse{
+				Email: helpers.NewNullable(dc.Email),
+				Edit:  helpers.NewNullable(dc.Edit),
+			})
+		}
+
+		documentDTOs = append(documentDTOs, dtos.DocumentResponse{
+			ID:                    helpers.NewNullable(document.ID),
+			CreatedBy:             helpers.NewNullable(document.CreatedBy),
+			Sender:                helpers.NewNullable(document.Sender),
+			FileName:              helpers.NewNullable(document.FileName),
+			FileType:              helpers.NewNullable(document.FileType),
+			FileContent:           helpers.NewNullable(document.FileContent),
+			DocumentCollaborators: helpers.NewNullable(collaborators),
+			UploadDate:            helpers.NewNullable(document.UploadDate),
+			ModifiedDate:          helpers.NewNullable(document.ModifiedDate),
 		})
 	}
 
-	s.logger.Info("Successfully converted Documents to DTOs")
-	return docResponses
+	s.logger.Info("Successfully converted Collaborators to DTOs")
+	return documentDTOs
 }
 
 func (s *CaseConversionServiceImpl) DTOToDocuments(documentsDTO []dtos.DocumentResponse) ([]models.Document, error) {
@@ -384,15 +424,68 @@ func (s *CaseConversionServiceImpl) DTOToDocuments(documentsDTO []dtos.DocumentR
 			s.logger.Error("Failed to convert DTO to Document: document ID is required", err)
 			return nil, err
 		}
+
+		collaborators := make([]models.DocumentCollaborator, len(dto.DocumentCollaborators.Value))
+		for _, dc := range dto.DocumentCollaborators.Value {
+			collaborators = append(collaborators, models.DocumentCollaborator{
+				Email: dc.Email.Value,
+				Edit:  dc.Edit.Value,
+			})
+		}
+
 		documents = append(documents, models.Document{
-			ID:          dto.ID.Value,
-			FileName:    dto.FileName.OrElse(""),
-			FileType:    dto.FileType.OrElse(""),
-			FileContent: dto.FileContent.OrElse(""),
-			UploadDate:  dto.UploadDate.OrElse(time.Now()),
+			ID:                    dto.ID.Value,
+			CreatedBy:             dto.CreatedBy.Value,
+			Sender:                dto.Sender.Value,
+			FileName:              dto.FileName.OrElse(""),
+			FileType:              dto.FileType.OrElse(""),
+			FileContent:           dto.FileContent.OrElse(""),
+			DocumentCollaborators: collaborators,
+			UploadDate:            dto.UploadDate.OrElse(time.Now()),
+			ModifiedDate:          dto.ModifiedDate.OrElse(time.Now()),
 		})
 	}
 
 	s.logger.Info("Successfully converted DTOs to Documents")
 	return documents, nil
+}
+
+func (s *CaseConversionServiceImpl) SkillsToDTO(skills []models.Skill) []dtos.SkillResponse {
+	s.logger.Info("Converting Skills to DTOs")
+
+	if len(skills) == 0 {
+		s.logger.Warn("No Skills provided for conversion")
+		return []dtos.SkillResponse{}
+	}
+
+	skillDTOs := make([]dtos.SkillResponse, 0, len(skills))
+	for _, skill := range skills {
+		skillDTOs = append(skillDTOs, dtos.SkillResponse{
+			AgentID: helpers.NewNullable(skill.AgentID),
+			Name:    helpers.NewNullable(skill.Name),
+		})
+	}
+
+	s.logger.Info("Successfully converted Skills to DTOs")
+	return skillDTOs
+}
+
+func (s *CaseConversionServiceImpl) DTOToSkills(skillsDTO []dtos.SkillResponse) ([]models.Skill, error) {
+	s.logger.Info("Converting DTOs to Skills")
+
+	if len(skillsDTO) == 0 {
+		s.logger.Warn("No SkillResponses provided for conversion")
+		return []models.Skill{}, nil
+	}
+
+	skills := make([]models.Skill, 0, len(skillsDTO))
+	for _, dto := range skillsDTO {
+		skills = append(skills, models.Skill{
+			AgentID: dto.AgentID.Value,
+			Name:    dto.Name.OrElse(""),
+		})
+	}
+
+	s.logger.Info("Successfully converted DTOs to Skills")
+	return skills, nil
 }
