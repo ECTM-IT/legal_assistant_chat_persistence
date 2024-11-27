@@ -39,6 +39,10 @@ func (h *BaseHandler) ParseObjectID(r *http.Request, key string, fromHeader bool
 	return primitive.ObjectIDFromHex(strings.TrimSpace(mux.Vars(r)[key]))
 }
 
+func (h *BaseHandler) ParseURLVar(r *http.Request, key string) string {
+	return strings.TrimSpace(mux.Vars(r)[key])
+}
+
 func (h *BaseHandler) DecodeJSONBody(r *http.Request, v interface{}) error {
 	return json.NewDecoder(r.Body).Decode(v)
 }

@@ -100,7 +100,7 @@ type AddDocumentToCase struct {
 type Feedback struct {
 	ID           helpers.Nullable[primitive.ObjectID] `json:"id" bson:"_id,omitempty"`
 	CaseID       helpers.Nullable[primitive.ObjectID] `json:"case_id" bson:"case_id" validate:"required"`
-	MessageID    helpers.Nullable[primitive.ObjectID] `json:"message_id" bson:"message_id,omitempty"`
+	MessageID    helpers.Nullable[string]             `json:"message_id" bson:"message_id,omitempty"`
 	CreatorID    helpers.Nullable[primitive.ObjectID] `json:"creator_id" bson:"creator_id,omitempty"`
 	Score        helpers.Nullable[string]             `json:"score" bson:"score,omitempty"`
 	Reasons      helpers.Nullable[[]string]           `json:"reasons" bson:"reasons,omitempty"`
@@ -109,11 +109,8 @@ type Feedback struct {
 }
 
 type AddFeedbackRequest struct {
-	CaseID       primitive.ObjectID `json:"case_id" bson:"case_id" validate:"required"`
-	MessageID    primitive.ObjectID `json:"message_id" bson:"message_id" validate:"required"`
-	CreatorID    primitive.ObjectID `json:"creator_id" bson:"creator_id" validate:"required"`
-	Score        string             `json:"score" bson:"score" validate:"required"`
-	Reasons      []string           `json:"reasons" bson:"reasons"`
-	Comment      string             `json:"comment" bson:"comment"`
-	CreationDate time.Time          `json:"creation_date" bson:"creation_date"`
+	CreatorID primitive.ObjectID `json:"creator_id" bson:"creator_id,omitempty"`
+	Score     string             `json:"score" bson:"score" validate:"required"`
+	Reasons   []string           `json:"reasons" bson:"reasons"`
+	Comment   string             `json:"comment" bson:"comment"`
 }

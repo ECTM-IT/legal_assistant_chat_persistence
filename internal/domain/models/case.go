@@ -43,7 +43,7 @@ type Message struct {
 type Feedback struct {
 	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	CaseID       primitive.ObjectID `json:"case_id" bson:"case_id" validate:"required"`
-	MessageID    primitive.ObjectID `json:"message_id" bson:"message_id"`
+	MessageID    string             `json:"message_id" bson:"message_id"`
 	CreatorID    primitive.ObjectID `json:"creator_id" bson:"creator_id"`
 	Score        string             `json:"score" bson:"score"`
 	Reasons      []string           `json:"reasons" bson:"reasons"`

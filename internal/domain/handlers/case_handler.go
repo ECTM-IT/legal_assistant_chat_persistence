@@ -231,8 +231,8 @@ func (h *CaseHandler) AddFeedbackToMessage(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Parse messageID from the URL
-	messageID, err := h.ParseObjectID(r, "messageId", false)
-	if err != nil {
+	messageID := h.ParseURLVar(r, "messageId")
+	if messageID == "" {
 		h.RespondWithError(w, http.StatusBadRequest, "Invalid message ID")
 		return
 	}
@@ -244,12 +244,8 @@ func (h *CaseHandler) AddFeedbackToMessage(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Set caseID and messageID in request to ensure they are passed correctly
-	req.CaseID = caseID
-	req.MessageID = messageID
-
 	// Call the service layer to add feedback to the message
-	feedback, err := h.service.AddFeedbackToMessage(r.Context(), &req)
+	feedback, err := h.service.AddFeedbackToMessage(r.Context(), caseID, messageID, &req)
 	if err != nil {
 		h.RespondWithError(w, http.StatusInternalServerError, "Failed to add feedback to message")
 		return
@@ -275,9 +271,9 @@ func (h *CaseHandler) GetFeedbackByUserAndMessageHandler(w http.ResponseWriter, 
 		return
 	}
 
-	// Parse messageID from the URL or query parameters
-	messageID, err := h.ParseObjectID(r, "messageId", false)
-	if err != nil {
+	// Parse messageID from the URL
+	messageID := h.ParseURLVar(r, "messageId")
+	if messageID == "" {
 		h.RespondWithError(w, http.StatusBadRequest, "Invalid message ID")
 		return
 	}
