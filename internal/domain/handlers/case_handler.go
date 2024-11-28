@@ -352,7 +352,7 @@ func (h *CaseHandler) GetFeedbackByUserAndMessageHandler(w http.ResponseWriter, 
 	}
 
 	// Call the service layer to get the feedback
-	feedbacks, err := h.service.GetFeedbackByUserAndMessage(r.Context(), creatorID, messageID.String())
+	feedbacks, err := h.service.GetFeedbackByUserAndMessage(r.Context(), creatorID, messageID)
 	if err != nil {
 		h.RespondWithError(w, http.StatusInternalServerError, "Failed to retrieve feedback")
 		return

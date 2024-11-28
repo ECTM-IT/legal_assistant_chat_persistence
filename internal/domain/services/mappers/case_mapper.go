@@ -65,12 +65,6 @@ func (s *CaseConversionServiceImpl) DTOToCase(caseRequest dtos.CreateCaseRequest
 		return nil, fmt.Errorf("error converting documents: %w", err)
 	}
 
-	skills, err := s.DTOToSkills(caseRequest.Skills.OrElse(nil))
-	if err != nil {
-		s.logger.Error("Failed to convert skills", err)
-		return nil, fmt.Errorf("error converting skills: %w", err)
-	}
-
 	now := time.Now()
 	caseModel := &models.Case{
 		ID:            primitive.NewObjectID(),
@@ -255,15 +249,6 @@ func (s *CaseConversionServiceImpl) MessageToDTO(message models.Message) dtos.Me
 		})
 	}
 
-	skills := make([]dtos.MessageSkillResponse, len(message.Skills))
-	for _, s := range message.Skills {
-		skills = append(skills, dtos.MessageSkillResponse{
-			ID:    helpers.NewNullable(s.ID),
-			Agent: helpers.NewNullable(s.Agent),
-			Name:  helpers.NewNullable(s.Name),
-		})
-	}
-
 	dto := dtos.MessageResponse{
 		ID:           helpers.NewNullable(message.ID),
 		Content:      helpers.NewNullable(message.Content),
@@ -303,15 +288,6 @@ func (s *CaseConversionServiceImpl) DTOToMessage(messageDTO dtos.MessageResponse
 			Reasons:      f.Reasons.Value,
 			Comment:      f.Comment.Value,
 			CreationDate: f.CreationDate.Value,
-		})
-	}
-
-	skills := make([]models.MessageSkill, len(messageDTO.Skills.Value))
-	for _, s := range messageDTO.Skills.Value {
-		skills = append(skills, models.MessageSkill{
-			ID:    s.ID.Value,
-			Agent: s.Agent.Value,
-			Name:  s.Name.Value,
 		})
 	}
 
@@ -372,7 +348,7 @@ func (s *CaseConversionServiceImpl) DTOToMessages(messagesDTO []dtos.MessageResp
 }
 
 // DocumentsToDTO converts a list of Document models to DocumentResponse DTOs
-func (s *CaseConversionServiceImpl) DocumentsToDTO(docs []models.Document) []dtos.DocumentResponse {
+func (s *CaseConversionServiceImpl) DocumentsToDTO(documents []models.Document) []dtos.DocumentResponse {
 	s.logger.Info("Converting Documents to DTOs")
 
 	if len(documents) == 0 {
@@ -446,44 +422,4 @@ func (s *CaseConversionServiceImpl) DTOToDocuments(documentsDTO []dtos.DocumentR
 
 	s.logger.Info("Successfully converted DTOs to Documents")
 	return documents, nil
-}
-
-func (s *CaseConversionServiceImpl) SkillsToDTO(skills []models.Skill) []dtos.SkillResponse {
-	s.logger.Info("Converting Skills to DTOs")
-
-	if len(skills) == 0 {
-		s.logger.Warn("No Skills provided for conversion")
-		return []dtos.SkillResponse{}
-	}
-
-	skillDTOs := make([]dtos.SkillResponse, 0, len(skills))
-	for _, skill := range skills {
-		skillDTOs = append(skillDTOs, dtos.SkillResponse{
-			AgentID: helpers.NewNullable(skill.AgentID),
-			Name:    helpers.NewNullable(skill.Name),
-		})
-	}
-
-	s.logger.Info("Successfully converted Skills to DTOs")
-	return skillDTOs
-}
-
-func (s *CaseConversionServiceImpl) DTOToSkills(skillsDTO []dtos.SkillResponse) ([]models.Skill, error) {
-	s.logger.Info("Converting DTOs to Skills")
-
-	if len(skillsDTO) == 0 {
-		s.logger.Warn("No SkillResponses provided for conversion")
-		return []models.Skill{}, nil
-	}
-
-	skills := make([]models.Skill, 0, len(skillsDTO))
-	for _, dto := range skillsDTO {
-		skills = append(skills, models.Skill{
-			AgentID: dto.AgentID.Value,
-			Name:    dto.Name.OrElse(""),
-		})
-	}
-
-	s.logger.Info("Successfully converted DTOs to Skills")
-	return skills, nil
 }

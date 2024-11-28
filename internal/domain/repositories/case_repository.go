@@ -67,8 +67,8 @@ func (r *CaseRepository) DeleteDocument(ctx context.Context, caseID, documentID 
 	return r.caseDAO.DeleteDocument(ctx, caseID, documentID)
 }
 
-func (r *CaseRepository) AddFeedbackToMessage(ctx context.Context, feedback models.Feedback) (*mongo.UpdateResult, error) {
-	return r.caseDAO.AddFeedback(ctx, feedback)
+func (r *CaseRepository) AddFeedbackToMessage(ctx context.Context, caseID primitive.ObjectID, messageID string, feedback models.Feedback) (*mongo.UpdateResult, error) {
+	return r.caseDAO.AddFeedback(ctx, caseID, messageID, feedback)
 }
 
 func (r *CaseRepository) GetFeedbackByUserAndMessage(ctx context.Context, creatorID primitive.ObjectID, messageID string) ([]models.Feedback, error) {

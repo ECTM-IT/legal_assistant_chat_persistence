@@ -302,7 +302,7 @@ func (s *CaseServiceImpl) AddFeedbackToMessage(ctx context.Context, caseID primi
 	}
 
 	// Add the feedback to the message in the case
-	_, err = s.caseRepo.AddFeedbackToMessage(ctx, feedback)
+	_, err = s.caseRepo.AddFeedbackToMessage(ctx, caseID, messageID, feedback)
 	if err != nil {
 		s.logger.Error("Service Level: Failed to add feedback to message in case", err)
 		return nil, err
