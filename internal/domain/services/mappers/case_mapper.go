@@ -239,6 +239,7 @@ func (s *CaseConversionServiceImpl) MessageToDTO(message models.Message) dtos.Me
 	for _, f := range message.Feedbacks {
 		feedbacks = append(feedbacks, dtos.Feedback{
 			ID:           helpers.NewNullable(f.ID),
+			CaseID:       helpers.NewNullable(f.CaseID),
 			MessageID:    helpers.NewNullable(f.MessageID),
 			CreatorID:    helpers.NewNullable(f.CreatorID),
 			Score:        helpers.NewNullable(f.Score),
@@ -249,6 +250,7 @@ func (s *CaseConversionServiceImpl) MessageToDTO(message models.Message) dtos.Me
 	}
 
 	dto := dtos.MessageResponse{
+		ID:           helpers.NewNullable(message.ID),
 		Content:      helpers.NewNullable(message.Content),
 		Sender:       helpers.NewNullable(message.Sender),
 		Recipient:    helpers.NewNullable(message.Recipient),
@@ -279,6 +281,7 @@ func (s *CaseConversionServiceImpl) DTOToMessage(messageDTO dtos.MessageResponse
 	for _, f := range messageDTO.Feedbacks.Value {
 		feedbacks = append(feedbacks, models.Feedback{
 			ID:           f.ID.Value,
+			CaseID:       f.CaseID.Value,
 			MessageID:    f.MessageID.Value,
 			CreatorID:    f.CreatorID.Value,
 			Score:        f.Score.Value,
@@ -289,6 +292,7 @@ func (s *CaseConversionServiceImpl) DTOToMessage(messageDTO dtos.MessageResponse
 	}
 
 	message := models.Message{
+		ID:           messageDTO.ID.Value,
 		Content:      messageDTO.Content.Value,
 		Sender:       messageDTO.Sender.Value,
 		Recipient:    messageDTO.Recipient.Value,
