@@ -73,6 +73,7 @@ func (s *CaseConversionServiceImpl) DTOToCase(caseRequest dtos.CreateCaseRequest
 		Messages:      messages,
 		Collaborators: collaborators,
 		Documents:     documents,
+		Skills:        caseRequest.Skills.OrElse([]string{}),
 		Action:        caseRequest.Action.OrElse("summarize"),
 		AgentID:       caseRequest.AgentID.OrElse(primitive.NilObjectID),
 		LastEdit:      caseRequest.LastEdit.OrElse(now),
@@ -99,7 +100,8 @@ func (s *CaseConversionServiceImpl) CaseToDTO(caseModel *models.Case) *dtos.Case
 		CreatorID:     helpers.NewNullable(caseModel.CreatorID),
 		Messages:      helpers.NewNullable(s.MessagesToDTO(caseModel.Messages)),
 		Collaborators: helpers.NewNullable(s.CollaboratorsToDTO(caseModel.Collaborators)),
-		Documents:     helpers.NewNullable(s.DocumentsToDocumentsResponse(caseModel.Documents)),
+		Documents:     helpers.NewNullable(s.DocumentsToDTO(caseModel.Documents)),
+		Skills:        helpers.NewNullable(caseModel.Skills),
 		Action:        helpers.NewNullable(caseModel.Action),
 		AgentID:       helpers.NewNullable(caseModel.AgentID),
 		LastEdit:      helpers.NewNullable(caseModel.LastEdit),
@@ -154,6 +156,17 @@ func (s *CaseConversionServiceImpl) UpdateCaseFieldsToMap(updateRequest dtos.Upd
 			return nil, fmt.Errorf("error converting collaborators: %w", err)
 		}
 		updateFields["collaborators"] = collaborators
+	}
+	if updateRequest.Documents.Present {
+		documents, err := s.DTOToDocuments(updateRequest.Documents.Value)
+		if err != nil {
+			s.logger.Error("Failed to convert documents for update", err)
+			return nil, fmt.Errorf("error converting documents: %w", err)
+		}
+		updateFields["documents"] = documents
+	}
+	if updateRequest.Skills.Present {
+		updateFields["skills"] = updateRequest.Skills.Value
 	}
 	if updateRequest.Action.Present {
 		updateFields["action"] = updateRequest.Action.Value
@@ -226,6 +239,7 @@ func (s *CaseConversionServiceImpl) MessageToDTO(message models.Message) dtos.Me
 	for _, f := range message.Feedbacks {
 		feedbacks = append(feedbacks, dtos.Feedback{
 			ID:           helpers.NewNullable(f.ID),
+			CaseID:       helpers.NewNullable(f.CaseID),
 			MessageID:    helpers.NewNullable(f.MessageID),
 			CreatorID:    helpers.NewNullable(f.CreatorID),
 			Score:        helpers.NewNullable(f.Score),
@@ -236,12 +250,16 @@ func (s *CaseConversionServiceImpl) MessageToDTO(message models.Message) dtos.Me
 	}
 
 	dto := dtos.MessageResponse{
+		ID:           helpers.NewNullable(message.ID),
 		Content:      helpers.NewNullable(message.Content),
 		Sender:       helpers.NewNullable(message.Sender),
 		Recipient:    helpers.NewNullable(message.Recipient),
 		FunctionCall: helpers.NewNullable(message.FunctionCall),
 		DocumentPath: helpers.NewNullable(message.DocumentPath),
 		Feedbacks:    helpers.NewNullable(feedbacks),
+
+		Skills: helpers.NewNullable(message.Skills),
+		Agent:  helpers.NewNullable(message.Agent),
 	}
 
 	s.logger.Info("Successfully converted Message to DTO")
@@ -263,6 +281,7 @@ func (s *CaseConversionServiceImpl) DTOToMessage(messageDTO dtos.MessageResponse
 	for _, f := range messageDTO.Feedbacks.Value {
 		feedbacks = append(feedbacks, models.Feedback{
 			ID:           f.ID.Value,
+			CaseID:       f.CaseID.Value,
 			MessageID:    f.MessageID.Value,
 			CreatorID:    f.CreatorID.Value,
 			Score:        f.Score.Value,
@@ -273,12 +292,16 @@ func (s *CaseConversionServiceImpl) DTOToMessage(messageDTO dtos.MessageResponse
 	}
 
 	message := models.Message{
+		ID:           messageDTO.ID.Value,
 		Content:      messageDTO.Content.Value,
 		Sender:       messageDTO.Sender.Value,
 		Recipient:    messageDTO.Recipient.Value,
 		FunctionCall: messageDTO.FunctionCall.OrElse(false),
 		DocumentPath: messageDTO.DocumentPath.OrElse(""),
 		Feedbacks:    feedbacks,
+
+		Skills: messageDTO.Skills.OrElse([]string{}),
+		Agent:  messageDTO.Agent.OrElse(""),
 	}
 
 	s.logger.Info("Successfully converted DTO to Message")
@@ -324,8 +347,8 @@ func (s *CaseConversionServiceImpl) DTOToMessages(messagesDTO []dtos.MessageResp
 	return messages, nil
 }
 
-// MapDocuments converts a list of Document models to DocumentResponse DTOs
-func (s *CaseConversionServiceImpl) DocumentsToDocumentsResponse(docs []models.Document) []dtos.DocumentResponse {
+// DocumentsToDTO converts a list of Document models to DocumentResponse DTOs
+func (s *CaseConversionServiceImpl) DocumentsToDTO(docs []models.Document) []dtos.DocumentResponse {
 	s.logger.Info("Converting Documents to DTOs")
 
 	var docResponses []dtos.DocumentResponse

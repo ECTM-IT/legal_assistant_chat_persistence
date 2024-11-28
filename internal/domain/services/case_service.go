@@ -239,7 +239,7 @@ func (s *CaseServiceImpl) DeleteDocumentFromCase(ctx context.Context, caseID, do
 }
 
 // AddFeedbackToMessage adds feedback to a message within a case.
-func (s *CaseServiceImpl) AddFeedbackToMessage(ctx context.Context, req *dtos.AddFeedbackRequest) (*models.Feedback, error) {
+func (s *CaseServiceImpl) AddFeedbackToMessage(ctx context.Context, caseID primitive.ObjectID, messageID string, req *dtos.AddFeedbackRequest) (*models.Feedback, error) {
 	s.logger.Info("Service Level: Attempting to add feedback to message in case")
 
 	// Ensure the creator exists (assuming there's a userRepo for this purpose)
@@ -249,16 +249,18 @@ func (s *CaseServiceImpl) AddFeedbackToMessage(ctx context.Context, req *dtos.Ad
 		return nil, err
 	}
 
+	dateCreated := time.Now()
+
 	// Construct the feedback model from the request
 	feedback := models.Feedback{
 		ID:           primitive.NewObjectID(),
-		CaseID:       req.CaseID,
-		MessageID:    req.MessageID,
+		CaseID:       caseID,
+		MessageID:    messageID,
 		CreatorID:    creator.ID,
 		Score:        req.Score,
 		Reasons:      req.Reasons,
 		Comment:      req.Comment,
-		CreationDate: req.CreationDate,
+		CreationDate: dateCreated,
 	}
 
 	// Add the feedback to the message in the case
@@ -273,7 +275,7 @@ func (s *CaseServiceImpl) AddFeedbackToMessage(ctx context.Context, req *dtos.Ad
 }
 
 // GetFeedbackByUserAndMessage retrieves feedback provided by a specific user for a specific message.
-func (s *CaseServiceImpl) GetFeedbackByUserAndMessage(ctx context.Context, creatorID, messageID primitive.ObjectID) ([]models.Feedback, error) {
+func (s *CaseServiceImpl) GetFeedbackByUserAndMessage(ctx context.Context, creatorID primitive.ObjectID, messageID string) ([]models.Feedback, error) {
 	s.logger.Info("Service Level: Attempting to retrieve feedback by user and message")
 
 	// Call repository layer to get feedback
