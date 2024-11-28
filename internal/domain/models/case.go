@@ -40,6 +40,12 @@ type Message struct {
 	Agent  string   `json:"agent" bson:"agent_id"`
 }
 
+type MessageSkill struct {
+	ID    primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Agent string             `json:"agent" bson:"agent_id"`
+	Name  string             `json:"name" bson:"name,omitempty"`
+}
+
 type Feedback struct {
 	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	CaseID       primitive.ObjectID `json:"case_id" bson:"case_id" validate:"required"`
@@ -52,9 +58,18 @@ type Feedback struct {
 }
 
 type Document struct {
-	ID          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	FileName    string             `json:"file_name" bson:"file_name"`
-	FileType    string             `json:"file_type" bson:"file_type"` // e.g., pdf, docx, xls
-	FileContent []byte             `json:"file_content" bson:"file_content"`
-	UploadDate  time.Time          `json:"upload_date" bson:"upload_date"`
+	ID                    primitive.ObjectID     `json:"id" bson:"_id,omitempty"`
+	CreatedBy             primitive.ObjectID     `json:"created_by" bson:"created_by,omitempty"`
+	Sender                string                 `json:"sender" bson:"sender"`
+	FileName              string                 `json:"file_name" bson:"file_name"`
+	FileType              string                 `json:"file_type" bson:"file_type"` // e.g., pdf, docx, xls
+	FileContent           string                 `json:"file_content" bson:"file_content"`
+	DocumentCollaborators []DocumentCollaborator `json:"collaborators" bson:"collaborators"`
+	UploadDate            time.Time              `json:"upload_date" bson:"upload_date"`
+	ModifiedDate          time.Time              `json:"modified_date" bson:"modified_date"`
+}
+
+type DocumentCollaborator struct {
+	Email string `json:"email" bson:"_email,omitempty"`
+	Edit  bool   `json:"edit" bson:"edit"`
 }

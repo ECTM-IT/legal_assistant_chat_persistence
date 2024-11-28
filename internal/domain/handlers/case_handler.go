@@ -20,9 +20,8 @@ type CaseHanler interface {
 	AddCollaboratorToCase(ctx context.Context, caseID, collaboratorID primitive.ObjectID) (*dtos.CaseResponse, error)
 	RemoveCollaboratorFromCase(ctx context.Context, caseID, collaboratorID primitive.ObjectID) (*dtos.CaseResponse, error)
 	AddDocumentToCase(ctx context.Context, caseID primitive.ObjectID, document *models.Document) (*dtos.CaseResponse, error)
+	UpdateDocument(ctx context.Context, caseID primitive.ObjectID, documentID primitive.ObjectID, document *models.Document) (*dtos.CaseResponse, error)
 	DeleteDocumentFromCase(ctx context.Context, caseID, documentID primitive.ObjectID) (*dtos.CaseResponse, error)
-	AddAgentSkillToCase(ctx context.Context, caseID primitive.ObjectID, agentSkill *dtos.AddAgentSkillToCaseRequest) (*dtos.CaseResponse, error)
-	DeleteAgentSkillFromCase(ctx context.Context, caseID, agentSkillID primitive.ObjectID) (*dtos.CaseResponse, error)
 }
 
 type CaseHandler struct {
@@ -125,7 +124,7 @@ func (h *CaseHandler) DeleteCase(w http.ResponseWriter, r *http.Request) {
 	deletedCase, err := h.service.DeleteCase(r.Context(), id)
 	if err != nil {
 		h.RespondWithError(w, http.StatusInternalServerError, "Failed to delete case")
-		return
+		// returnSender
 	}
 	h.RespondWithJSON(w, http.StatusOK, deletedCase)
 }
@@ -186,14 +185,88 @@ func (h *CaseHandler) AddDocumentToCase(w http.ResponseWriter, r *http.Request) 
 	}
 
 	document := &models.Document{
-		FileName:    doc.FileName,
-		FileType:    doc.FileType,
-		FileContent: doc.FileContent,
+		Sender:      doc.Sender.OrElse(""),
+		CreatedBy:   doc.CreatedBy.Value,
+		FileName:    doc.FileName.OrElse(""),
+		FileType:    doc.FileType.OrElse(""),
+		FileContent: doc.FileContent.OrElse(""),
 	}
 
 	updatedCase, err := h.service.AddDocumentToCase(r.Context(), caseID, document)
 	if err != nil {
 		h.RespondWithError(w, http.StatusInternalServerError, "Failed to add document to case")
+		return
+	}
+
+	h.RespondWithJSON(w, http.StatusOK, updatedCase)
+}
+
+func (h *CaseHandler) UpdateDocument(w http.ResponseWriter, r *http.Request) {
+	caseID, err := h.ParseObjectID(r, "id", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
+		return
+	}
+
+	documentID, err := h.ParseObjectID(r, "documentID", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid document ID")
+		return
+	}
+
+	var doc dtos.UpdateDocument // Assuming a DTO to parse the incoming JSON payload
+	if err := h.DecodeJSONBody(r, &doc); err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	document := &models.Document{
+		Sender:      doc.Sender.OrElse(""),
+		CreatedBy:   doc.CreatedBy.Value,
+		FileName:    doc.FileName.OrElse(""),
+		FileType:    doc.FileType.OrElse(""),
+		FileContent: doc.FileContent.OrElse(""),
+	}
+
+	updatedCase, err := h.service.UpdateDocument(r.Context(), caseID, documentID, document)
+	if err != nil {
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to add document to case")
+		return
+	}
+
+	h.RespondWithJSON(w, http.StatusOK, updatedCase)
+}
+
+// AddDocumentCollaborator handles adding a collaborator to a specific document in a case
+func (h *CaseHandler) AddDocumentCollaborator(w http.ResponseWriter, r *http.Request) {
+	caseID, err := h.ParseObjectID(r, "id", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
+		return
+	}
+
+	documentID, err := h.ParseObjectID(r, "documentID", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid document ID")
+		return
+	}
+
+	var collaborator dtos.DocumentCollaboratorRequest
+	if err := h.DecodeJSONBody(r, &collaborator); err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	// Create a new collaborator model
+	newCollaborator := &models.DocumentCollaborator{
+		Email: collaborator.Email.OrElse(""),
+		Edit:  collaborator.Edit.OrElse(false),
+	}
+
+	// Call the service layer to add the collaborator
+	updatedCase, err := h.service.AddDocumentCollaborator(r.Context(), caseID, documentID, newCollaborator)
+	if err != nil {
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to add collaborator to document")
 		return
 	}
 
@@ -279,7 +352,7 @@ func (h *CaseHandler) GetFeedbackByUserAndMessageHandler(w http.ResponseWriter, 
 	}
 
 	// Call the service layer to get the feedback
-	feedbacks, err := h.service.GetFeedbackByUserAndMessage(r.Context(), creatorID, messageID)
+	feedbacks, err := h.service.GetFeedbackByUserAndMessage(r.Context(), creatorID, messageID.String())
 	if err != nil {
 		h.RespondWithError(w, http.StatusInternalServerError, "Failed to retrieve feedback")
 		return
@@ -287,41 +360,4 @@ func (h *CaseHandler) GetFeedbackByUserAndMessageHandler(w http.ResponseWriter, 
 
 	// Respond with the feedback
 	h.RespondWithJSON(w, http.StatusOK, feedbacks)
-}
-
-func (h *CaseHandler) AddAgentSkillToCase(w http.ResponseWriter, r *http.Request) {
-	caseID, err := h.ParseObjectID(r, "id", false)
-	if err != nil {
-		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
-		return
-	}
-	var req dtos.AddAgentSkillToCaseRequest
-	if err := h.DecodeJSONBody(r, &req); err != nil {
-		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-	newUser, err := h.service.AddAgentSkillToCase(r.Context(), caseID, req)
-	if err != nil {
-		h.RespondWithError(w, http.StatusInternalServerError, "Failed to add agent skill to case")
-		return
-	}
-	h.RespondWithJSON(w, http.StatusOK, newUser)
-}
-func (h *CaseHandler) RemoveAgentSkillFromCase(w http.ResponseWriter, r *http.Request) {
-	caseID, err := h.ParseObjectID(r, "id", false)
-	if err != nil {
-		h.RespondWithError(w, http.StatusBadRequest, "Invalid case ID")
-		return
-	}
-	agentSkillID, err := h.ParseObjectID(r, "agentSkillID", false)
-	if err != nil {
-		h.RespondWithError(w, http.StatusBadRequest, "Invalid agent skill ID")
-		return
-	}
-	updatedCase, err := h.service.RemoveAgentSkillFromCase(r.Context(), caseID, agentSkillID)
-	if err != nil {
-		h.RespondWithError(w, http.StatusInternalServerError, "Failed to remove agent skill from case")
-		return
-	}
-	h.RespondWithJSON(w, http.StatusOK, updatedCase)
 }

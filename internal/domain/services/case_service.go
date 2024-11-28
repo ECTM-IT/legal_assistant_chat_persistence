@@ -22,8 +22,6 @@ type CaseService interface {
 	DeleteCase(ctx context.Context, id primitive.ObjectID) (dtos.CaseResponse, error)
 	AddCollaboratorToCase(ctx context.Context, id, collaboratorID primitive.ObjectID) (dtos.CaseResponse, error)
 	RemoveCollaboratorFromCase(ctx context.Context, id, collaboratorID primitive.ObjectID) (dtos.CaseResponse, error)
-	AddAgentSkillToCase(ctx context.Context, id primitive.ObjectID, agentSkillRequest dtos.AddAgentSkillToCaseRequest) (dtos.CaseResponse, error)
-	RemoveAgentSkillFromCase(ctx context.Context, id, agentSkillID primitive.ObjectID) (dtos.CaseResponse, error)
 }
 
 // CaseServiceImpl implements the CaseService interface.
@@ -218,6 +216,46 @@ func (s *CaseServiceImpl) AddDocumentToCase(ctx context.Context, caseID primitiv
 	return updatedCase, nil
 }
 
+// UpdateDocument updates a document to a case.
+func (s *CaseServiceImpl) UpdateDocument(ctx context.Context, caseID primitive.ObjectID, documentID primitive.ObjectID, document *models.Document) (*dtos.CaseResponse, error) {
+	s.logger.Info("Service Level: Attempting to update document to case")
+
+	_, err := s.caseRepo.UpdateDocument(ctx, caseID, documentID, document)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to update document to case", err)
+		return nil, err
+	}
+
+	updatedCase, err := s.GetCaseByID(ctx, caseID)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to retrieve updated case", err)
+		return nil, err
+	}
+
+	s.logger.Info("Service Level: Successfully updated document to case")
+	return updatedCase, nil
+}
+
+// UpdateDocument updates a document to a case.
+func (s *CaseServiceImpl) AddDocumentCollaborator(ctx context.Context, caseID primitive.ObjectID, documentID primitive.ObjectID, collaborator *models.DocumentCollaborator) (*dtos.CaseResponse, error) {
+	s.logger.Info("Service Level: Attempting to update document to case")
+
+	_, err := s.caseRepo.AddDocumentCollaborator(ctx, caseID, documentID, collaborator)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to update document to case", err)
+		return nil, err
+	}
+
+	updatedCase, err := s.GetCaseByID(ctx, caseID)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to retrieve updated case", err)
+		return nil, err
+	}
+
+	s.logger.Info("Service Level: Successfully updated document to case")
+	return updatedCase, nil
+}
+
 // DeleteDocumentFromCase removes a document from a case.
 func (s *CaseServiceImpl) DeleteDocumentFromCase(ctx context.Context, caseID, documentID primitive.ObjectID) (*dtos.CaseResponse, error) {
 	s.logger.Info("Service Level: Attempting to delete document from case")
@@ -287,43 +325,4 @@ func (s *CaseServiceImpl) GetFeedbackByUserAndMessage(ctx context.Context, creat
 
 	s.logger.Info("Service Level: Successfully retrieved feedback by user and message")
 	return feedbacks, nil
-}
-
-// AddAgentSkillToCase adds a agent skill to a case.
-func (s *CaseServiceImpl) AddAgentSkillToCase(ctx context.Context, id primitive.ObjectID, agentSkillRequest dtos.AddAgentSkillToCaseRequest) (*dtos.CaseResponse, error) {
-	s.logger.Info("Service Level: Attempting to add agent skill to case")
-	updates := map[string]interface{}{
-		"id":       agentSkillRequest.ID,
-		"agent_id": agentSkillRequest.AgentID,
-		"name":     agentSkillRequest.Name,
-	}
-	_, err := s.caseRepo.AddAgentSkillToCase(ctx, id, updates)
-	if err != nil {
-		s.logger.Error("Service Level: Failed to add agent skill to case", err)
-		return nil, err
-	}
-	updatedCase, err := s.GetCaseByID(ctx, id)
-	if err != nil {
-		s.logger.Error("Service Level: Failed to retrieve updated case", err)
-		return nil, err
-	}
-	s.logger.Info("Service Level: Successfully added agent skill to case")
-	return updatedCase, nil
-}
-
-// RemoveAgentSkillFromCase removes a agent skill from a case.
-func (s *CaseServiceImpl) RemoveAgentSkillFromCase(ctx context.Context, id, agentSkillID primitive.ObjectID) (*dtos.CaseResponse, error) {
-	s.logger.Info("Service Level: Attempting to remove agent skill from case")
-	_, err := s.caseRepo.RemoveAgentSkillFromCase(ctx, id, agentSkillID)
-	if err != nil {
-		s.logger.Error("Service Level: Failed to remove agent skill from case", err)
-		return nil, err
-	}
-	updatedCase, err := s.GetCaseByID(ctx, id)
-	if err != nil {
-		s.logger.Error("Service Level: Failed to retrieve updated case", err)
-		return nil, err
-	}
-	s.logger.Info("Service Level: Successfully removed agent skill from case")
-	return updatedCase, nil
 }

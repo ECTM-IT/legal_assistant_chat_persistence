@@ -55,6 +55,14 @@ func (r *CaseRepository) AddDocument(ctx context.Context, caseID primitive.Objec
 	return r.caseDAO.AddDocument(ctx, caseID, document)
 }
 
+func (r *CaseRepository) UpdateDocument(ctx context.Context, caseID primitive.ObjectID, documentID primitive.ObjectID, document *models.Document) (*mongo.UpdateResult, error) {
+	return r.caseDAO.UpdateDocument(ctx, caseID, documentID, document)
+}
+
+func (r *CaseRepository) AddDocumentCollaborator(ctx context.Context, caseID primitive.ObjectID, documentID primitive.ObjectID, collaborator *models.DocumentCollaborator) (*mongo.UpdateResult, error) {
+	return r.caseDAO.AddDocumentCollaborator(ctx, caseID, documentID, collaborator)
+}
+
 func (r *CaseRepository) DeleteDocument(ctx context.Context, caseID, documentID primitive.ObjectID) (*mongo.UpdateResult, error) {
 	return r.caseDAO.DeleteDocument(ctx, caseID, documentID)
 }
@@ -65,12 +73,4 @@ func (r *CaseRepository) AddFeedbackToMessage(ctx context.Context, feedback mode
 
 func (r *CaseRepository) GetFeedbackByUserAndMessage(ctx context.Context, creatorID primitive.ObjectID, messageID string) ([]models.Feedback, error) {
 	return r.caseDAO.GetFeedbackByUserAndMessage(ctx, creatorID, messageID)
-}
-
-func (r *CaseRepository) AddAgentSkillToCase(ctx context.Context, id primitive.ObjectID, agentSkill map[string]interface{}) (*mongo.UpdateResult, error) {
-	return r.caseDAO.AddAgentSkillToCase(ctx, id, agentSkill)
-}
-
-func (r *CaseRepository) RemoveAgentSkillFromCase(ctx context.Context, id primitive.ObjectID, agentSkillID primitive.ObjectID) (*mongo.UpdateResult, error) {
-	return r.caseDAO.RemoveAgentSkillFromCase(ctx, id, agentSkillID)
 }
