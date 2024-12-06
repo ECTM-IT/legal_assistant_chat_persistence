@@ -133,7 +133,7 @@ type Feedback struct {
 }
 
 type AddFeedbackRequest struct {
-	CreatorID primitive.ObjectID `json:"creator_id" bson:"creator_id,omitempty"`
+	CreatorID primitive.ObjectID `json:"creator_id" bson:"creator_id" validate:"required"`
 	Score     string             `json:"score" bson:"score" validate:"required"`
 	Reasons   []string           `json:"reasons" bson:"reasons"`
 	Comment   string             `json:"comment" bson:"comment"`
