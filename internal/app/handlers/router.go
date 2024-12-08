@@ -10,7 +10,14 @@ import (
 )
 
 // Routes initializes the routes for the application with the provided services.
-func Routes(agentService *services.AgentServiceImpl, caseService *services.CaseServiceImpl, teamService *services.TeamServiceImpl, userService *services.UserServiceImpl, subscriptionService *services.SubscriptionServiceImpl) http.Handler {
+func Routes(
+	agentService *services.AgentServiceImpl,
+	caseService *services.CaseServiceImpl,
+	teamService *services.TeamServiceImpl,
+	userService *services.UserServiceImpl,
+	subscriptionService *services.SubscriptionServiceImpl,
+	planService *services.PlanServiceImpl,
+) http.Handler {
 	router := mux.NewRouter()
 
 	// Create a new CORS handler with the desired configuration
@@ -31,6 +38,7 @@ func Routes(agentService *services.AgentServiceImpl, caseService *services.CaseS
 	teamHandler := handlers.NewTeamHandler(teamService)
 	userHandler := handlers.NewUserHandler(userService)
 	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionService)
+	planHandler := handlers.NewPlanHandler(planService)
 
 	// Register agent routes
 	registerAgentRoutes(router, agentHandler)
@@ -46,6 +54,9 @@ func Routes(agentService *services.AgentServiceImpl, caseService *services.CaseS
 
 	// Register subscription routes
 	registerSubscriptionRoutes(router, subscriptionHandler)
+
+	// Register plan routes
+	registerPlanRoutes(router, planHandler)
 
 	router.NotFoundHandler = http.HandlerFunc(NotFoundHandler)
 	router.MethodNotAllowedHandler = http.HandlerFunc(MethodNotAllowedHandler)
@@ -101,4 +112,10 @@ func registerSubscriptionRoutes(router *mux.Router, handler *handlers.Subscripti
 	router.HandleFunc("/subscriptions/", handler.CreateSubscription).Methods(http.MethodPost)
 	router.HandleFunc("/subscriptions/{id}/", handler.UpdateSubscription).Methods(http.MethodPatch)
 	router.HandleFunc("/subscriptions/{id}/", handler.DeleteSubscription).Methods(http.MethodDelete)
+}
+
+func registerPlanRoutes(router *mux.Router, handler *handlers.PlanHandler) {
+	router.HandleFunc("/plans", handler.GetPlanOptions).Methods(http.MethodGet)
+	router.HandleFunc("/plans/toggle", handler.TogglePlanType).Methods(http.MethodPatch)
+	router.HandleFunc("/plans/select", handler.SelectPlan).Methods(http.MethodPost)
 }

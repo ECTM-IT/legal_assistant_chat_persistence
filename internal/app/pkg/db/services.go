@@ -15,6 +15,7 @@ type Services struct {
 	TeamService         *services.TeamServiceImpl
 	UserService         *services.UserServiceImpl
 	SubscriptionService *services.SubscriptionServiceImpl
+	PlanService         *services.PlanServiceImpl
 }
 
 func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
@@ -38,6 +39,7 @@ func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 	teamMapper := mappers.NewTeamConversionService(logger)
 	userMapper := mappers.NewUserConversionService(logger)
 	subscriptionMapper := mappers.NewSubscriptionConversionService(logger)
+	planMapper := mappers.NewPlanConversionService(logger)
 
 	// Initialize services
 	agentService := services.NewAgentService(agentRepo, agentMapper, userMapper, logger)
@@ -45,6 +47,7 @@ func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 	teamService := services.NewTeamService(teamRepo, teamMapper, logger)
 	userService := services.NewUserService(userRepo, userMapper, logger)
 	subscriptionService := services.NewSubscriptionService(subscriptionRepo, subscriptionMapper, logger)
+	planService := services.NewPlanService(subscriptionRepo, planMapper, subscriptionMapper, logger)
 
 	return &Services{
 		AgentService:        agentService,
@@ -52,5 +55,6 @@ func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 		TeamService:         teamService,
 		UserService:         userService,
 		SubscriptionService: subscriptionService,
+		PlanService:         planService,
 	}
 }
