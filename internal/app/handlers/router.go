@@ -55,6 +55,24 @@ func Routes(agentService *services.AgentServiceImpl, caseService *services.CaseS
 	return corsHandler.Handler(router)
 }
 
+func corsMiddleware(handler func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Set CORS headers
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		// Handle preflight requests
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		// Pass the request to the next handler
+		handler(w, r)
+	}
+}
+
 func registerAgentRoutes(router *mux.Router, handler *handlers.AgentHandler) {
 	router.HandleFunc("/agents/", handler.GetAllAgents).Methods(http.MethodGet)
 	router.HandleFunc("/agents/{id}/", handler.GetAgentByID).Methods(http.MethodGet)
@@ -67,12 +85,12 @@ func registerCaseRoutes(router *mux.Router, handler *handlers.CaseHandler) {
 	router.HandleFunc("/cases-user/", handler.GetCasesByCreatorID).Methods(http.MethodGet)
 	router.HandleFunc("/cases/{id}/", handler.GetCaseByID).Methods(http.MethodGet)
 	router.HandleFunc("/cases-create/", handler.CreateCase).Methods(http.MethodPost)
-	router.HandleFunc("/cases/{id}/", handler.UpdateCase).Methods(http.MethodPatch)
+	router.HandleFunc("/cases/{id}/", corsMiddleware(handler.UpdateCase)).Methods(http.MethodPatch)
 	router.HandleFunc("/cases/{id}/", handler.DeleteCase).Methods(http.MethodDelete)
 	router.HandleFunc("/case-add-user/{id}/", handler.AddCollaboratorToCase).Methods(http.MethodPost)
 	router.HandleFunc("/case-remove-user/{id}/{userID}/", handler.RemoveCollaboratorFromCase).Methods(http.MethodDelete)
 	router.HandleFunc("/case-add-document/{id}/", handler.AddDocumentToCase).Methods(http.MethodPost)
-	router.HandleFunc("/case-update-document/{id}/document/{documentID}/", handler.UpdateDocument).Methods(http.MethodPatch)
+	router.HandleFunc("/case-update-document/{id}/document/{documentID}/", corsMiddleware(handler.UpdateDocument)).Methods(http.MethodPatch)
 	router.HandleFunc("/case-add-document-collaborator/{id}/document/{documentID}/", handler.AddDocumentCollaborator).Methods(http.MethodPost)
 	router.HandleFunc("/case-remove-document/{id}/{documentID}/", handler.DeleteDocumentFromCase).Methods(http.MethodDelete)
 	router.HandleFunc("/case-add-feedback-to-message/{id}/{messageId}/", handler.AddFeedbackToMessage).Methods(http.MethodPost)
