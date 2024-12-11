@@ -21,6 +21,7 @@ func Routes(agentService *services.AgentServiceImpl, caseService *services.CaseS
 			http.MethodGet,
 			http.MethodDelete,
 			http.MethodPatch,
+			http.MethodOptions,
 		},
 		AllowedHeaders:   []string{"*"},
 		AllowCredentials: false,
