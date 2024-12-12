@@ -6,26 +6,43 @@ import (
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/handlers"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
 	"github.com/gorilla/mux"
-	"github.com/rs/cors"
 )
+
+// CORS middleware to allow all methods
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Set CORS headers
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Expose-Headers", "Content-Type, Authorization")
+		// Handle preflight requests
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		// Pass to the next handler
+		next.ServeHTTP(w, r)
+	})
+}
 
 // Routes initializes the routes for the application with the provided services.
 func Routes(agentService *services.AgentServiceImpl, caseService *services.CaseServiceImpl, teamService *services.TeamServiceImpl, userService *services.UserServiceImpl, subscriptionService *services.SubscriptionServiceImpl) http.Handler {
 	router := mux.NewRouter()
 
 	// Create a new CORS handler with the desired configuration
-	corsHandler := cors.New(cors.Options{
-		AllowedOrigins: []string{"*"},
-		AllowedMethods: []string{
-			http.MethodPost,
-			http.MethodGet,
-			http.MethodDelete,
-			http.MethodPatch,
-			http.MethodOptions,
-		},
-		AllowedHeaders:   []string{"*"},
-		AllowCredentials: false,
-	})
+	// corsHandler := cors.New(cors.Options{
+	// 	AllowedOrigins: []string{"*"},
+	// 	AllowedMethods: []string{
+	// 		http.MethodPost,
+	// 		http.MethodGet,
+	// 		http.MethodDelete,
+	// 		http.MethodPatch,
+	// 		http.MethodOptions,
+	// 	},
+	// 	AllowedHeaders:   []string{"*"},
+	// 	AllowCredentials: false,
+	// })
 
 	agentHandler := handlers.NewAgentHandler(agentService)
 	caseHandler := handlers.NewCaseHandler(caseService)
@@ -52,7 +69,7 @@ func Routes(agentService *services.AgentServiceImpl, caseService *services.CaseS
 	router.MethodNotAllowedHandler = http.HandlerFunc(MethodNotAllowedHandler)
 
 	// Wrap the router with the CORS handler
-	return corsHandler.Handler(router)
+	return corsMiddleware(router)
 }
 
 func registerAgentRoutes(router *mux.Router, handler *handlers.AgentHandler) {
