@@ -13,21 +13,25 @@ import (
 )
 
 type TeamRepository struct {
-	teamDAO *daos.TeamDAO
-	userDAO *daos.UserDAO
-	logger  logs.Logger
+	teamDAO       *daos.TeamDAO
+	userDAO       *daos.UserDAO
+	invitationDAO *daos.InvitationDAO
+	logger        logs.Logger
 }
 
-func NewTeamRepository(teamDAO *daos.TeamDAO, userDAO *daos.UserDAO, logger logs.Logger) *TeamRepository {
+func NewTeamRepository(teamDAO *daos.TeamDAO, userDAO *daos.UserDAO, invitationDAO *daos.InvitationDAO, logger logs.Logger) *TeamRepository {
 	return &TeamRepository{
-		teamDAO: teamDAO,
-		userDAO: userDAO,
-		logger:  logger,
+		teamDAO:       teamDAO,
+		userDAO:       userDAO,
+		invitationDAO: invitationDAO,
+		logger:        logger,
 	}
 }
 
 func (r *TeamRepository) CreateTeam(ctx context.Context, team *models.Team) (*models.Team, error) {
 	r.logger.Info("Repository Level: Attempting to create new team")
+	team.CreatedAt = time.Now()
+	team.UpdatedAt = time.Now()
 	createdTeam, err := r.teamDAO.CreateTeam(ctx, team)
 	if err != nil {
 		r.logger.Error("Repository Level: Failed to create team", err)
@@ -50,7 +54,8 @@ func (r *TeamRepository) GetTeamByID(ctx context.Context, id primitive.ObjectID)
 
 func (r *TeamRepository) GetAllTeams(ctx context.Context) ([]models.Team, error) {
 	r.logger.Info("Repository Level: Attempting to retrieve all teams")
-	teams, err := r.teamDAO.GetAllTeams(ctx)
+	filter := bson.M{"is_deleted": false}
+	teams, err := r.teamDAO.GetAllTeams(ctx, filter)
 	if err != nil {
 		r.logger.Error("Repository Level: Failed to retrieve teams", err)
 		return nil, err
@@ -61,6 +66,7 @@ func (r *TeamRepository) GetAllTeams(ctx context.Context) ([]models.Team, error)
 
 func (r *TeamRepository) UpdateTeam(ctx context.Context, id primitive.ObjectID, update bson.M) (*models.Team, error) {
 	r.logger.Info("Repository Level: Attempting to update team")
+	update["updated_at"] = time.Now()
 	_, err := r.teamDAO.UpdateTeam(ctx, id, update)
 	if err != nil {
 		r.logger.Error("Repository Level: Failed to update team", err)
@@ -75,75 +81,155 @@ func (r *TeamRepository) UpdateTeam(ctx context.Context, id primitive.ObjectID, 
 	return updatedTeam, nil
 }
 
-func (r *TeamRepository) DeleteTeam(ctx context.Context, id primitive.ObjectID) error {
-	r.logger.Info("Repository Level: Attempting to delete team")
-	err := r.teamDAO.DeleteTeam(ctx, id)
+func (r *TeamRepository) SoftDeleteTeam(ctx context.Context, id primitive.ObjectID) error {
+	r.logger.Info("Repository Level: Attempting to soft delete team")
+	now := time.Now()
+	update := bson.M{
+		"is_deleted": true,
+		"deleted_at": now,
+		"updated_at": now,
+	}
+	_, err := r.teamDAO.UpdateTeam(ctx, id, update)
 	if err != nil {
-		r.logger.Error("Repository Level: Failed to delete team", err)
+		r.logger.Error("Repository Level: Failed to soft delete team", err)
 		return err
 	}
-	r.logger.Info("Repository Level: Successfully deleted team")
+	r.logger.Info("Repository Level: Successfully soft deleted team")
 	return nil
 }
 
-func (r *TeamRepository) GetTeamMember(ctx context.Context, id primitive.ObjectID) (*models.User, error) {
-	r.logger.Info("Repository Level: Attempting to retrieve team member")
-	user, err := r.userDAO.GetUserByID(ctx, id)
-	if err != nil {
-		r.logger.Error("Repository Level: Failed to retrieve team member", err)
-		return nil, err
-	}
-	r.logger.Info("Repository Level: Successfully retrieved team member")
-	return user, nil
-}
-
-func (r *TeamRepository) ChangeAdmin(ctx context.Context, id primitive.ObjectID, email string) (*models.User, error) {
-	r.logger.Info("Repository Level: Attempting to change team admin")
-	user, err := r.userDAO.GetUserByEmail(ctx, email)
-	if err != nil {
-		r.logger.Error("Repository Level: Failed to retrieve user by email", err)
-		return nil, err
-	}
+func (r *TeamRepository) UndoTeamDeletion(ctx context.Context, id primitive.ObjectID) error {
+	r.logger.Info("Repository Level: Attempting to undo team deletion")
+	now := time.Now()
 	update := bson.M{
-		"admin_id": user.ID,
+		"is_deleted": false,
+		"deleted_at": nil,
+		"updated_at": now,
 	}
-	_, err = r.teamDAO.UpdateTeam(ctx, id, update)
+	_, err := r.teamDAO.UpdateTeam(ctx, id, update)
 	if err != nil {
-		r.logger.Error("Repository Level: Failed to update team admin", err)
-		return nil, err
+		r.logger.Error("Repository Level: Failed to undo team deletion", err)
+		return err
 	}
-	r.logger.Info("Repository Level: Successfully changed team admin")
-	return user, nil
+	r.logger.Info("Repository Level: Successfully undid team deletion")
+	return nil
 }
 
-func (r *TeamRepository) AddMember(ctx context.Context, id primitive.ObjectID, email string) (*mongo.UpdateResult, error) {
+func (r *TeamRepository) AddTeamMember(ctx context.Context, teamID primitive.ObjectID, member models.TeamMember) error {
 	r.logger.Info("Repository Level: Attempting to add team member")
-	user, err := r.userDAO.GetUserByEmail(ctx, email)
-	if err != nil {
-		r.logger.Error("Repository Level: Failed to retrieve user by email", err)
-		return nil, err
+	member.DateAdded = time.Now()
+	member.LastActive = time.Now()
+
+	// Check if there's already an admin if the new member is to be an admin
+	if member.Role == models.RoleAdmin {
+		hasAdmin, err := r.teamDAO.HasAdminMember(ctx, teamID)
+		if err != nil {
+			r.logger.Error("Repository Level: Failed to check for existing admin", err)
+			return err
+		}
+		if hasAdmin {
+			r.logger.Error("Repository Level: Cannot add another admin, one already exists", nil)
+			return mongo.ErrNoDocuments
+		}
 	}
-	member := models.TeamMember{
-		UserID:     user.ID,
-		DateAdded:  time.Now(),
-		LastActive: time.Now(),
-	}
-	result, err := r.teamDAO.AddMember(ctx, id, member)
+
+	_, err := r.teamDAO.AddMember(ctx, teamID, member)
 	if err != nil {
 		r.logger.Error("Repository Level: Failed to add team member", err)
-		return nil, err
+		return err
 	}
 	r.logger.Info("Repository Level: Successfully added team member")
-	return result, nil
+	return nil
 }
 
-func (r *TeamRepository) RemoveMember(ctx context.Context, id, memberID primitive.ObjectID) (*mongo.UpdateResult, error) {
-	r.logger.Info("Repository Level: Attempting to remove team member")
-	result, err := r.teamDAO.RemoveMember(ctx, id, memberID)
+func (r *TeamRepository) UpdateTeamMember(ctx context.Context, teamID, memberID primitive.ObjectID, update bson.M) error {
+	r.logger.Info("Repository Level: Attempting to update team member")
+
+	// If updating to admin role, check if there's already an admin
+	if role, ok := update["role"].(models.Role); ok && role == models.RoleAdmin {
+		hasAdmin, err := r.teamDAO.HasAdminMember(ctx, teamID)
+		if err != nil {
+			r.logger.Error("Repository Level: Failed to check for existing admin", err)
+			return err
+		}
+		if hasAdmin {
+			r.logger.Error("Repository Level: Cannot update to admin role, one already exists", nil)
+			return mongo.ErrNoDocuments
+		}
+	}
+
+	_, err := r.teamDAO.UpdateMember(ctx, teamID, memberID, update)
 	if err != nil {
-		r.logger.Error("Repository Level: Failed to remove team member", err)
+		r.logger.Error("Repository Level: Failed to update team member", err)
+		return err
+	}
+	r.logger.Info("Repository Level: Successfully updated team member")
+	return nil
+}
+
+func (r *TeamRepository) SoftDeleteTeamMember(ctx context.Context, teamID, memberID primitive.ObjectID) error {
+	r.logger.Info("Repository Level: Attempting to soft delete team member")
+	now := time.Now()
+	update := bson.M{
+		"is_deleted": true,
+		"deleted_at": now,
+	}
+	_, err := r.teamDAO.UpdateMember(ctx, teamID, memberID, update)
+	if err != nil {
+		r.logger.Error("Repository Level: Failed to soft delete team member", err)
+		return err
+	}
+	r.logger.Info("Repository Level: Successfully soft deleted team member")
+	return nil
+}
+
+func (r *TeamRepository) UndoTeamMemberDeletion(ctx context.Context, teamID, memberID primitive.ObjectID) error {
+	r.logger.Info("Repository Level: Attempting to undo team member deletion")
+	update := bson.M{
+		"is_deleted": false,
+		"deleted_at": nil,
+	}
+	_, err := r.teamDAO.UpdateMember(ctx, teamID, memberID, update)
+	if err != nil {
+		r.logger.Error("Repository Level: Failed to undo team member deletion", err)
+		return err
+	}
+	r.logger.Info("Repository Level: Successfully undid team member deletion")
+	return nil
+}
+
+func (r *TeamRepository) CreateInvitation(ctx context.Context, invitation *models.TeamInvitation) (*models.TeamInvitation, error) {
+	r.logger.Info("Repository Level: Attempting to create team invitation")
+	invitation.CreatedAt = time.Now()
+	invitation.ExpiresAt = time.Now().Add(24 * time.Hour) // 24-hour expiration
+	createdInvitation, err := r.invitationDAO.CreateInvitation(ctx, invitation)
+	if err != nil {
+		r.logger.Error("Repository Level: Failed to create team invitation", err)
 		return nil, err
 	}
-	r.logger.Info("Repository Level: Successfully removed team member")
-	return result, nil
+	r.logger.Info("Repository Level: Successfully created team invitation")
+	return createdInvitation, nil
+}
+
+func (r *TeamRepository) GetInvitationByToken(ctx context.Context, token string) (*models.TeamInvitation, error) {
+	r.logger.Info("Repository Level: Attempting to retrieve invitation by token")
+	invitation, err := r.invitationDAO.GetInvitationByToken(ctx, token)
+	if err != nil {
+		r.logger.Error("Repository Level: Failed to retrieve invitation", err)
+		return nil, err
+	}
+	r.logger.Info("Repository Level: Successfully retrieved invitation")
+	return invitation, nil
+}
+
+func (r *TeamRepository) MarkInvitationAsUsed(ctx context.Context, id primitive.ObjectID) error {
+	r.logger.Info("Repository Level: Attempting to mark invitation as used")
+	update := bson.M{"is_used": true}
+	err := r.invitationDAO.UpdateInvitation(ctx, id, update)
+	if err != nil {
+		r.logger.Error("Repository Level: Failed to mark invitation as used", err)
+		return err
+	}
+	r.logger.Info("Repository Level: Successfully marked invitation as used")
+	return nil
 }

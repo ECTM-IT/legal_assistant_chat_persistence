@@ -39,7 +39,6 @@ func Routes(
 	userHandler := handlers.NewUserHandler(userService)
 	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionService)
 	planHandler := handlers.NewPlanHandler(planService)
-
 	// Register agent routes
 	registerAgentRoutes(router, agentHandler)
 
@@ -63,6 +62,7 @@ func Routes(
 
 	// Wrap the router with the CORS handler
 	return corsHandler.Handler(router)
+
 }
 
 func registerAgentRoutes(router *mux.Router, handler *handlers.AgentHandler) {
@@ -70,6 +70,21 @@ func registerAgentRoutes(router *mux.Router, handler *handlers.AgentHandler) {
 	router.HandleFunc("/agents/{id}/", handler.GetAgentByID).Methods(http.MethodGet)
 	router.HandleFunc("/agents-user/", handler.GetAgentsByUser).Methods(http.MethodGet)
 	router.HandleFunc("/agent-purchase/{id}/", handler.PurchaseAgent).Methods(http.MethodGet)
+}
+
+func registerTeamRoutes(router *mux.Router, handler *handlers.TeamHandler) {
+	router.HandleFunc("/teams", handler.CreateTeam).Methods(http.MethodPost)
+	router.HandleFunc("/teams/{id}", handler.GetTeamByID).Methods(http.MethodGet)
+	router.HandleFunc("/teams", handler.GetAllTeams).Methods(http.MethodGet)
+	router.HandleFunc("/teams/{id}", handler.UpdateTeam).Methods(http.MethodPut)
+	router.HandleFunc("/teams/{id}", handler.SoftDeleteTeam).Methods(http.MethodDelete)
+	router.HandleFunc("/teams/{id}/restore", handler.UndoTeamDeletion).Methods(http.MethodPost)
+	router.HandleFunc("/teams/{id}/members", handler.AddTeamMember).Methods(http.MethodPost)
+	router.HandleFunc("/teams/{id}/members/{memberId}", handler.UpdateTeamMember).Methods(http.MethodPut)
+	router.HandleFunc("/teams/{id}/members/{memberId}", handler.SoftDeleteTeamMember).Methods(http.MethodDelete)
+	router.HandleFunc("/teams/{id}/members/{memberId}/restore", handler.UndoTeamMemberDeletion).Methods(http.MethodPost)
+	router.HandleFunc("/teams/{id}/invitations", handler.CreateInvitation).Methods(http.MethodPost)
+	router.HandleFunc("/teams/invitations/accept", handler.AcceptInvitation).Methods(http.MethodPost)
 }
 
 func registerCaseRoutes(router *mux.Router, handler *handlers.CaseHandler) {
@@ -89,14 +104,6 @@ func registerCaseRoutes(router *mux.Router, handler *handlers.CaseHandler) {
 	router.HandleFunc("/case-get-feedback-from-message/{id}/{creatorId}/{messageId}/", handler.GetCaseByID).Methods(http.MethodGet)
 }
 
-func registerTeamRoutes(router *mux.Router, handler *handlers.TeamHandler) {
-	router.HandleFunc("/teams/{id}/", handler.GetTeamByID).Methods(http.MethodGet)
-	router.HandleFunc("/team-member/{id}/", handler.GetTeamMember).Methods(http.MethodGet)
-	router.HandleFunc("/team/change-admin/{id}/", handler.ChangeAdmin).Methods(http.MethodPatch)
-	router.HandleFunc("/team/add/{id}/", handler.AddMember).Methods(http.MethodPost)
-	router.HandleFunc("/team/remove/{id}/{memberId}/", handler.RemoveMember).Methods(http.MethodDelete)
-}
-
 func registerUserRoutes(router *mux.Router, handler *handlers.UserHandler) {
 	router.HandleFunc("/users/{id}/", handler.GetUserByID).Methods(http.MethodGet)
 	router.HandleFunc("/users-email/", handler.GetUserByEmail).Methods(http.MethodPost)
@@ -112,6 +119,7 @@ func registerSubscriptionRoutes(router *mux.Router, handler *handlers.Subscripti
 	router.HandleFunc("/subscriptions/", handler.CreateSubscription).Methods(http.MethodPost)
 	router.HandleFunc("/subscriptions/{id}/", handler.UpdateSubscription).Methods(http.MethodPatch)
 	router.HandleFunc("/subscriptions/{id}/", handler.DeleteSubscription).Methods(http.MethodDelete)
+	router.HandleFunc("/subscriptions/purchase/", handler.PurchaseSubscription).Methods(http.MethodPost)
 }
 
 func registerPlanRoutes(router *mux.Router, handler *handlers.PlanHandler) {
