@@ -8,11 +8,11 @@ import (
 )
 
 // SubscriptionType represents the type of subscription
-type SubscriptionType string
+type PlanType string
 
 const (
-	Monthly SubscriptionType = "monthly"
-	Annual  SubscriptionType = "annual"
+	Monthly PlanType = "monthly"
+	Annual  PlanType = "annual"
 )
 
 // SubscriptionStatus represents the status of a subscription
@@ -39,14 +39,14 @@ const (
 type CreateSubscriptionRequest struct {
 	UserID              helpers.Nullable[primitive.ObjectID] `json:"user_id" bson:"user_id"`
 	Plan                helpers.Nullable[string]             `json:"plan" bson:"plan"`
-	Type                helpers.Nullable[SubscriptionType]   `json:"type" bson:"type"`
+	Type                helpers.Nullable[PlanType]           `json:"type" bson:"type"`
 	BillingInformations helpers.Nullable[BillingInformation] `json:"billing_informations" bson:"billing_informations"`
 	PaymentMethodID     helpers.Nullable[string]             `json:"payment_method_id" bson:"payment_method_id"`
 }
 
 type UpdateSubscriptionRequest struct {
 	Plan                helpers.Nullable[string]             `json:"plan" bson:"plan,omitempty"`
-	Type                helpers.Nullable[SubscriptionType]   `json:"type" bson:"type,omitempty"`
+	Type                helpers.Nullable[PlanType]           `json:"type" bson:"type,omitempty"`
 	BillingInformations helpers.Nullable[BillingInformation] `json:"billing_informations" bson:"billing_informations,omitempty"`
 	PaymentMethodID     helpers.Nullable[string]             `json:"payment_method_id" bson:"payment_method_id,omitempty"`
 }
@@ -55,7 +55,7 @@ type SubscriptionResponse struct {
 	ID                   helpers.Nullable[primitive.ObjectID] `json:"id" bson:"_id,omitempty"`
 	UserID               helpers.Nullable[primitive.ObjectID] `json:"user_id" bson:"user_id"`
 	Plan                 helpers.Nullable[string]             `json:"plan" bson:"plan"`
-	Type                 helpers.Nullable[SubscriptionType]   `json:"type" bson:"type"`
+	Renewal              helpers.Nullable[PlanType]           `json:"renewal" bson:"renewal"`
 	Status               helpers.Nullable[SubscriptionStatus] `json:"status" bson:"status"`
 	CurrentPeriodStart   helpers.Nullable[time.Time]          `json:"current_period_start" bson:"current_period_start"`
 	CurrentPeriodEnd     helpers.Nullable[time.Time]          `json:"current_period_end" bson:"current_period_end"`

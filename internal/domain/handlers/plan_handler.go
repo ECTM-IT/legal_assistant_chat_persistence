@@ -9,10 +9,10 @@ import (
 
 type PlanHandler struct {
 	BaseHandler
-	service services.PlanService
+	service *services.PlanServiceImpl
 }
 
-func NewPlanHandler(service services.PlanService) *PlanHandler {
+func NewPlanHandler(service *services.PlanServiceImpl) *PlanHandler {
 	return &PlanHandler{service: service}
 }
 

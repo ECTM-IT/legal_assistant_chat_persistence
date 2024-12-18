@@ -24,10 +24,11 @@ type SubscriptionService interface {
 
 // SubscriptionServiceImpl implements the SubscriptionService interface.
 type SubscriptionServiceImpl struct {
-	repo     *repositories.SubscriptionRepositoryImpl
-	userRepo *repositories.UserRepositoryImpl
-	mapper   *mappers.SubscriptionConversionServiceImpl
-	logger   logs.Logger
+	repo        *repositories.SubscriptionRepositoryImpl
+	userRepo    *repositories.UserRepositoryImpl
+	mapper      *mappers.SubscriptionConversionServiceImpl
+	planService *PlanServiceImpl
+	logger      logs.Logger
 }
 
 // NewSubscriptionService creates a new instance of the subscription service.
@@ -58,6 +59,19 @@ func (s *SubscriptionServiceImpl) CreateSubscription(ctx context.Context, req *d
 func (s *SubscriptionServiceImpl) PurchaseSubscription(ctx context.Context, req *dtos.CreateSubscriptionRequest) (*dtos.SubscriptionResponse, error) {
 	s.logger.Info("Attempting to purchase subscription")
 
+	selectPlanRequest := &dtos.SelectPlanRequest{
+		UserID: req.UserID,
+		Plan:   req.Plan,
+		Type:   req.Type,
+	}
+
+	plan, err := s.planService.SelectPlan(ctx, selectPlanRequest)
+
+	if err != nil {
+		s.logger.Error("Service Level: Failed to get plan", err)
+		return nil, errors.NewDatabaseError("Service Level: Failed to get plan", "get_plan_failed")
+	}
+	req.Plan = plan.Plan
 	// Create subscription
 	subscription, err := s.CreateSubscription(ctx, req)
 

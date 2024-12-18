@@ -85,6 +85,7 @@ func (h *SubscriptionHandler) PurchaseSubscription(w http.ResponseWriter, r *htt
 		h.RespondWithError(w, http.StatusBadRequest, "Invalid creator ID")
 		return
 	}
+
 	req.UserID.Value = creatorID
 	req.UserID.Present = true
 	if err := h.DecodeJSONBody(r, &req); err != nil {
