@@ -236,8 +236,8 @@ func (s *CaseConversionServiceImpl) MessageToDTO(message models.Message) dtos.Me
 	s.logger.Info("Converting Message to DTO")
 
 	feedbacks := make([]dtos.Feedback, len(message.Feedbacks))
-	for _, f := range message.Feedbacks {
-		feedbacks = append(feedbacks, dtos.Feedback{
+	for i, f := range message.Feedbacks {
+		feedbacks[i] = dtos.Feedback{
 			ID:           helpers.NewNullable(f.ID),
 			CaseID:       helpers.NewNullable(f.CaseID),
 			MessageID:    helpers.NewNullable(f.MessageID),
@@ -246,7 +246,7 @@ func (s *CaseConversionServiceImpl) MessageToDTO(message models.Message) dtos.Me
 			Reasons:      helpers.NewNullable(f.Reasons),
 			Comment:      helpers.NewNullable(f.Comment),
 			CreationDate: helpers.NewNullable(f.CreationDate),
-		})
+		}
 	}
 
 	dto := dtos.MessageResponse{
