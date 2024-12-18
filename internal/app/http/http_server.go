@@ -35,8 +35,7 @@ type HTTPServer struct {
 func NewHTTPServer(config *Config, services *db.Services, logger logs.Logger) *HTTPServer {
 	return &HTTPServer{
 		addr:       fmt.Sprintf("0.0.0.0:%d", config.HTTPPort),
-		handler:    handler.Routes(services.AgentService, services.CaseService, services.TeamService, services.UserService, services.SubscriptionService),
-		logger:     logger,
+		handler:    handler.Routes(services.AgentService, services.CaseService, services.TeamService, services.UserService, services.SubscriptionService, services.PlanService),
 		shutdownCh: make(chan os.Signal, 1),
 	}
 }

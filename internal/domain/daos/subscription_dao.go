@@ -16,6 +16,7 @@ type SubscriptionsDAOInterface interface {
 	GetAllSubscriptions(ctx context.Context) ([]models.Subscriptions, error)
 	GetSubscriptionByID(ctx context.Context, id primitive.ObjectID) (*models.Subscriptions, error)
 	GetSubscriptionsByPlan(ctx context.Context, plan string) ([]models.Subscriptions, error)
+	GetSubscriptionsByUserID(ctx context.Context, userID primitive.ObjectID) ([]models.Subscriptions, error)
 	CreateSubscription(ctx context.Context, subscription *models.Subscriptions) (*mongo.InsertOneResult, error)
 	UpdateSubscription(ctx context.Context, id primitive.ObjectID, update bson.M) (*mongo.UpdateResult, error)
 	DeleteSubscription(ctx context.Context, id primitive.ObjectID) (*mongo.DeleteResult, error)
@@ -89,6 +90,26 @@ func (dao *SubscriptionsDAO) GetSubscriptionsByPlan(ctx context.Context, plan st
 	}
 
 	dao.logger.Info("DAO Level: Successfully retrieved subscriptions by plan")
+	return subscriptions, nil
+}
+
+// GetSubscriptionsByUserID retrieves subscriptions by user ID from the database
+func (dao *SubscriptionsDAO) GetSubscriptionsByUserID(ctx context.Context, userID primitive.ObjectID) ([]models.Subscriptions, error) {
+	dao.logger.Info("DAO Level: Attempting to retrieve subscriptions by user ID")
+	cursor, err := dao.collection.Find(ctx, bson.M{"user_id": userID})
+	if err != nil {
+		dao.logger.Error("DAO Level: Failed to retrieve subscriptions by user ID", err)
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var subscriptions []models.Subscriptions
+	if err := cursor.All(ctx, &subscriptions); err != nil {
+		dao.logger.Error("DAO Level: Failed to decode subscriptions", err)
+		return nil, err
+	}
+
+	dao.logger.Info("DAO Level: Successfully retrieved subscriptions by user ID")
 	return subscriptions, nil
 }
 

@@ -15,6 +15,7 @@ type Services struct {
 	TeamService         *services.TeamServiceImpl
 	UserService         *services.UserServiceImpl
 	SubscriptionService *services.SubscriptionServiceImpl
+	PlanService         *services.PlanServiceImpl
 }
 
 func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
@@ -24,11 +25,12 @@ func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 	teamDAO := daos.NewTeamDAO(db, logger)
 	userDAO := daos.NewUserDAO(db, logger)
 	subscriptionDAO := daos.NewSubscriptionsDAO(db, logger)
+	invitationDAO := daos.NewInvitationDAO(db, logger)
 
 	// Initialize repositories
 	agentRepo := repositories.NewAgentRepository(agentDAO, userDAO, logger)
 	caseRepo := repositories.NewCaseRepository(caseDAO)
-	teamRepo := repositories.NewTeamRepository(teamDAO, userDAO, logger)
+	teamRepo := repositories.NewTeamRepository(teamDAO, userDAO, invitationDAO, logger)
 	userRepo := repositories.NewUserRepository(userDAO)
 	subscriptionRepo := repositories.NewSubscriptionRepository(subscriptionDAO)
 
@@ -38,13 +40,15 @@ func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 	teamMapper := mappers.NewTeamConversionService(logger)
 	userMapper := mappers.NewUserConversionService(logger)
 	subscriptionMapper := mappers.NewSubscriptionConversionService(logger)
+	planMapper := mappers.NewPlanConversionService(logger)
 
 	// Initialize services
 	agentService := services.NewAgentService(agentRepo, agentMapper, userMapper, logger)
 	caseService := services.NewCaseService(caseRepo, caseMapper, userMapper, userRepo, logger)
 	teamService := services.NewTeamService(teamRepo, teamMapper, logger)
 	userService := services.NewUserService(userRepo, userMapper, logger)
-	subscriptionService := services.NewSubscriptionService(subscriptionRepo, subscriptionMapper, logger)
+	subscriptionService := services.NewSubscriptionService(subscriptionRepo, userRepo, subscriptionMapper, logger)
+	planService := services.NewPlanService(subscriptionRepo, planMapper, subscriptionMapper, logger)
 
 	return &Services{
 		AgentService:        agentService,
@@ -52,5 +56,6 @@ func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 		TeamService:         teamService,
 		UserService:         userService,
 		SubscriptionService: subscriptionService,
+		PlanService:         planService,
 	}
 }

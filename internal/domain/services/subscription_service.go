@@ -19,18 +19,20 @@ type SubscriptionService interface {
 	GetSubscriptionByID(ctx context.Context, id primitive.ObjectID) (*dtos.SubscriptionResponse, error)
 	GetSubscriptionsByPlan(ctx context.Context, plan string) ([]dtos.SubscriptionResponse, error)
 	DeleteSubscription(ctx context.Context, id primitive.ObjectID) error
+	PurchaseSubscription(ctx context.Context, req *dtos.CreateSubscriptionRequest) (*dtos.SubscriptionResponse, error)
 }
 
 // SubscriptionServiceImpl implements the SubscriptionService interface.
 type SubscriptionServiceImpl struct {
-	repo   *repositories.SubscriptionRepositoryImpl
-	mapper *mappers.SubscriptionConversionServiceImpl
-	logger logs.Logger
+	repo     *repositories.SubscriptionRepositoryImpl
+	userRepo *repositories.UserRepositoryImpl
+	mapper   *mappers.SubscriptionConversionServiceImpl
+	logger   logs.Logger
 }
 
 // NewSubscriptionService creates a new instance of the subscription service.
-func NewSubscriptionService(repo *repositories.SubscriptionRepositoryImpl, mapper *mappers.SubscriptionConversionServiceImpl, logger logs.Logger) *SubscriptionServiceImpl {
-	return &SubscriptionServiceImpl{repo: repo, mapper: mapper, logger: logger}
+func NewSubscriptionService(repo *repositories.SubscriptionRepositoryImpl, userRepo *repositories.UserRepositoryImpl, mapper *mappers.SubscriptionConversionServiceImpl, logger logs.Logger) *SubscriptionServiceImpl {
+	return &SubscriptionServiceImpl{repo: repo, userRepo: userRepo, mapper: mapper, logger: logger}
 }
 
 // CreateSubscription handles the business logic for creating a subscription.
@@ -51,6 +53,27 @@ func (s *SubscriptionServiceImpl) CreateSubscription(ctx context.Context, req *d
 	response := s.mapper.SubscriptionToDTO(createdSubscription)
 	s.logger.Info("Service Level: Successfully created new subscription")
 	return response, nil
+}
+
+func (s *SubscriptionServiceImpl) PurchaseSubscription(ctx context.Context, req *dtos.CreateSubscriptionRequest) (*dtos.SubscriptionResponse, error) {
+	s.logger.Info("Attempting to purchase subscription")
+
+	// Create subscription
+	subscription, err := s.CreateSubscription(ctx, req)
+
+	if err != nil {
+		s.logger.Error("Service Level: Failed to create subscription", err)
+		return nil, errors.NewDatabaseError("Service Level: Failed to create subscription", "create_subscription_failed")
+	}
+
+	// Update user model
+	_, err = s.userRepo.UpdateUser(ctx, req.UserID.Value, map[string]interface{}{"subscription_id": subscription.ID.Value})
+	if err != nil {
+		s.logger.Error("Service Level: Failed to update user", err)
+		return nil, errors.NewDatabaseError("Service Level: Failed to update user", "update_user_failed")
+	}
+
+	return subscription, nil
 }
 
 // UpdateSubscription handles the business logic for updating a subscription.
