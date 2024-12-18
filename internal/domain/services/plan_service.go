@@ -20,6 +20,10 @@ type PlanService interface {
 	GetPlans(ctx context.Context, planType string) (*dtos.PlanListResponse, error)
 	TogglePlanType(ctx context.Context, req *dtos.TogglePlanTypeRequest) (*dtos.SubscriptionResponse, error)
 	SelectPlan(ctx context.Context, req *dtos.SelectPlanRequest) (*dtos.SelectedPlanResponse, error)
+	CreateSubscription(ctx context.Context, req *dtos.CreateSubscriptionRequest) (*dtos.SubscriptionResponse, error)
+	GetSubscriptionByID(ctx context.Context, id primitive.ObjectID) (*dtos.SubscriptionResponse, error)
+	UpdateSubscription(ctx context.Context, req *dtos.UpdateSubscriptionRequest) (*dtos.SubscriptionResponse, error)
+	DeleteSubscription(ctx context.Context, id primitive.ObjectID) error
 }
 
 type PlanServiceImpl struct {
@@ -44,7 +48,7 @@ func NewPlanService(
 }
 
 func (s *PlanServiceImpl) GetPlans(ctx context.Context, planType string) (*dtos.PlanListResponse, error) {
-	s.logger.Info("Service Level: Retrieving plans")
+	s.logger.Info("Service: Retrieving plans")
 
 	if planType != "monthly" && planType != "annual" {
 		planType = "monthly" // Default to monthly if invalid type
@@ -57,25 +61,27 @@ func (s *PlanServiceImpl) GetPlans(ctx context.Context, planType string) (*dtos.
 		Plans: helpers.NewNullable(planDTOs),
 	}
 
-	s.logger.Info("Service Level: Successfully retrieved plans")
+	s.logger.Info("Service: Successfully retrieved plans")
 	return response, nil
 }
 
 func (s *PlanServiceImpl) TogglePlanType(ctx context.Context, req *dtos.TogglePlanTypeRequest) (*dtos.SubscriptionResponse, error) {
-	s.logger.Info("Service Level: Toggling plan type")
+	s.logger.Info("Service: Toggling plan type")
 
 	if !req.UserID.Present || !req.NewType.Present {
+		s.logger.Error("Service: Missing required user ID or new type", errors.New("user ID and new type are required"))
 		return nil, errors.New("user ID and new type are required")
 	}
 
-	// Get current subscription
+	// Get current subscription(s)
 	subscriptions, err := s.subscriptionRepo.FindByUserID(ctx, req.UserID.Value)
 	if err != nil {
-		s.logger.Error("Service Level: Failed to find subscription", err)
+		s.logger.Error("Service: Failed to find subscription", err)
 		return nil, customErrors.NewDatabaseError("Failed to find subscription", "find_subscription_failed")
 	}
 
 	if len(subscriptions) == 0 {
+		s.logger.Error("Service: No subscription found for user", errors.New("no subscription found for user"))
 		return nil, errors.New("no subscription found for user")
 	}
 
@@ -89,30 +95,30 @@ func (s *PlanServiceImpl) TogglePlanType(ctx context.Context, req *dtos.TogglePl
 	}
 
 	if activeSubscription == nil {
+		s.logger.Error("Service: No active subscription found for user", errors.New("no active subscription found"))
 		return nil, errors.New("no active subscription found")
 	}
 
-	// Create update document
-	update := &bson.M{
+	update := bson.M{
 		"type": string(req.NewType.Value),
 	}
 
-	// Update subscription
-	updatedSubscription, err := s.subscriptionRepo.Update(ctx, activeSubscription.ID, *update)
+	updatedSubscription, err := s.subscriptionRepo.Update(ctx, activeSubscription.ID, update)
 	if err != nil {
-		s.logger.Error("Service Level: Failed to update subscription", err)
+		s.logger.Error("Service: Failed to update subscription", err)
 		return nil, customErrors.NewDatabaseError("Failed to update subscription", "update_subscription_failed")
 	}
 
 	response := s.subMapper.SubscriptionToDTO(updatedSubscription)
-	s.logger.Info("Service Level: Successfully toggled plan type")
+	s.logger.Info("Service: Successfully toggled plan type")
 	return response, nil
 }
 
 func (s *PlanServiceImpl) SelectPlan(ctx context.Context, req *dtos.SelectPlanRequest) (*dtos.SelectedPlanResponse, error) {
-	s.logger.Info("Service Level: Selecting plan")
+	s.logger.Info("Service: Selecting plan")
 
 	if !req.UserID.Present || !req.Plan.Present || !req.Type.Present {
+		s.logger.Error("Service: Missing required user ID, plan, or type", errors.New("user ID, plan, and type are required"))
 		return nil, errors.New("user ID, plan, and type are required")
 	}
 
@@ -127,13 +133,14 @@ func (s *PlanServiceImpl) SelectPlan(ctx context.Context, req *dtos.SelectPlanRe
 	}
 
 	if selectedPlan == nil {
+		s.logger.Error("Service: Invalid plan selection", errors.New("invalid plan selection"))
 		return nil, errors.New("invalid plan selection")
 	}
 
 	// Get or create subscription
 	subscriptions, err := s.subscriptionRepo.FindByUserID(ctx, req.UserID.Value)
 	if err != nil {
-		s.logger.Error("Service Level: Failed to find subscription", err)
+		s.logger.Error("Service: Failed to find subscription", err)
 		return nil, customErrors.NewDatabaseError("Failed to find subscription", "find_subscription_failed")
 	}
 
@@ -143,48 +150,41 @@ func (s *PlanServiceImpl) SelectPlan(ctx context.Context, req *dtos.SelectPlanRe
 		subscription = &models.Subscriptions{
 			ID:                 primitive.NewObjectID(),
 			UserID:             req.UserID.Value,
-			Plan:               selectedPlan.Name,
-			Type:               selectedPlan.Type,
+			Plan:               *selectedPlan,
 			Status:             "active",
 			CurrentPeriodStart: time.Now(),
-			CurrentPeriodEnd:   time.Now().AddDate(0, 1, 0), // 1 month trial
-		}
-
-		if selectedPlan.Type == "annual" {
-			subscription.CurrentPeriodEnd = time.Now().AddDate(1, 0, 0) // 1 year trial
+			CurrentPeriodEnd:   time.Now().AddDate(0, 1, 0), // default 1 month trial
 		}
 
 		subscription, err = s.subscriptionRepo.Create(ctx, subscription)
 		if err != nil {
-			s.logger.Error("Service Level: Failed to create subscription", err)
+			s.logger.Error("Service: Failed to create subscription", err)
 			return nil, customErrors.NewDatabaseError("Failed to create subscription", "create_subscription_failed")
 		}
 	} else {
 		// Update existing subscription
 		subscription = &subscriptions[0]
-		update := &bson.M{
+		update := bson.M{
 			"plan": selectedPlan.Name,
 			"type": selectedPlan.Type,
 		}
 
-		subscription, err = s.subscriptionRepo.Update(ctx, subscription.ID, *update)
+		subscription, err = s.subscriptionRepo.Update(ctx, subscription.ID, update)
 		if err != nil {
-			s.logger.Error("Service Level: Failed to update subscription", err)
+			s.logger.Error("Service: Failed to update subscription", err)
 			return nil, customErrors.NewDatabaseError("Failed to update subscription", "update_subscription_failed")
 		}
 	}
 
-	// Calculate time until trial ends
 	remainingDuration := time.Until(subscription.CurrentPeriodEnd)
-
 	response := &dtos.SelectedPlanResponse{
 		UserID:             helpers.NewNullable(subscription.UserID),
-		Plan:               helpers.NewNullable(subscription.Plan),
-		Type:               helpers.NewNullable(dtos.SubscriptionType(subscription.Type)),
+		Plan:               helpers.NewNullable(subscription.Plan.Name),
+		Type:               helpers.NewNullable(dtos.PlanType(subscription.Plan.Type)),
 		Price:              helpers.NewNullable(selectedPlan.Price),
 		RemainingTrialDays: helpers.NewNullable(int(remainingDuration.Hours() / 24)),
 	}
 
-	s.logger.Info("Service Level: Successfully selected plan")
+	s.logger.Info("Service: Successfully selected plan")
 	return response, nil
 }

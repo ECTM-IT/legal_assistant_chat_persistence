@@ -40,8 +40,8 @@ func (s *SubscriptionConversionServiceImpl) SubscriptionToDTO(subscription *mode
 	dto := &dtos.SubscriptionResponse{
 		ID:                   helpers.NewNullable(subscription.ID),
 		UserID:               helpers.NewNullable(subscription.UserID),
-		Plan:                 helpers.NewNullable(subscription.Plan),
-		Type:                 helpers.NewNullable(dtos.SubscriptionType(subscription.Type)),
+		Plan:                 helpers.NewNullable(subscription.Plan.Name),
+		Renewal:              helpers.NewNullable(dtos.PlanType(subscription.Plan.Type)),
 		Status:               helpers.NewNullable(dtos.SubscriptionStatus(subscription.Status)),
 		CurrentPeriodStart:   helpers.NewNullable(subscription.CurrentPeriodStart),
 		CurrentPeriodEnd:     helpers.NewNullable(subscription.CurrentPeriodEnd),
@@ -83,10 +83,12 @@ func (s *SubscriptionConversionServiceImpl) DTOToSubscription(req *dtos.CreateSu
 	}
 
 	subscription := &models.Subscriptions{
-		ID:                  primitive.NewObjectID(),
-		UserID:              req.UserID.Value,
-		Plan:                req.Plan.Value,
-		Type:                string(req.Type.Value),
+		ID:     primitive.NewObjectID(),
+		UserID: req.UserID.Value,
+		Plan: models.Plan{
+			Name: req.Plan.Value,
+			Type: string(req.Type.Value),
+		},
 		Status:              string(dtos.Incomplete), // Set initial status
 		BillingInformations: billingInfo,
 		// Other fields will be set when the Stripe subscription is created

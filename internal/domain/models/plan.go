@@ -13,21 +13,21 @@ func PredefinedPlans() map[string][]Plan {
 	return map[string][]Plan{
 		"monthly": {
 			{
-				Name:        "Pro",
+				Name:        "pro",
 				Type:        "monthly",
 				Price:       49.99,
 				Description: "Professional plan for individual users",
 				Features:    []string{"Unlimited cases", "Priority support", "Advanced analytics"},
 			},
 			{
-				Name:        "Team",
+				Name:        "team",
 				Type:        "monthly",
 				Price:       99.99,
 				Description: "Perfect for small teams",
 				Features:    []string{"Everything in Pro", "Team collaboration", "Admin dashboard"},
 			},
 			{
-				Name:        "Enterprise",
+				Name:        "enterprise",
 				Type:        "monthly",
 				Price:       199.99,
 				Description: "For large organizations",
@@ -36,21 +36,21 @@ func PredefinedPlans() map[string][]Plan {
 		},
 		"annual": {
 			{
-				Name:        "Pro",
+				Name:        "pro",
 				Type:        "annual",
 				Price:       499.99,
 				Description: "Professional plan for individual users",
 				Features:    []string{"Unlimited cases", "Priority support", "Advanced analytics"},
 			},
 			{
-				Name:        "Team",
+				Name:        "team",
 				Type:        "annual",
 				Price:       999.99,
 				Description: "Perfect for small teams",
 				Features:    []string{"Everything in Pro", "Team collaboration", "Admin dashboard"},
 			},
 			{
-				Name:        "Enterprise",
+				Name:        "enterprise",
 				Type:        "annual",
 				Price:       1999.99,
 				Description: "For large organizations",
