@@ -73,18 +73,18 @@ func registerAgentRoutes(router *mux.Router, handler *handlers.AgentHandler) {
 }
 
 func registerTeamRoutes(router *mux.Router, handler *handlers.TeamHandler) {
-	router.HandleFunc("/teams", handler.CreateTeam).Methods(http.MethodPost)
-	router.HandleFunc("/teams/{id}", handler.GetTeamByID).Methods(http.MethodGet)
-	router.HandleFunc("/teams", handler.GetAllTeams).Methods(http.MethodGet)
-	router.HandleFunc("/teams/{id}", handler.UpdateTeam).Methods(http.MethodPut)
-	router.HandleFunc("/teams/{id}", handler.SoftDeleteTeam).Methods(http.MethodDelete)
-	router.HandleFunc("/teams/{id}/restore", handler.UndoTeamDeletion).Methods(http.MethodPost)
-	router.HandleFunc("/teams/{id}/members", handler.AddTeamMember).Methods(http.MethodPost)
-	router.HandleFunc("/teams/{id}/members/{memberId}", handler.UpdateTeamMember).Methods(http.MethodPut)
-	router.HandleFunc("/teams/{id}/members/{memberId}", handler.SoftDeleteTeamMember).Methods(http.MethodDelete)
-	router.HandleFunc("/teams/{id}/members/{memberId}/restore", handler.UndoTeamMemberDeletion).Methods(http.MethodPost)
-	router.HandleFunc("/teams/{id}/invitations", handler.CreateInvitation).Methods(http.MethodPost)
-	router.HandleFunc("/teams/invitations/accept", handler.AcceptInvitation).Methods(http.MethodPost)
+	router.HandleFunc("/teams/", handler.CreateTeam).Methods(http.MethodPost)
+	router.HandleFunc("/teams/{id}/", handler.GetTeamByID).Methods(http.MethodGet)
+	router.HandleFunc("/teams/", handler.GetAllTeams).Methods(http.MethodGet)
+	router.HandleFunc("/teams/{id}/", handler.UpdateTeam).Methods(http.MethodPut)
+	router.HandleFunc("/teams/{id}/", handler.SoftDeleteTeam).Methods(http.MethodDelete)
+	router.HandleFunc("/teams/{id}/restore/", handler.UndoTeamDeletion).Methods(http.MethodPost)
+	router.HandleFunc("/teams/{id}/members/", handler.AddTeamMember).Methods(http.MethodPost)
+	router.HandleFunc("/teams/{id}/members/{memberId}/", handler.UpdateTeamMember).Methods(http.MethodPut)
+	router.HandleFunc("/teams/{id}/members/{memberId}/", handler.SoftDeleteTeamMember).Methods(http.MethodDelete)
+	router.HandleFunc("/teams/{id}/members/{memberId}/restore/", handler.UndoTeamMemberDeletion).Methods(http.MethodPost)
+	router.HandleFunc("/teams/{id}/invitations/", handler.CreateInvitation).Methods(http.MethodPost)
+	router.HandleFunc("/teams/invitations/accept/", handler.AcceptInvitation).Methods(http.MethodPost)
 }
 
 func registerCaseRoutes(router *mux.Router, handler *handlers.CaseHandler) {
@@ -123,7 +123,7 @@ func registerSubscriptionRoutes(router *mux.Router, handler *handlers.Subscripti
 }
 
 func registerPlanRoutes(router *mux.Router, handler *handlers.PlanHandler) {
-	router.HandleFunc("/plans", handler.GetPlanOptions).Methods(http.MethodGet)
-	router.HandleFunc("/plans/toggle", handler.TogglePlanType).Methods(http.MethodPatch)
-	router.HandleFunc("/plans/select", handler.SelectPlan).Methods(http.MethodPost)
+	router.HandleFunc("/plans/", handler.GetPlanOptions).Methods(http.MethodGet)
+	router.HandleFunc("/plans/toggle/", handler.TogglePlanType).Methods(http.MethodPatch)
+	router.HandleFunc("/plans/select/", handler.SelectPlan).Methods(http.MethodPost)
 }

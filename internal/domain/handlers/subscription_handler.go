@@ -80,6 +80,13 @@ func (h *SubscriptionHandler) CreateSubscription(w http.ResponseWriter, r *http.
 
 func (h *SubscriptionHandler) PurchaseSubscription(w http.ResponseWriter, r *http.Request) {
 	var req dtos.CreateSubscriptionRequest
+	creatorID, err := h.ParseObjectID(r, "", true)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid creator ID")
+		return
+	}
+	req.UserID.Value = creatorID
+	req.UserID.Present = true
 	if err := h.DecodeJSONBody(r, &req); err != nil {
 		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
