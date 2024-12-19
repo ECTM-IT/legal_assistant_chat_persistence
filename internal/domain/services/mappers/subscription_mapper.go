@@ -2,6 +2,7 @@ package mappers
 
 import (
 	"errors"
+	"time"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/pkg/helpers"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
@@ -37,9 +38,15 @@ func (s *SubscriptionConversionServiceImpl) SubscriptionToDTO(subscription *mode
 	}
 
 	dto := &dtos.SubscriptionResponse{
-		ID:                   helpers.NewNullable(subscription.ID),
-		UserID:               helpers.NewNullable(subscription.UserID),
-		Plan:                 helpers.NewNullable(subscription.Plan.Name),
+		ID:     helpers.NewNullable(subscription.ID),
+		UserID: helpers.NewNullable(subscription.UserID),
+		Plan: helpers.NewNullable(dtos.PlanResponse{
+			Name:        helpers.NewNullable(subscription.Plan.Name),
+			Type:        helpers.NewNullable(subscription.Plan.Type),
+			Price:       helpers.NewNullable(subscription.Plan.Price),
+			Description: helpers.NewNullable(subscription.Plan.Description),
+			Features:    helpers.NewNullable(subscription.Plan.Features),
+		}),
 		Renewal:              helpers.NewNullable(dtos.PlanType(subscription.Plan.Type)),
 		Status:               helpers.NewNullable(dtos.SubscriptionStatus(subscription.Status)),
 		CurrentPeriodStart:   helpers.NewNullable(subscription.CurrentPeriodStart),
@@ -81,13 +88,33 @@ func (s *SubscriptionConversionServiceImpl) DTOToSubscription(req *dtos.CreateSu
 		return nil, err
 	}
 
+	currentPeriodStart := time.Now()
+	var currentPeriodEnd time.Time
+	if req.Type.Value == dtos.Annual {
+		currentPeriodEnd = currentPeriodStart.AddDate(1, 0, 0)
+	} else {
+		currentPeriodEnd = currentPeriodStart.AddDate(0, 1, 0)
+	}
+
+	plans := models.PredefinedPlans()[string(req.Type.Value)]
+	var planPrice models.Plan
+	for _, plan := range plans {
+		if plan.Name == string(req.Plan.Value) {
+			planPrice = plan
+			break
+		}
+	}
+
 	subscription := &models.Subscriptions{
 		ID:     primitive.NewObjectID(),
 		UserID: req.UserID.Value,
 		Plan: models.Plan{
-			Name: req.Plan.Value,
-			Type: string(req.Type.Value),
+			Name:  req.Plan.Value,
+			Type:  string(req.Type.Value),
+			Price: planPrice.Price,
 		},
+		CurrentPeriodStart:  currentPeriodStart,
+		CurrentPeriodEnd:    currentPeriodEnd,
 		Status:              string(dtos.Incomplete), // Set initial status
 		BillingInformations: billingInfo,
 		// Other fields will be set when the Stripe subscription is created

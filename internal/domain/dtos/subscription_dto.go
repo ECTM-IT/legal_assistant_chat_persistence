@@ -54,7 +54,7 @@ type UpdateSubscriptionRequest struct {
 type SubscriptionResponse struct {
 	ID                   helpers.Nullable[primitive.ObjectID] `json:"id" bson:"_id,omitempty"`
 	UserID               helpers.Nullable[primitive.ObjectID] `json:"user_id" bson:"user_id"`
-	Plan                 helpers.Nullable[string]             `json:"plan" bson:"plan"`
+	Plan                 helpers.Nullable[PlanResponse]       `json:"plan" bson:"plan"`
 	Renewal              helpers.Nullable[PlanType]           `json:"renewal" bson:"renewal"`
 	Status               helpers.Nullable[SubscriptionStatus] `json:"status" bson:"status"`
 	CurrentPeriodStart   helpers.Nullable[time.Time]          `json:"current_period_start" bson:"current_period_start"`
