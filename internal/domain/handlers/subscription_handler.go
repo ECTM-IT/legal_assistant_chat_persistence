@@ -130,8 +130,13 @@ func (h *SubscriptionHandler) DeleteSubscription(w http.ResponseWriter, r *http.
 		h.RespondWithError(w, http.StatusBadRequest, "Invalid subscription ID")
 		return
 	}
+	userID, err := h.ParseObjectID(r, "", true)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
+		return
+	}
 
-	err = h.service.DeleteSubscription(r.Context(), id)
+	err = h.service.DeleteSubscription(r.Context(), id, userID)
 	if err != nil {
 		h.RespondWithError(w, http.StatusInternalServerError, "Failed to delete subscription")
 		return

@@ -166,7 +166,7 @@ func (s *SubscriptionServiceImpl) GetSubscriptionsByPlan(ctx context.Context, pl
 }
 
 // DeleteSubscription deletes a subscription by its ID.
-func (s *SubscriptionServiceImpl) DeleteSubscription(ctx context.Context, id primitive.ObjectID) error {
+func (s *SubscriptionServiceImpl) DeleteSubscription(ctx context.Context, id primitive.ObjectID, userID primitive.ObjectID) error {
 	s.logger.Info("Service Level: Attempting to delete subscription")
 	_, err := s.userRepo.UpdateUser(ctx, id, map[string]interface{}{"subscription_id": primitive.NilObjectID})
 	if err != nil {
