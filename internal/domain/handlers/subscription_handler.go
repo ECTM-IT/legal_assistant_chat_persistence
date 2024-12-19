@@ -86,12 +86,13 @@ func (h *SubscriptionHandler) PurchaseSubscription(w http.ResponseWriter, r *htt
 		return
 	}
 
-	req.UserID.Value = creatorID
-	req.UserID.Present = true
 	if err := h.DecodeJSONBody(r, &req); err != nil {
 		h.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
+
+	req.UserID.Value = creatorID
+	req.UserID.Present = true
 
 	subscription, err := h.service.PurchaseSubscription(r.Context(), &req)
 	if err != nil {

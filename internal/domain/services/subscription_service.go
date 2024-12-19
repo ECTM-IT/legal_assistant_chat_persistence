@@ -32,8 +32,20 @@ type SubscriptionServiceImpl struct {
 }
 
 // NewSubscriptionService creates a new instance of the subscription service.
-func NewSubscriptionService(repo *repositories.SubscriptionRepositoryImpl, userRepo *repositories.UserRepositoryImpl, mapper *mappers.SubscriptionConversionServiceImpl, logger logs.Logger) *SubscriptionServiceImpl {
-	return &SubscriptionServiceImpl{repo: repo, userRepo: userRepo, mapper: mapper, logger: logger}
+func NewSubscriptionService(
+	repo *repositories.SubscriptionRepositoryImpl,
+	userRepo *repositories.UserRepositoryImpl,
+	mapper *mappers.SubscriptionConversionServiceImpl,
+	planService *PlanServiceImpl,
+	logger logs.Logger,
+) *SubscriptionServiceImpl {
+	return &SubscriptionServiceImpl{
+		repo:        repo,
+		userRepo:    userRepo,
+		mapper:      mapper,
+		planService: planService,
+		logger:      logger,
+	}
 }
 
 // CreateSubscription handles the business logic for creating a subscription.

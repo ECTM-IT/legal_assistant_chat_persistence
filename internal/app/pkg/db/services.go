@@ -47,8 +47,8 @@ func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 	caseService := services.NewCaseService(caseRepo, caseMapper, userMapper, userRepo, logger)
 	teamService := services.NewTeamService(teamRepo, teamMapper, logger)
 	userService := services.NewUserService(userRepo, userMapper, logger)
-	subscriptionService := services.NewSubscriptionService(subscriptionRepo, userRepo, subscriptionMapper, logger)
 	planService := services.NewPlanService(subscriptionRepo, planMapper, subscriptionMapper, logger)
+	subscriptionService := services.NewSubscriptionService(subscriptionRepo, userRepo, subscriptionMapper, planService, logger)
 
 	return &Services{
 		AgentService:        agentService,
