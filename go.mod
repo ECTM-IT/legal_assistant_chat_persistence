@@ -1,6 +1,6 @@
 module github.com/ECTM-IT/legal_assistant_chat_persistence
 
-go 1.21.6
+go 1.22.10
 
 require github.com/fatih/structs v1.1.0
 
@@ -35,9 +35,8 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
-	github.com/rs/cors v1.11.1
 	go.opencensus.io v0.24.0 // indirect
-	go.uber.org/multierr v1.10.0 // indirect
+	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/net v0.22.0 // indirect
 	golang.org/x/oauth2 v0.18.0 // indirect
 	google.golang.org/api v0.170.0 // indirect
@@ -59,7 +58,7 @@ require (
 	github.com/xdg-go/stringprep v1.0.4 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
 	go.mongodb.org/mongo-driver v1.13.1
-	go.uber.org/zap v1.26.0
+	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect

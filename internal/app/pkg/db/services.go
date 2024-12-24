@@ -1,6 +1,8 @@
 package db
 
 import (
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/config"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/pkg/libs"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/daos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/repositories"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
@@ -16,6 +18,8 @@ type Services struct {
 	UserService         *services.UserServiceImpl
 	SubscriptionService *services.SubscriptionServiceImpl
 	PlanService         *services.PlanServiceImpl
+	HelpService         *services.HelpServiceImpl
+	MailerService       libs.MailerService
 }
 
 func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
@@ -42,13 +46,25 @@ func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 	subscriptionMapper := mappers.NewSubscriptionConversionService(logger)
 	planMapper := mappers.NewPlanConversionService(logger)
 
+	// Load mailer configuration
+	mailerConfig := config.LoadMailerConfig()
+
 	// Initialize services
+	mailerService := libs.NewMailerService(
+		mailerConfig.Host,
+		mailerConfig.Port,
+		mailerConfig.Username,
+		mailerConfig.Password,
+		mailerConfig.From,
+		logger,
+	)
 	agentService := services.NewAgentService(agentRepo, agentMapper, userMapper, logger)
 	caseService := services.NewCaseService(caseRepo, caseMapper, userMapper, userRepo, logger)
 	teamService := services.NewTeamService(teamRepo, teamMapper, logger)
 	userService := services.NewUserService(userRepo, userMapper, logger)
 	planService := services.NewPlanService(subscriptionRepo, planMapper, subscriptionMapper, logger)
-	subscriptionService := services.NewSubscriptionService(subscriptionRepo, userRepo, subscriptionMapper, planService, logger)
+	subscriptionService := services.NewSubscriptionService(subscriptionRepo, userRepo, subscriptionMapper, planService, mailerService, logger)
+	helpService := services.NewHelpService(mailerService, logger)
 
 	return &Services{
 		AgentService:        agentService,
@@ -57,5 +73,7 @@ func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 		UserService:         userService,
 		SubscriptionService: subscriptionService,
 		PlanService:         planService,
+		HelpService:         helpService,
+		MailerService:       mailerService,
 	}
 }

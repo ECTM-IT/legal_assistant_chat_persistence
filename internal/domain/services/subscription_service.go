@@ -3,6 +3,8 @@ package services
 import (
 	"context"
 
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/pkg/libs"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/pkg/templates"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/repositories"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services/mappers"
@@ -28,6 +30,7 @@ type SubscriptionServiceImpl struct {
 	userRepo    *repositories.UserRepositoryImpl
 	mapper      *mappers.SubscriptionConversionServiceImpl
 	planService *PlanServiceImpl
+	mailer      libs.MailerService
 	logger      logs.Logger
 }
 
@@ -37,6 +40,7 @@ func NewSubscriptionService(
 	userRepo *repositories.UserRepositoryImpl,
 	mapper *mappers.SubscriptionConversionServiceImpl,
 	planService *PlanServiceImpl,
+	mailer libs.MailerService,
 	logger logs.Logger,
 ) *SubscriptionServiceImpl {
 	return &SubscriptionServiceImpl{
@@ -44,6 +48,7 @@ func NewSubscriptionService(
 		userRepo:    userRepo,
 		mapper:      mapper,
 		planService: planService,
+		mailer:      mailer,
 		logger:      logger,
 	}
 }
@@ -71,6 +76,13 @@ func (s *SubscriptionServiceImpl) CreateSubscription(ctx context.Context, req *d
 func (s *SubscriptionServiceImpl) PurchaseSubscription(ctx context.Context, req *dtos.CreateSubscriptionRequest) (*dtos.SubscriptionResponse, error) {
 	s.logger.Info("Attempting to purchase subscription")
 
+	// Get user details for email
+	user, err := s.userRepo.FindByID(ctx, req.UserID.Value)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to get user details", err)
+		return nil, errors.NewDatabaseError("Service Level: Failed to get user details", "get_user_failed")
+	}
+
 	selectPlanRequest := &dtos.SelectPlanRequest{
 		UserID: req.UserID,
 		Plan:   req.Plan,
@@ -78,15 +90,14 @@ func (s *SubscriptionServiceImpl) PurchaseSubscription(ctx context.Context, req 
 	}
 
 	plan, err := s.planService.SelectPlan(ctx, selectPlanRequest)
-
 	if err != nil {
 		s.logger.Error("Service Level: Failed to get plan", err)
 		return nil, errors.NewDatabaseError("Service Level: Failed to get plan", "get_plan_failed")
 	}
+
 	req.Plan = plan.Plan
 	// Create subscription
 	subscription, err := s.CreateSubscription(ctx, req)
-
 	if err != nil {
 		s.logger.Error("Service Level: Failed to create subscription", err)
 		return nil, errors.NewDatabaseError("Service Level: Failed to create subscription", "create_subscription_failed")
@@ -97,6 +108,45 @@ func (s *SubscriptionServiceImpl) PurchaseSubscription(ctx context.Context, req 
 	if err != nil {
 		s.logger.Error("Service Level: Failed to update user", err)
 		return nil, errors.NewDatabaseError("Service Level: Failed to update user", "update_user_failed")
+	}
+
+	// Send welcome email
+	welcomeEmailData := templates.WelcomeEmailData{
+		Username: user.FirstName,
+		PlanName: plan.Plan.Value,
+	}
+
+	welcomeEmailHTML, err := templates.GenerateWelcomeEmail(welcomeEmailData)
+	if err != nil {
+		s.logger.Error("Failed to generate welcome email", err)
+	} else {
+		go func() {
+			err := s.mailer.SendHTMLEmail([]string{user.Email}, "Welcome to Legal Assistant!", welcomeEmailHTML)
+			if err != nil {
+				s.logger.Error("Failed to send welcome email", err)
+			}
+		}()
+	}
+
+	// Send subscription confirmation email
+	subscriptionEmailData := templates.SubscriptionEmailData{
+		Username:    user.FirstName,
+		PlanName:    plan.Plan.Value,
+		ExpiryDate:  subscription.CurrentPeriodEnd.Value.Format("2006-01-02"),
+		TotalAmount: plan.Price.Value,
+		// InvoiceURL:  "https://yourdomain.com/invoices/" + subscription.ID.Value.Hex(), // Replace with actual invoice URL
+	}
+
+	subscriptionEmailHTML, err := templates.GenerateSubscriptionEmail(subscriptionEmailData)
+	if err != nil {
+		s.logger.Error("Failed to generate subscription email", err)
+	} else {
+		go func() {
+			err := s.mailer.SendHTMLEmail([]string{user.Email}, "Subscription Confirmation", subscriptionEmailHTML)
+			if err != nil {
+				s.logger.Error("Failed to send subscription confirmation email", err)
+			}
+		}()
 	}
 
 	return subscription, nil

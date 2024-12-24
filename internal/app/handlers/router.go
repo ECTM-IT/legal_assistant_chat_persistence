@@ -34,22 +34,9 @@ func Routes(
 	userService *services.UserServiceImpl,
 	subscriptionService *services.SubscriptionServiceImpl,
 	planService *services.PlanServiceImpl,
+	helpService *services.HelpServiceImpl,
 ) http.Handler {
 	router := mux.NewRouter()
-
-	// Create a new CORS handler with the desired configuration
-	// corsHandler := cors.New(cors.Options{
-	// 	AllowedOrigins: []string{"*"},
-	// 	AllowedMethods: []string{
-	// 		http.MethodPost,
-	// 		http.MethodGet,
-	// 		http.MethodDelete,
-	// 		http.MethodPatch,
-	// 		http.MethodOptions,
-	// 	},
-	// 	AllowedHeaders:   []string{"*"},
-	// 	AllowCredentials: false,
-	// })
 
 	agentHandler := handlers.NewAgentHandler(agentService)
 	caseHandler := handlers.NewCaseHandler(caseService)
@@ -57,6 +44,11 @@ func Routes(
 	userHandler := handlers.NewUserHandler(userService)
 	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionService)
 	planHandler := handlers.NewPlanHandler(planService)
+	helpHandler := handlers.NewHelpHandler(helpService)
+
+	// Register help routes
+	registerHelpRoutes(router, helpHandler)
+
 	// Register agent routes
 	registerAgentRoutes(router, agentHandler)
 
@@ -80,6 +72,11 @@ func Routes(
 
 	// Wrap the router with the CORS handler
 	return corsMiddleware(router)
+}
+
+// Register help routes
+func registerHelpRoutes(router *mux.Router, handler *handlers.HelpHandler) {
+	router.HandleFunc("/help/", handler.SendHelpRequest).Methods(http.MethodPost)
 }
 
 func registerAgentRoutes(router *mux.Router, handler *handlers.AgentHandler) {

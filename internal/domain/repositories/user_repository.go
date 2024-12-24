@@ -17,6 +17,7 @@ type UserRepository interface {
 	DeleteUser(ctx context.Context, userID primitive.ObjectID) error
 	CreateUser(ctx context.Context, user *models.User) (*models.User, error)
 	UpdateUser(ctx context.Context, userID primitive.ObjectID, updates map[string]interface{}) (*models.User, error)
+	FindByID(ctx context.Context, id primitive.ObjectID) (*models.User, error)
 }
 
 // UserRepositoryImpl implements the UserRepository interface.
@@ -68,4 +69,8 @@ func (r *UserRepositoryImpl) UpdateUser(ctx context.Context, userID primitive.Ob
 		return nil, err
 	}
 	return r.FindUserByID(ctx, userID)
+}
+
+func (r *UserRepositoryImpl) FindByID(ctx context.Context, id primitive.ObjectID) (*models.User, error) {
+	return r.userDAO.GetUserByID(ctx, id)
 }

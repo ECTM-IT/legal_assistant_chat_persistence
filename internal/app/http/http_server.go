@@ -42,6 +42,7 @@ func NewHTTPServer(config *Config, services *db.Services, logger logs.Logger) *H
 			services.UserService,
 			services.SubscriptionService,
 			services.PlanService,
+			services.HelpService,
 		),
 		shutdownCh: make(chan os.Signal, 1),
 		logger:     logger,
