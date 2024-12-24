@@ -52,12 +52,3 @@ func (app *Application) Run() error {
 	server := NewHTTPServer(&app.config, app.services, app.logger)
 	return server.ServeHTTP()
 }
-
-// // Close cleans up resources used by the Application.
-// func (app *Application) Close() {
-// 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-// 	defer cancel()
-// 	if err := db.(ctx, app.client, app.logger); err != nil {
-// 		app.logger.Error("Failed to disconnect from MongoDB", zap.Error(err))
-// 	}
-// }

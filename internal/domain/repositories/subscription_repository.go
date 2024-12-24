@@ -15,8 +15,9 @@ type SubscriptionRepository interface {
 	FindAll(ctx context.Context) ([]models.Subscriptions, error)
 	FindByID(ctx context.Context, id primitive.ObjectID) (*models.Subscriptions, error)
 	FindByPlan(ctx context.Context, plan string) ([]models.Subscriptions, error)
+	FindByUserID(ctx context.Context, userID primitive.ObjectID) ([]models.Subscriptions, error)
 	Create(ctx context.Context, subscription *models.Subscriptions) (*models.Subscriptions, error)
-	Update(ctx context.Context, id primitive.ObjectID, subscription *bson.M) (*mongo.UpdateResult, error)
+	Update(ctx context.Context, id primitive.ObjectID, subscription *bson.M) (*models.Subscriptions, error)
 	Delete(ctx context.Context, id primitive.ObjectID) (*mongo.DeleteResult, error)
 }
 
@@ -47,6 +48,11 @@ func (r *SubscriptionRepositoryImpl) FindByPlan(ctx context.Context, plan string
 	return r.subscriptionDAO.GetSubscriptionsByPlan(ctx, plan)
 }
 
+// FindByUserID retrieves subscriptions by user ID.
+func (r *SubscriptionRepositoryImpl) FindByUserID(ctx context.Context, userID primitive.ObjectID) ([]models.Subscriptions, error) {
+	return r.subscriptionDAO.GetSubscriptionsByUserID(ctx, userID)
+}
+
 // Create creates a new subscription.
 func (r *SubscriptionRepositoryImpl) Create(ctx context.Context, req *models.Subscriptions) (*models.Subscriptions, error) {
 	_, err := r.subscriptionDAO.CreateSubscription(ctx, req)
@@ -57,8 +63,12 @@ func (r *SubscriptionRepositoryImpl) Create(ctx context.Context, req *models.Sub
 }
 
 // Update updates an existing subscription.
-func (r *SubscriptionRepositoryImpl) Update(ctx context.Context, id primitive.ObjectID, req bson.M) (*mongo.UpdateResult, error) {
-	return r.subscriptionDAO.UpdateSubscription(ctx, id, req)
+func (r *SubscriptionRepositoryImpl) Update(ctx context.Context, id primitive.ObjectID, req bson.M) (*models.Subscriptions, error) {
+	_, err := r.subscriptionDAO.UpdateSubscription(ctx, id, req)
+	if err != nil {
+		return nil, err
+	}
+	return r.FindByID(ctx, id)
 }
 
 // Delete deletes a subscription by its ID.

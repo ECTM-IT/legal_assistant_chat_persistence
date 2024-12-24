@@ -27,28 +27,27 @@ func corsMiddleware(next http.Handler) http.Handler {
 }
 
 // Routes initializes the routes for the application with the provided services.
-func Routes(agentService *services.AgentServiceImpl, caseService *services.CaseServiceImpl, teamService *services.TeamServiceImpl, userService *services.UserServiceImpl, subscriptionService *services.SubscriptionServiceImpl) http.Handler {
+func Routes(
+	agentService *services.AgentServiceImpl,
+	caseService *services.CaseServiceImpl,
+	teamService *services.TeamServiceImpl,
+	userService *services.UserServiceImpl,
+	subscriptionService *services.SubscriptionServiceImpl,
+	planService *services.PlanServiceImpl,
+	helpService *services.HelpServiceImpl,
+) http.Handler {
 	router := mux.NewRouter()
-
-	// Create a new CORS handler with the desired configuration
-	// corsHandler := cors.New(cors.Options{
-	// 	AllowedOrigins: []string{"*"},
-	// 	AllowedMethods: []string{
-	// 		http.MethodPost,
-	// 		http.MethodGet,
-	// 		http.MethodDelete,
-	// 		http.MethodPatch,
-	// 		http.MethodOptions,
-	// 	},
-	// 	AllowedHeaders:   []string{"*"},
-	// 	AllowCredentials: false,
-	// })
 
 	agentHandler := handlers.NewAgentHandler(agentService)
 	caseHandler := handlers.NewCaseHandler(caseService)
 	teamHandler := handlers.NewTeamHandler(teamService)
 	userHandler := handlers.NewUserHandler(userService)
 	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionService)
+	planHandler := handlers.NewPlanHandler(planService)
+	helpHandler := handlers.NewHelpHandler(helpService)
+
+	// Register help routes
+	registerHelpRoutes(router, helpHandler)
 
 	// Register agent routes
 	registerAgentRoutes(router, agentHandler)
@@ -65,6 +64,9 @@ func Routes(agentService *services.AgentServiceImpl, caseService *services.CaseS
 	// Register subscription routes
 	registerSubscriptionRoutes(router, subscriptionHandler)
 
+	// Register plan routes
+	registerPlanRoutes(router, planHandler)
+
 	router.NotFoundHandler = http.HandlerFunc(NotFoundHandler)
 	router.MethodNotAllowedHandler = http.HandlerFunc(MethodNotAllowedHandler)
 
@@ -72,11 +74,31 @@ func Routes(agentService *services.AgentServiceImpl, caseService *services.CaseS
 	return corsMiddleware(router)
 }
 
+// Register help routes
+func registerHelpRoutes(router *mux.Router, handler *handlers.HelpHandler) {
+	router.HandleFunc("/send-email/", handler.SendHelpRequest).Methods(http.MethodPost)
+}
+
 func registerAgentRoutes(router *mux.Router, handler *handlers.AgentHandler) {
 	router.HandleFunc("/agents/", handler.GetAllAgents).Methods(http.MethodGet)
 	router.HandleFunc("/agents/{id}/", handler.GetAgentByID).Methods(http.MethodGet)
 	router.HandleFunc("/agents-user/", handler.GetAgentsByUser).Methods(http.MethodGet)
 	router.HandleFunc("/agent-purchase/{id}/", handler.PurchaseAgent).Methods(http.MethodGet)
+}
+
+func registerTeamRoutes(router *mux.Router, handler *handlers.TeamHandler) {
+	router.HandleFunc("/teams/", handler.CreateTeam).Methods(http.MethodPost)
+	router.HandleFunc("/teams/{id}/", handler.GetTeamByID).Methods(http.MethodGet)
+	router.HandleFunc("/teams/", handler.GetAllTeams).Methods(http.MethodGet)
+	router.HandleFunc("/teams/{id}/", handler.UpdateTeam).Methods(http.MethodPut)
+	router.HandleFunc("/teams/{id}/", handler.SoftDeleteTeam).Methods(http.MethodDelete)
+	router.HandleFunc("/teams/{id}/restore/", handler.UndoTeamDeletion).Methods(http.MethodPost)
+	router.HandleFunc("/teams/{id}/members/", handler.AddTeamMember).Methods(http.MethodPost)
+	router.HandleFunc("/teams/{id}/members/{memberId}/", handler.UpdateTeamMember).Methods(http.MethodPut)
+	router.HandleFunc("/teams/{id}/members/{memberId}/", handler.SoftDeleteTeamMember).Methods(http.MethodDelete)
+	router.HandleFunc("/teams/{id}/members/{memberId}/restore/", handler.UndoTeamMemberDeletion).Methods(http.MethodPost)
+	router.HandleFunc("/teams/{id}/invitations/", handler.CreateInvitation).Methods(http.MethodPost)
+	router.HandleFunc("/teams/invitations/accept/", handler.AcceptInvitation).Methods(http.MethodPost)
 }
 
 func registerCaseRoutes(router *mux.Router, handler *handlers.CaseHandler) {
@@ -96,14 +118,6 @@ func registerCaseRoutes(router *mux.Router, handler *handlers.CaseHandler) {
 	router.HandleFunc("/case-get-feedback-from-message/{id}/{creatorId}/{messageId}/", handler.GetCaseByID).Methods(http.MethodGet)
 }
 
-func registerTeamRoutes(router *mux.Router, handler *handlers.TeamHandler) {
-	router.HandleFunc("/teams/{id}/", handler.GetTeamByID).Methods(http.MethodGet)
-	router.HandleFunc("/team-member/{id}/", handler.GetTeamMember).Methods(http.MethodGet)
-	router.HandleFunc("/team/change-admin/{id}/", handler.ChangeAdmin).Methods(http.MethodPatch)
-	router.HandleFunc("/team/add/{id}/", handler.AddMember).Methods(http.MethodPost)
-	router.HandleFunc("/team/remove/{id}/{memberId}/", handler.RemoveMember).Methods(http.MethodDelete)
-}
-
 func registerUserRoutes(router *mux.Router, handler *handlers.UserHandler) {
 	router.HandleFunc("/users/{id}/", handler.GetUserByID).Methods(http.MethodGet)
 	router.HandleFunc("/users-email/", handler.GetUserByEmail).Methods(http.MethodPost)
@@ -119,4 +133,11 @@ func registerSubscriptionRoutes(router *mux.Router, handler *handlers.Subscripti
 	router.HandleFunc("/subscriptions/", handler.CreateSubscription).Methods(http.MethodPost)
 	router.HandleFunc("/subscriptions/{id}/", handler.UpdateSubscription).Methods(http.MethodPatch)
 	router.HandleFunc("/subscriptions/{id}/", handler.DeleteSubscription).Methods(http.MethodDelete)
+	router.HandleFunc("/subscriptions/purchase/", handler.PurchaseSubscription).Methods(http.MethodPost)
+}
+
+func registerPlanRoutes(router *mux.Router, handler *handlers.PlanHandler) {
+	router.HandleFunc("/plans/", handler.GetPlanOptions).Methods(http.MethodGet)
+	router.HandleFunc("/plans/toggle/", handler.TogglePlanType).Methods(http.MethodPatch)
+	router.HandleFunc("/plans/select/", handler.SelectPlan).Methods(http.MethodPost)
 }

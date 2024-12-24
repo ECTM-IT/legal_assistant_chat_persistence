@@ -9,9 +9,8 @@ import (
 type Subscriptions struct {
 	ID                   primitive.ObjectID     `json:"id" bson:"_id,omitempty"`
 	UserID               primitive.ObjectID     `json:"user_id" bson:"user_id"`
-	Plan                 string                 `json:"plan" bson:"plan"`
+	Plan                 Plan                   `json:"plan" bson:"plan"`
 	Expiry               time.Time              `json:"expiry" bson:"expiry"`
-	Type                 string                 `json:"type" bson:"type"`
 	Status               string                 `json:"status" bson:"status"` // e.g., "active", "canceled", "past_due"
 	StripeCustomerID     string                 `json:"stripe_customer_id" bson:"stripe_customer_id"`
 	StripeSubscriptionID string                 `json:"stripe_subscription_id" bson:"stripe_subscription_id"`

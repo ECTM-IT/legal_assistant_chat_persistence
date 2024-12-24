@@ -14,12 +14,12 @@ import (
 // TeamDAOInterface defines the interface for the TeamDAO
 type TeamDAOInterface interface {
 	GetTeamByID(ctx context.Context, id primitive.ObjectID) (*models.Team, error)
-	GetAllTeams(ctx context.Context) ([]models.Team, error)
+	GetAllTeams(ctx context.Context, filter bson.M) ([]models.Team, error)
 	CreateTeam(ctx context.Context, team *models.Team) (*models.Team, error)
 	UpdateTeam(ctx context.Context, id primitive.ObjectID, update bson.M) (*mongo.UpdateResult, error)
-	DeleteTeam(ctx context.Context, id primitive.ObjectID) error
+	HasAdminMember(ctx context.Context, teamID primitive.ObjectID) (bool, error)
 	AddMember(ctx context.Context, id primitive.ObjectID, member models.TeamMember) (*mongo.UpdateResult, error)
-	RemoveMember(ctx context.Context, id primitive.ObjectID, memberID primitive.ObjectID) (*mongo.UpdateResult, error)
+	UpdateMember(ctx context.Context, teamID, memberID primitive.ObjectID, update bson.M) (*mongo.UpdateResult, error)
 }
 
 // TeamDAO implements the TeamDAOInterface
@@ -40,7 +40,10 @@ func NewTeamDAO(db *mongo.Database, logger logs.Logger) *TeamDAO {
 func (dao *TeamDAO) GetTeamByID(ctx context.Context, id primitive.ObjectID) (*models.Team, error) {
 	dao.logger.Info("DAO Level: Attempting to retrieve team by ID")
 	var team models.Team
-	err := dao.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&team)
+	err := dao.collection.FindOne(ctx, bson.M{
+		"_id":        id,
+		"is_deleted": false,
+	}).Decode(&team)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			dao.logger.Warn("Team not found")
@@ -54,9 +57,9 @@ func (dao *TeamDAO) GetTeamByID(ctx context.Context, id primitive.ObjectID) (*mo
 }
 
 // GetAllTeams retrieves all teams from the database
-func (dao *TeamDAO) GetAllTeams(ctx context.Context) ([]models.Team, error) {
+func (dao *TeamDAO) GetAllTeams(ctx context.Context, filter bson.M) ([]models.Team, error) {
 	dao.logger.Info("DAO Level: Attempting to retrieve all teams")
-	cursor, err := dao.collection.Find(ctx, bson.M{})
+	cursor, err := dao.collection.Find(ctx, filter)
 	if err != nil {
 		dao.logger.Error("DAO Level: Failed to retrieve teams", err)
 		return nil, err
@@ -96,16 +99,23 @@ func (dao *TeamDAO) UpdateTeam(ctx context.Context, id primitive.ObjectID, updat
 	return result, nil
 }
 
-// DeleteTeam deletes a team by its ID from the database
-func (dao *TeamDAO) DeleteTeam(ctx context.Context, id primitive.ObjectID) error {
-	dao.logger.Info("DAO Level: Attempting to delete team")
-	_, err := dao.collection.DeleteOne(ctx, bson.M{"_id": id})
+// HasAdminMember checks if a team has an admin member
+func (dao *TeamDAO) HasAdminMember(ctx context.Context, teamID primitive.ObjectID) (bool, error) {
+	dao.logger.Info("DAO Level: Checking for admin member")
+	count, err := dao.collection.CountDocuments(ctx, bson.M{
+		"_id": teamID,
+		"members": bson.M{
+			"$elemMatch": bson.M{
+				"role":       models.RoleAdmin,
+				"is_deleted": false,
+			},
+		},
+	})
 	if err != nil {
-		dao.logger.Error("DAO Level: Failed to delete team", err)
-		return err
+		dao.logger.Error("DAO Level: Failed to check for admin member", err)
+		return false, err
 	}
-	dao.logger.Info("DAO Level: Successfully deleted team")
-	return nil
+	return count > 0, nil
 }
 
 // AddMember adds a member to a team in the database
@@ -120,14 +130,25 @@ func (dao *TeamDAO) AddMember(ctx context.Context, id primitive.ObjectID, member
 	return result, nil
 }
 
-// RemoveMember removes a member from a team in the database
-func (dao *TeamDAO) RemoveMember(ctx context.Context, id primitive.ObjectID, memberID primitive.ObjectID) (*mongo.UpdateResult, error) {
-	dao.logger.Info("DAO Level: Attempting to remove member from team")
-	result, err := dao.collection.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$pull": bson.M{"members": bson.M{"_id": memberID}}})
+// UpdateMember updates a team member in the database
+func (dao *TeamDAO) UpdateMember(ctx context.Context, teamID, memberID primitive.ObjectID, update bson.M) (*mongo.UpdateResult, error) {
+	dao.logger.Info("DAO Level: Attempting to update team member")
+	result, err := dao.collection.UpdateOne(
+		ctx,
+		bson.M{
+			"_id":         teamID,
+			"members._id": memberID,
+		},
+		bson.M{
+			"$set": bson.M{
+				"members.$": update,
+			},
+		},
+	)
 	if err != nil {
-		dao.logger.Error("DAO Level: Failed to remove member from team", err)
+		dao.logger.Error("DAO Level: Failed to update team member", err)
 		return nil, err
 	}
-	dao.logger.Info("DAO Level: Successfully removed member from team")
+	dao.logger.Info("DAO Level: Successfully updated team member")
 	return result, nil
 }

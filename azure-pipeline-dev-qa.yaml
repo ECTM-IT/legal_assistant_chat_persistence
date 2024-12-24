@@ -1,0 +1,61 @@
+trigger:
+  branches:
+    include:
+      - dev-qa
+    exclude:
+      - dev-qa/*
+
+variables:
+  - group: ContainerRegisteryConnectionNameDevQA
+
+pool: Ubuntu2204-PrivatePool-04
+
+stages:
+  - stage: RunCICD
+    displayName: 'Checkout github repo'
+    jobs:
+      - job: CheckoutRepository
+        displayName: 'Checkout github repo'
+        steps:
+          - checkout: self
+          - task: GoTool@0
+            displayName: 'Compile Go code'
+            inputs:
+              version: '1.22.2'
+              arguments: build ./cmd/server -o $(Build.ArtifactStagingDirectory)/server             
+
+          - script: |
+              # Run your unit tests here
+              go test ./...
+              echo "================="
+              echo $(Build.Reason)
+              echo "================="
+            displayName: 'Run Unit Tests'
+
+          - task: Docker@2
+            displayName: 'Build Docker image'
+            inputs:
+              containerRegistry: $(containerRegistry)
+              repository: 'legal_assist_chat_persistence_dev_qa'
+              command: 'build'
+              Dockerfile: 'DockerFile'
+              tags: $(Build.BuildId)  
+
+          - task: Docker@2
+            displayName: 'Push Docker image to registry'
+            condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
+            inputs:
+              containerRegistry: $(containerRegistry)
+              repository: 'legal_assist_chat_persistence_dev_qa'
+              command: 'push'
+              tags: $(Build.BuildId)
+
+          - task: AzureContainerApps@1
+            condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
+            inputs:
+              azureSubscription: 'Legal Assist - SC'
+              containerAppName: 'legal-assist-chat-dev-qa'
+              resourceGroup: 'legal-assist-italy-dev-qa'
+              imageToDeploy: 'legalassistcrdevqa.azurecr.io/legal_assist_chat_persistence_dev_qa:$(Build.BuildId)'      
+            env:
+              AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)
