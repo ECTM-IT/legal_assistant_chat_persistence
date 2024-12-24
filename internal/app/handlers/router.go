@@ -76,7 +76,7 @@ func Routes(
 
 // Register help routes
 func registerHelpRoutes(router *mux.Router, handler *handlers.HelpHandler) {
-	router.HandleFunc("/help/", handler.SendHelpRequest).Methods(http.MethodPost)
+	router.HandleFunc("/send-email/", handler.SendHelpRequest).Methods(http.MethodPost)
 }
 
 func registerAgentRoutes(router *mux.Router, handler *handlers.AgentHandler) {
