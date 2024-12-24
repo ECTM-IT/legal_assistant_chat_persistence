@@ -46,9 +46,24 @@ func (dao *InvitationDAO) CreateInvitation(ctx context.Context, invitation *mode
 	return invitation, nil
 }
 
+// validateToken checks if the provided token is in a valid format.
+func validateToken(token string) error {
+	if len(token) == 0 {
+		return errors.New("token is empty")
+	}
+	// Add more validation logic as needed, e.g., regex check for allowed characters
+	return nil
+}
+
 // GetInvitationByToken retrieves a team invitation by its token
 func (dao *InvitationDAO) GetInvitationByToken(ctx context.Context, token string) (*models.TeamInvitation, error) {
 	dao.logger.Info("DAO Level: Attempting to retrieve team invitation by token")
+
+	if err := validateToken(token); err != nil {
+		dao.logger.Warn("Invalid token format")
+		return nil, errors.New("invalid token format")
+	}
+
 	var invitation models.TeamInvitation
 	err := dao.collection.FindOne(ctx, bson.M{
 		"token":      token,
