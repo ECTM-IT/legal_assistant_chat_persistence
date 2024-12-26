@@ -67,6 +67,11 @@ type Document struct {
 	DocumentCollaborators []DocumentCollaborator `json:"collaborators" bson:"collaborators"`
 	UploadDate            time.Time              `json:"upload_date" bson:"upload_date"`
 	ModifiedDate          time.Time              `json:"modified_date" bson:"modified_date"`
+
+	// Google Drive file details
+	DriveFileName string `json:"drive_file_name" bson:"drive_file_name"`
+	DriveFileID   string `json:"drive_file_id" bson:"drive_file_id"`
+	DriveFileURL  string `json:"drive_file_url" bson:"drive_file_url"`
 }
 
 type DocumentCollaborator struct {

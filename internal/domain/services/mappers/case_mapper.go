@@ -376,6 +376,10 @@ func (s *CaseConversionServiceImpl) DocumentsToDTO(documents []models.Document) 
 			DocumentCollaborators: helpers.NewNullable(collaborators),
 			UploadDate:            helpers.NewNullable(document.UploadDate),
 			ModifiedDate:          helpers.NewNullable(document.ModifiedDate),
+
+			DriveFileName: helpers.NewNullable(document.DriveFileName),
+			DriveFileID:   helpers.NewNullable(document.DriveFileID),
+			DriveFileURL:  helpers.NewNullable(document.DriveFileURL),
 		})
 	}
 
@@ -417,6 +421,10 @@ func (s *CaseConversionServiceImpl) DTOToDocuments(documentsDTO []dtos.DocumentR
 			DocumentCollaborators: collaborators,
 			UploadDate:            dto.UploadDate.OrElse(time.Now()),
 			ModifiedDate:          dto.ModifiedDate.OrElse(time.Now()),
+
+			DriveFileName: dto.DriveFileName.OrElse(""),
+			DriveFileID:   dto.DriveFileID.OrElse(""),
+			DriveFileURL:  dto.DriveFileURL.OrElse(""),
 		})
 	}
 

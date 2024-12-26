@@ -93,6 +93,11 @@ type DocumentResponse struct {
 	DocumentCollaborators helpers.Nullable[[]DocumentCollaboratorResponse] `json:"collaborators" bson:"collaborators"`
 	UploadDate            helpers.Nullable[time.Time]                      `json:"upload_date" bson:"upload_date"`
 	ModifiedDate          helpers.Nullable[time.Time]                      `json:"modified_date" bson:"modified_date"`
+
+	// Google Drive file details
+	DriveFileName helpers.Nullable[string] `json:"drive_file_name" bson:"drive_file_name"`
+	DriveFileID   helpers.Nullable[string] `json:"drive_file_id" bson:"drive_file_id"`
+	DriveFileURL  helpers.Nullable[string] `json:"drive_file_url" bson:"drive_file_url"`
 }
 
 type DocumentCollaboratorResponse struct {

@@ -55,6 +55,10 @@ func (r *CaseRepository) AddDocument(ctx context.Context, caseID primitive.Objec
 	return r.caseDAO.AddDocument(ctx, caseID, document)
 }
 
+func (r *CaseRepository) GetDocumentById(ctx context.Context, caseID primitive.ObjectID, documentID primitive.ObjectID) (*models.Document, error) {
+	return r.caseDAO.GetDocumentById(ctx, caseID, documentID)
+}
+
 func (r *CaseRepository) UpdateDocument(ctx context.Context, caseID primitive.ObjectID, documentID primitive.ObjectID, document *models.Document) (*mongo.UpdateResult, error) {
 	return r.caseDAO.UpdateDocument(ctx, caseID, documentID, document)
 }

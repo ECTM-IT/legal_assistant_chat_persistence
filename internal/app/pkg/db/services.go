@@ -22,7 +22,7 @@ type Services struct {
 	MailerService       libs.MailerService
 }
 
-func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
+func InitializeServices(db *mongo.Database, gcpSaKeyPath string, logger logs.Logger) *Services {
 	// Initialize DAOs
 	agentDAO := daos.NewAgentDAO(db, logger)
 	caseDAO := daos.NewCaseDAO(db, logger)
@@ -49,6 +49,9 @@ func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 	// Load mailer configuration
 	mailerConfig := config.LoadMailerConfig()
 
+	// initialize Google Drive Service
+	driveService := services.NewDriveService(gcpSaKeyPath, logger)
+
 	// Initialize services
 	mailerService := libs.NewMailerService(
 		mailerConfig.Host,
@@ -59,7 +62,7 @@ func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 		logger,
 	)
 	agentService := services.NewAgentService(agentRepo, agentMapper, userMapper, logger)
-	caseService := services.NewCaseService(caseRepo, caseMapper, userMapper, userRepo, logger)
+	caseService := services.NewCaseService(caseRepo, caseMapper, userMapper, userRepo, driveService, logger)
 	teamService := services.NewTeamService(teamRepo, teamMapper, logger)
 	userService := services.NewUserService(userRepo, userMapper, logger)
 	planService := services.NewPlanService(subscriptionRepo, planMapper, subscriptionMapper, logger)

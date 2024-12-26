@@ -12,6 +12,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.uber.org/zap"
 )
 
 // CaseDAOInterface defines the interface for the CaseDAO
@@ -24,6 +26,7 @@ type CaseDAOInterface interface {
 	Delete(ctx context.Context, id primitive.ObjectID) error
 	AddCollaborator(ctx context.Context, caseID primitive.ObjectID, collaborator map[string]interface{}) (*mongo.UpdateResult, error)
 	RemoveCollaborator(ctx context.Context, caseID, collaboratorID primitive.ObjectID) (*mongo.UpdateResult, error)
+	GetDocumentById(ctx context.Context, caseID primitive.ObjectID, documentID primitive.ObjectID) (*models.Document, error)
 }
 
 // CaseDAO implements the CaseDAOInterface
@@ -181,6 +184,44 @@ func (dao *CaseDAO) AddDocument(ctx context.Context, caseID primitive.ObjectID, 
 	}
 	dao.logger.Info("DAO Level: Successfully added document to case")
 	return result, nil
+}
+
+// GetDocumentById retrieves a document by its ID from a case in the database
+func (dao *CaseDAO) GetDocumentById(ctx context.Context, caseID primitive.ObjectID, documentID primitive.ObjectID) (*models.Document, error) {
+	dao.logger.Info("DAO Level: Attempting to retrieve document by ID")
+
+	// Define the filter to match the case and the document ID within the documents array
+	filter := bson.M{
+		"_id":           caseID,
+		"documents._id": documentID,
+	}
+
+	// Define the projection to only include the matching document
+	projection := bson.M{
+		"documents.$": 1, // $ operator projects only the first matching array element
+	}
+
+	// Find the case with the matching document ID
+	var result struct {
+		Documents []models.Document `bson:"documents"`
+	}
+	err := dao.collection.FindOne(ctx, filter, options.FindOne().SetProjection(projection)).Decode(&result)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			dao.logger.Warn("DAO Level: Document not found", zap.String("documentID", documentID.Hex()))
+			return nil, fmt.Errorf("document with ID %s not found", documentID.Hex())
+		}
+		dao.logger.Error("DAO Level: Failed to retrieve document", err)
+		return nil, err
+	}
+
+	if len(result.Documents) == 0 {
+		dao.logger.Warn("DAO Level: No documents found in case matching the criteria")
+		return nil, fmt.Errorf("document with ID %s not found", documentID.Hex())
+	}
+
+	dao.logger.Info("DAO Level: Successfully retrieved document")
+	return &result.Documents[0], nil
 }
 
 func (dao *CaseDAO) UpdateDocument(ctx context.Context, caseID primitive.ObjectID, documentID primitive.ObjectID, updatedDocument *models.Document) (*mongo.UpdateResult, error) {

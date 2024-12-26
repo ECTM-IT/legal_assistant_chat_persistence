@@ -1,7 +1,12 @@
 package services
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
+	"fmt"
+	"log"
+	"strings"
 	"time"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
@@ -22,25 +27,31 @@ type CaseService interface {
 	DeleteCase(ctx context.Context, id primitive.ObjectID) (dtos.CaseResponse, error)
 	AddCollaboratorToCase(ctx context.Context, id, collaboratorID primitive.ObjectID) (dtos.CaseResponse, error)
 	RemoveCollaboratorFromCase(ctx context.Context, id, collaboratorID primitive.ObjectID) (dtos.CaseResponse, error)
+	AddDocumentToCase(ctx context.Context, caseID primitive.ObjectID, document *models.Document) (*dtos.CaseResponse, error)
+	UpdateDocument(ctx context.Context, caseID primitive.ObjectID, documentID primitive.ObjectID, document *models.Document) (*dtos.CaseResponse, error)
+	AddDocumentCollaborator(ctx context.Context, caseID primitive.ObjectID, documentID primitive.ObjectID, collaborator *models.DocumentCollaborator) (*dtos.CaseResponse, error)
+	DeleteDocumentFromCase(ctx context.Context, caseID, documentID primitive.ObjectID) (*dtos.CaseResponse, error)
 }
 
 // CaseServiceImpl implements the CaseService interface.
 type CaseServiceImpl struct {
-	caseRepo   *repositories.CaseRepository
-	userRepo   *repositories.UserRepositoryImpl
-	mapper     *mappers.CaseConversionServiceImpl
-	userMapper *mappers.UserConversionServiceImpl
-	logger     logs.Logger
+	caseRepo     *repositories.CaseRepository
+	userRepo     *repositories.UserRepositoryImpl
+	mapper       *mappers.CaseConversionServiceImpl
+	userMapper   *mappers.UserConversionServiceImpl
+	driveService *DriveServiceImpl
+	logger       logs.Logger
 }
 
 // NewCaseService creates a new instance of the case service.
-func NewCaseService(caseRepo *repositories.CaseRepository, mapper *mappers.CaseConversionServiceImpl, userMapper *mappers.UserConversionServiceImpl, userRepo *repositories.UserRepositoryImpl, logger logs.Logger) *CaseServiceImpl {
+func NewCaseService(caseRepo *repositories.CaseRepository, mapper *mappers.CaseConversionServiceImpl, userMapper *mappers.UserConversionServiceImpl, userRepo *repositories.UserRepositoryImpl, driveService *DriveServiceImpl, logger logs.Logger) *CaseServiceImpl {
 	return &CaseServiceImpl{
-		caseRepo:   caseRepo,
-		userRepo:   userRepo,
-		mapper:     mapper,
-		userMapper: userMapper,
-		logger:     logger,
+		caseRepo:     caseRepo,
+		userRepo:     userRepo,
+		mapper:       mapper,
+		userMapper:   userMapper,
+		driveService: driveService,
+		logger:       logger,
 	}
 }
 
@@ -196,11 +207,47 @@ func (s *CaseServiceImpl) RemoveCollaboratorFromCase(ctx context.Context, id, co
 	return updatedCase, nil
 }
 
+func base64toIOReader(base64String string) (*bytes.Reader, error) {
+	cleanInput := strings.TrimSpace(base64String)
+	var err error
+
+	parts := strings.SplitN(cleanInput, ",", 2)
+	if len(parts) != 2 {
+		err = fmt.Errorf("invalid Base64 data URI: %v", cleanInput)
+		log.Fatalf("Invalid Base64 data URI: %v", err)
+		return nil, err
+	}
+	base64StringClean := parts[1]
+
+	decodedData, err := base64.StdEncoding.DecodeString(base64StringClean)
+	if err != nil {
+		log.Fatalf("Failed to decode Base64 string: %v", err)
+		return nil, fmt.Errorf("failed to decode Base64 string: %w", err)
+	}
+	return bytes.NewReader(decodedData), nil
+}
+
 // AddDocumentToCase adds a document to a case.
 func (s *CaseServiceImpl) AddDocumentToCase(ctx context.Context, caseID primitive.ObjectID, document *models.Document) (*dtos.CaseResponse, error) {
 	s.logger.Info("Service Level: Attempting to add document to case")
 
-	_, err := s.caseRepo.AddDocument(ctx, caseID, document)
+	user, err := s.userRepo.FindUserByID(ctx, document.CreatedBy)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to fetch user data", err)
+		return nil, err
+	}
+
+	uploadedFile, fileURL, err := s.driveService.UploadDocumentToDrive(ctx, document, user.Email)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to upload document to Drive", err)
+		return nil, err
+	}
+
+	document.DriveFileName = uploadedFile.Name
+	document.DriveFileID = uploadedFile.Id
+	document.DriveFileURL = fileURL
+
+	_, err = s.caseRepo.AddDocument(ctx, caseID, document)
 	if err != nil {
 		s.logger.Error("Service Level: Failed to add document to case", err)
 		return nil, err
@@ -240,7 +287,20 @@ func (s *CaseServiceImpl) UpdateDocument(ctx context.Context, caseID primitive.O
 func (s *CaseServiceImpl) AddDocumentCollaborator(ctx context.Context, caseID primitive.ObjectID, documentID primitive.ObjectID, collaborator *models.DocumentCollaborator) (*dtos.CaseResponse, error) {
 	s.logger.Info("Service Level: Attempting to update document to case")
 
-	_, err := s.caseRepo.AddDocumentCollaborator(ctx, caseID, documentID, collaborator)
+	document, err := s.caseRepo.GetDocumentById(ctx, caseID, documentID)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to get document by documentID from repo", err)
+		return nil, err
+	}
+
+	err = s.driveService.ShareDocument(ctx, document.DriveFileID, collaborator.Email)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to share Drive file with user", err)
+		return nil, err
+	}
+	s.logger.Info("Service Level: Successfully shared drive document with user")
+
+	_, err = s.caseRepo.AddDocumentCollaborator(ctx, caseID, documentID, collaborator)
 	if err != nil {
 		s.logger.Error("Service Level: Failed to update document to case", err)
 		return nil, err

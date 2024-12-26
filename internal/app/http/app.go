@@ -19,6 +19,9 @@ type Config struct {
 		URI      string
 		Database string
 	}
+	GCP struct {
+		SAKeyPath string
+	}
 }
 
 // Application holds the configuration, logger, and services for the application.
@@ -37,7 +40,7 @@ func NewApplication(cfg Config, logger logs.Logger) (*Application, error) {
 	}
 
 	laDatabase := db.CreateDB(client, cfg.MongoDB.Database, logger)
-	services := db.InitializeServices(laDatabase, logger)
+	services := db.InitializeServices(laDatabase, cfg.GCP.SAKeyPath, logger)
 
 	return &Application{
 		config:   cfg,
