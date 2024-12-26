@@ -51,8 +51,8 @@ func NewTeamService(teamRepo *repositories.TeamRepository, mapper *mappers.TeamC
 func (s *TeamServiceImpl) CreateTeam(ctx context.Context, request dtos.CreateTeamRequest) (*dtos.TeamResponse, error) {
 	s.logger.Info("Service Level: Attempting to create new team")
 	team := &models.Team{
-		Name:        request.Name,
-		Description: request.Description,
+		Name:        request.Name.Value,
+		Description: request.Description.Value,
 		Members:     []models.TeamMember{},
 	}
 
@@ -99,11 +99,11 @@ func (s *TeamServiceImpl) GetAllTeams(ctx context.Context) ([]dtos.TeamResponse,
 func (s *TeamServiceImpl) UpdateTeam(ctx context.Context, id primitive.ObjectID, request dtos.UpdateTeamRequest) (*dtos.TeamResponse, error) {
 	s.logger.Info("Service Level: Attempting to update team")
 	update := bson.M{}
-	if request.Name != nil {
-		update["name"] = *request.Name
+	if request.Name.Present {
+		update["name"] = request.Name.Value
 	}
-	if request.Description != nil {
-		update["description"] = *request.Description
+	if request.Description.Present {
+		update["description"] = request.Description.Value
 	}
 
 	updatedTeam, err := s.teamRepo.UpdateTeam(ctx, id, update)
@@ -146,10 +146,10 @@ func (s *TeamServiceImpl) AddTeamMember(ctx context.Context, teamID primitive.Ob
 	s.logger.Info("Service Level: Attempting to add team member")
 	member := models.TeamMember{
 		ID:        primitive.NewObjectID(),
-		Role:      request.Role,
-		FirstName: request.FirstName,
-		LastName:  request.LastName,
-		Email:     request.Email,
+		Role:      request.Role.Value,
+		FirstName: request.FirstName.Value,
+		LastName:  request.LastName.Value,
+		Email:     request.Email.Value,
 	}
 
 	err := s.teamRepo.AddTeamMember(ctx, teamID, member)
@@ -165,17 +165,17 @@ func (s *TeamServiceImpl) AddTeamMember(ctx context.Context, teamID primitive.Ob
 func (s *TeamServiceImpl) UpdateTeamMember(ctx context.Context, teamID, memberID primitive.ObjectID, request dtos.UpdateTeamMemberRequest) error {
 	s.logger.Info("Service Level: Attempting to update team member")
 	update := bson.M{}
-	if request.Role != nil {
-		update["role"] = *request.Role
+	if request.Role.Present {
+		update["role"] = request.Role.Value
 	}
-	if request.FirstName != nil {
-		update["first_name"] = *request.FirstName
+	if request.FirstName.Present {
+		update["first_name"] = request.FirstName.Value
 	}
-	if request.LastName != nil {
-		update["last_name"] = *request.LastName
+	if request.LastName.Present {
+		update["last_name"] = request.LastName.Value
 	}
-	if request.Email != nil {
-		update["email"] = *request.Email
+	if request.Email.Present {
+		update["email"] = request.Email.Value
 	}
 
 	err := s.teamRepo.UpdateTeamMember(ctx, teamID, memberID, update)
@@ -233,8 +233,8 @@ func (s *TeamServiceImpl) CreateInvitation(ctx context.Context, teamID primitive
 	invitation := &models.TeamInvitation{
 		ID:     primitive.NewObjectID(),
 		TeamID: teamID,
-		Email:  request.Email,
-		Role:   request.Role,
+		Email:  request.Email.Value,
+		Role:   request.Role.Value,
 		Token:  token,
 	}
 
@@ -244,14 +244,7 @@ func (s *TeamServiceImpl) CreateInvitation(ctx context.Context, teamID primitive
 		return nil, errors.NewDatabaseError("Failed to create team invitation", "create_invitation_failed")
 	}
 
-	response := &dtos.TeamInvitationResponse{
-		ID:        createdInvitation.ID,
-		Email:     createdInvitation.Email,
-		Role:      createdInvitation.Role,
-		CreatedAt: createdInvitation.CreatedAt,
-		ExpiresAt: createdInvitation.ExpiresAt,
-		IsUsed:    createdInvitation.IsUsed,
-	}
+	response := s.mapper.TeamInvitationToDTO(createdInvitation)
 
 	s.logger.Info("Service Level: Successfully created team invitation")
 	return response, nil
@@ -260,7 +253,7 @@ func (s *TeamServiceImpl) CreateInvitation(ctx context.Context, teamID primitive
 // AcceptInvitation accepts a team invitation.
 func (s *TeamServiceImpl) AcceptInvitation(ctx context.Context, request dtos.AcceptInvitationRequest) error {
 	s.logger.Info("Service Level: Attempting to accept team invitation")
-	invitation, err := s.teamRepo.GetInvitationByToken(ctx, request.Token)
+	invitation, err := s.teamRepo.GetInvitationByToken(ctx, request.Token.Value)
 	if err != nil {
 		s.logger.Error("Service Level: Failed to get invitation", err)
 		return errors.NewNotFoundError("Invalid or expired invitation token", "invalid_token")
@@ -269,8 +262,8 @@ func (s *TeamServiceImpl) AcceptInvitation(ctx context.Context, request dtos.Acc
 	member := models.TeamMember{
 		ID:        primitive.NewObjectID(),
 		Role:      invitation.Role,
-		FirstName: request.FirstName,
-		LastName:  request.LastName,
+		FirstName: request.FirstName.Value,
+		LastName:  request.LastName.Value,
 		Email:     invitation.Email,
 	}
 
