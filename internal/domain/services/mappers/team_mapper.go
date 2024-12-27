@@ -1,9 +1,13 @@
 package mappers
 
 import (
+	"time"
+
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/pkg/helpers"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/logs"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type TeamConversionService interface {
@@ -11,6 +15,8 @@ type TeamConversionService interface {
 	TeamsToDTO(teams []models.Team) []dtos.TeamResponse
 	TeamMemberToDTO(member *models.TeamMember) *dtos.TeamMemberResponse
 	TeamMembersToDTO(members []models.TeamMember) []dtos.TeamMemberResponse
+	TeamInvitationToDTO(invitation *models.TeamInvitation) *dtos.TeamInvitationResponse
+	TeamInvitationsToDTO(invitations []models.TeamInvitation) []dtos.TeamInvitationResponse
 }
 
 type TeamConversionServiceImpl struct {
@@ -31,12 +37,12 @@ func (s *TeamConversionServiceImpl) TeamToDTO(team *models.Team) *dtos.TeamRespo
 	}
 
 	dto := &dtos.TeamResponse{
-		ID:          team.ID,
-		Name:        team.Name,
-		Description: team.Description,
-		Members:     s.TeamMembersToDTO(team.Members),
-		CreatedAt:   team.CreatedAt,
-		UpdatedAt:   team.UpdatedAt,
+		ID:          helpers.Nullable[primitive.ObjectID]{Value: team.ID},
+		Name:        helpers.Nullable[string]{Value: team.Name},
+		Description: helpers.Nullable[string]{Value: team.Description},
+		Members:     helpers.Nullable[[]dtos.TeamMemberResponse]{Value: s.TeamMembersToDTO(team.Members)},
+		CreatedAt:   helpers.Nullable[time.Time]{Value: team.CreatedAt},
+		UpdatedAt:   helpers.Nullable[time.Time]{Value: team.UpdatedAt},
 	}
 	s.logger.Info("Successfully converted Team to DTO")
 	return dto
@@ -63,14 +69,14 @@ func (s *TeamConversionServiceImpl) TeamMemberToDTO(member *models.TeamMember) *
 	}
 
 	dto := &dtos.TeamMemberResponse{
-		ID:         member.ID,
-		UserID:     member.UserID,
-		Role:       member.Role,
-		FirstName:  member.FirstName,
-		LastName:   member.LastName,
-		Email:      member.Email,
-		DateAdded:  member.DateAdded,
-		LastActive: member.LastActive,
+		ID:         helpers.Nullable[primitive.ObjectID]{Value: member.ID},
+		UserID:     helpers.Nullable[primitive.ObjectID]{Value: member.UserID},
+		Role:       helpers.Nullable[models.Role]{Value: member.Role},
+		FirstName:  helpers.Nullable[string]{Value: member.FirstName},
+		LastName:   helpers.Nullable[string]{Value: member.LastName},
+		Email:      helpers.Nullable[string]{Value: member.Email},
+		DateAdded:  helpers.Nullable[time.Time]{Value: member.DateAdded},
+		LastActive: helpers.Nullable[time.Time]{Value: member.LastActive},
 	}
 	s.logger.Info("Successfully converted TeamMember to DTO")
 	return dto
@@ -89,4 +95,51 @@ func (s *TeamConversionServiceImpl) TeamMembersToDTO(members []models.TeamMember
 	}
 	s.logger.Info("Successfully converted multiple TeamMembers to DTOs")
 	return memberResponses
+}
+
+func (s *TeamConversionServiceImpl) TeamInvitationToDTO(invitation *models.TeamInvitation) *dtos.TeamInvitationResponse {
+	s.logger.Info("Converting TeamInvitation to DTO")
+	if invitation == nil {
+		s.logger.Warn("Attempted to convert nil TeamInvitation to DTO")
+		return nil
+	}
+
+	dto := &dtos.TeamInvitationResponse{
+		ID:        helpers.Nullable[primitive.ObjectID]{Value: invitation.ID},
+		Email:     helpers.Nullable[string]{Value: invitation.Email},
+		Role:      helpers.Nullable[models.Role]{Value: invitation.Role},
+		CreatedAt: helpers.Nullable[time.Time]{Value: invitation.CreatedAt},
+		ExpiresAt: helpers.Nullable[time.Time]{Value: invitation.ExpiresAt},
+		IsUsed:    helpers.Nullable[bool]{Value: invitation.IsUsed},
+	}
+
+	s.logger.Info("Successfully converted TeamInvitation to DTO")
+	return dto
+}
+
+func (s *TeamConversionServiceImpl) TeamInvitationsToDTO(invitations []models.TeamInvitation) []dtos.TeamInvitationResponse {
+	s.logger.Info("Converting multiple TeamInvitations to DTOs")
+	invitationResponses := make([]dtos.TeamInvitationResponse, 0, len(invitations))
+	for _, invitation := range invitations {
+		if response := s.TeamInvitationToDTO(&invitation); response != nil {
+			invitationResponses = append(invitationResponses, *response)
+		}
+	}
+	s.logger.Info("Successfully converted multiple TeamInvitations to DTOs")
+	return invitationResponses
+}
+
+func (s *TeamConversionServiceImpl) AcceptInvitationToDTO(invitation *models.TeamInvitation) *dtos.AcceptInvitationRequest {
+	s.logger.Info("Converting AcceptInvitation to DTO")
+	if invitation == nil {
+		s.logger.Warn("Attempted to convert nil AcceptInvitation to DTO")
+		return nil
+	}
+
+	dto := &dtos.AcceptInvitationRequest{
+		Token: helpers.Nullable[string]{Value: invitation.Token},
+	}
+
+	s.logger.Info("Successfully converted AcceptInvitation to DTO")
+	return dto
 }

@@ -3,70 +3,80 @@ package dtos
 import (
 	"time"
 
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/pkg/helpers"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type CreateTeamRequest struct {
-	Name        string `json:"name" validate:"required"`
-	Description string `json:"description"`
+	Name        helpers.Nullable[string]              `json:"name" validate:"required"`
+	Description helpers.Nullable[string]              `json:"description"`
+	Members     helpers.Nullable[[]TeamMemberRequest] `json:"members"`
 }
 
 type TeamResponse struct {
-	ID          primitive.ObjectID   `json:"id"`
-	Name        string               `json:"name"`
-	Description string               `json:"description"`
-	Members     []TeamMemberResponse `json:"members"`
-	CreatedAt   time.Time            `json:"created_at"`
-	UpdatedAt   time.Time            `json:"updated_at"`
+	ID          helpers.Nullable[primitive.ObjectID]   `json:"id"`
+	Name        helpers.Nullable[string]               `json:"name"`
+	Description helpers.Nullable[string]               `json:"description"`
+	Members     helpers.Nullable[[]TeamMemberResponse] `json:"members"`
+	CreatedAt   helpers.Nullable[time.Time]            `json:"created_at"`
+	UpdatedAt   helpers.Nullable[time.Time]            `json:"updated_at"`
 }
 
 type UpdateTeamRequest struct {
-	Name        *string `json:"name,omitempty"`
-	Description *string `json:"description,omitempty"`
+	Name        helpers.Nullable[string] `json:"name,omitempty"`
+	Description helpers.Nullable[string] `json:"description,omitempty"`
+}
+
+type TeamMemberRequest struct {
+	Email     helpers.Nullable[string]             `json:"email,omitempty"`
+	UserID    helpers.Nullable[primitive.ObjectID] `json:"user_id,omitempty"`
+	Role      helpers.Nullable[models.Role]        `json:"role,omitempty"`
+	FirstName helpers.Nullable[string]             `json:"first_name,omitempty"`
+	LastName  helpers.Nullable[string]             `json:"last_name,omitempty"`
 }
 
 type TeamMemberResponse struct {
-	ID         primitive.ObjectID `json:"id"`
-	UserID     primitive.ObjectID `json:"user_id"`
-	Role       models.Role        `json:"role"`
-	FirstName  string             `json:"first_name"`
-	LastName   string             `json:"last_name"`
-	Email      string             `json:"email"`
-	DateAdded  time.Time          `json:"date_added"`
-	LastActive time.Time          `json:"last_active"`
+	ID         helpers.Nullable[primitive.ObjectID] `json:"id"`
+	UserID     helpers.Nullable[primitive.ObjectID] `json:"user_id"`
+	Role       helpers.Nullable[models.Role]        `json:"role"`
+	FirstName  helpers.Nullable[string]             `json:"first_name"`
+	LastName   helpers.Nullable[string]             `json:"last_name"`
+	Email      helpers.Nullable[string]             `json:"email"`
+	DateAdded  helpers.Nullable[time.Time]          `json:"date_added"`
+	LastActive helpers.Nullable[time.Time]          `json:"last_active"`
 }
 
 type AddTeamMemberRequest struct {
-	Email     string      `json:"email" validate:"required,email"`
-	Role      models.Role `json:"role" validate:"required"`
-	FirstName string      `json:"first_name" validate:"required"`
-	LastName  string      `json:"last_name" validate:"required"`
+	Email     helpers.Nullable[string]      `json:"email" validate:"required,email"`
+	Role      helpers.Nullable[models.Role] `json:"role" validate:"required"`
+	FirstName helpers.Nullable[string]      `json:"first_name" validate:"required"`
+	LastName  helpers.Nullable[string]      `json:"last_name" validate:"required"`
 }
 
 type UpdateTeamMemberRequest struct {
-	Role      *models.Role `json:"role,omitempty"`
-	FirstName *string      `json:"first_name,omitempty"`
-	LastName  *string      `json:"last_name,omitempty"`
-	Email     *string      `json:"email,omitempty" validate:"omitempty,email"`
+	Role      helpers.Nullable[models.Role] `json:"role,omitempty"`
+	FirstName helpers.Nullable[string]      `json:"first_name,omitempty"`
+	LastName  helpers.Nullable[string]      `json:"last_name,omitempty"`
+	Email     helpers.Nullable[string]      `json:"email,omitempty" validate:"omitempty,email"`
 }
 
 type TeamInvitationRequest struct {
-	Email string      `json:"email" validate:"required,email"`
-	Role  models.Role `json:"role" validate:"required"`
+	Email helpers.Nullable[string]      `json:"email" validate:"required,email"`
+	Role  helpers.Nullable[models.Role] `json:"role" validate:"required"`
 }
 
 type TeamInvitationResponse struct {
-	ID        primitive.ObjectID `json:"id"`
-	Email     string             `json:"email"`
-	Role      models.Role        `json:"role"`
-	CreatedAt time.Time          `json:"created_at"`
-	ExpiresAt time.Time          `json:"expires_at"`
-	IsUsed    bool               `json:"is_used"`
+	ID        helpers.Nullable[primitive.ObjectID] `json:"id"`
+	Email     helpers.Nullable[string]             `json:"email"`
+	Role      helpers.Nullable[models.Role]        `json:"role"`
+	CreatedAt helpers.Nullable[time.Time]          `json:"created_at"`
+	ExpiresAt helpers.Nullable[time.Time]          `json:"expires_at"`
+	IsUsed    helpers.Nullable[bool]               `json:"is_used"`
 }
 
 type AcceptInvitationRequest struct {
-	Token     string `json:"token" validate:"required"`
-	FirstName string `json:"first_name" validate:"required"`
-	LastName  string `json:"last_name" validate:"required"`
+	Token     helpers.Nullable[string] `json:"token" validate:"required"`
+	FirstName helpers.Nullable[string] `json:"first_name" validate:"required"`
+	LastName  helpers.Nullable[string] `json:"last_name" validate:"required"`
 }
