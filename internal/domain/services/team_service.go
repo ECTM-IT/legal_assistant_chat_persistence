@@ -35,14 +35,16 @@ type TeamService interface {
 type TeamServiceImpl struct {
 	teamRepo *repositories.TeamRepository
 	mapper   *mappers.TeamConversionServiceImpl
+	userRepo *repositories.UserRepositoryImpl
 	logger   logs.Logger
 }
 
 // NewTeamService creates a new instance of the team service.
-func NewTeamService(teamRepo *repositories.TeamRepository, mapper *mappers.TeamConversionServiceImpl, logger logs.Logger) *TeamServiceImpl {
+func NewTeamService(teamRepo *repositories.TeamRepository, mapper *mappers.TeamConversionServiceImpl, userRepo *repositories.UserRepositoryImpl, logger logs.Logger) *TeamServiceImpl {
 	return &TeamServiceImpl{
 		teamRepo: teamRepo,
 		mapper:   mapper,
+		userRepo: userRepo,
 		logger:   logger,
 	}
 }
@@ -237,6 +239,21 @@ func (s *TeamServiceImpl) CreateInvitation(ctx context.Context, teamID primitive
 		Role:   request.Role.Value,
 		Token:  token,
 	}
+
+	user, err := s.userRepo.FindUserByEmail(ctx, request.Email.Value)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to get user by email", err)
+		return nil, errors.NewDatabaseError("Failed to get user by email", "get_user_by_email_failed")
+	}
+
+	s.teamRepo.AddTeamMember(ctx, teamID, models.TeamMember{
+		ID:        user.ID,
+		UserID:    user.ID,
+		Role:      request.Role.Value,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		Email:     invitation.Email,
+	})
 
 	createdInvitation, err := s.teamRepo.CreateInvitation(ctx, invitation)
 	if err != nil {
