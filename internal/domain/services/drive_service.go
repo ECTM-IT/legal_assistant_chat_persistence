@@ -10,6 +10,8 @@ import (
 	"google.golang.org/api/drive/v3"
 )
 
+// Given there's quite a single use case for these, there not much sense
+// to extract these into .env file or something similar for now.
 const (
 	fileURLstring         = "https://drive.google.com/file/d/%s/view"
 	defaultPermissionType = "user"
@@ -54,6 +56,7 @@ var fileMimeTypes = map[string]string{
 	".xml":  "application/xml",
 	".json": "application/json",
 	".csv":  "text/csv",
+	"":      "application/octet-stream",
 }
 
 // DriveService defines the operations available for managing Google Drive files.
@@ -78,10 +81,14 @@ func NewDriveService(srv *drive.Service, logger logs.Logger) *DriveServiceImpl {
 
 // UploadDocumentToDrive uploads a single document into Google Drive.
 func (s *DriveServiceImpl) UploadDocumentToDrive(ctx context.Context, document *models.Document, userEmail string) (*drive.File, string, error) {
+	mimeType := fileMimeTypes[strings.ToLower(getFileExtension(document.FileName))]
+	if mimeType == "" {
+		mimeType = fileMimeTypes[""]
+	}
 	// Define the file metadata
 	driveFile := &drive.File{
 		Name:     document.FileName,
-		MimeType: fileMimeTypes[getFileExtension(document.FileName)],
+		MimeType: mimeType,
 	}
 
 	file, err := base64toIOReader(document.FileContent)
@@ -98,22 +105,13 @@ func (s *DriveServiceImpl) UploadDocumentToDrive(ctx context.Context, document *
 	}
 	s.logger.Info("File uploaded successfully!")
 
-	// userEmail comes points to the owner of this case and is used here to identify
-	// the user to share the current file with.
+	// userEmail is used here to identify the user to share the current file with.
 	if userEmail != "" {
-		// Permission to user's email
-		permission := &drive.Permission{
-			Type:         defaultPermissionType, // "anyone" to make file accessibel to anyone with the link
-			Role:         defaultPermissionRole, // options: reader, commenter, writer
-			EmailAddress: userEmail,
-		}
-
-		// Create permission
-		_, err = s.driveService.Permissions.Create(uploadedFile.Id, permission).Do()
+		err = s.ShareDocument(ctx, uploadedFile.Id, userEmail)
 		if err != nil {
-			s.logger.Error("Failed to share file: %v", err)
+			s.logger.Error("Unable to share the document: %v", err)
+			return nil, "", err
 		}
-		s.logger.Info("File shared successfully!")
 	}
 
 	fileURL := fmt.Sprintf(fileURLstring, uploadedFile.Id)
