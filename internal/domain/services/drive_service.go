@@ -8,7 +8,6 @@ import (
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/logs"
 	"google.golang.org/api/drive/v3"
-	"google.golang.org/api/option"
 )
 
 const (
@@ -70,16 +69,7 @@ type DriveServiceImpl struct {
 }
 
 // NewDriveService creates a new instance of the DriveService.
-func NewDriveService(gcpSaKeyPath string, logger logs.Logger) *DriveServiceImpl {
-	// Create a context
-	ctx := context.Background()
-
-	// Authenticate using the service account
-	srv, err := drive.NewService(ctx, option.WithCredentialsFile(gcpSaKeyPath))
-	if err != nil {
-		logger.Error("Unable to create Drive client: %v", err)
-	}
-
+func NewDriveService(srv *drive.Service, logger logs.Logger) *DriveServiceImpl {
 	return &DriveServiceImpl{
 		driveService: srv,
 		logger:       logger,

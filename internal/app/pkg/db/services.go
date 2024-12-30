@@ -1,6 +1,8 @@
 package db
 
 import (
+	"context"
+
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/config"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/pkg/libs"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/daos"
@@ -9,6 +11,8 @@ import (
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services/mappers"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/logs"
 	"go.mongodb.org/mongo-driver/mongo"
+	"google.golang.org/api/drive/v3"
+	"google.golang.org/api/option"
 )
 
 type Services struct {
@@ -23,6 +27,9 @@ type Services struct {
 }
 
 func InitializeServices(db *mongo.Database, gcpSaKeyPath string, logger logs.Logger) *Services {
+	// Create a context
+	ctx := context.Background()
+
 	// Initialize DAOs
 	agentDAO := daos.NewAgentDAO(db, logger)
 	caseDAO := daos.NewCaseDAO(db, logger)
@@ -49,8 +56,14 @@ func InitializeServices(db *mongo.Database, gcpSaKeyPath string, logger logs.Log
 	// Load mailer configuration
 	mailerConfig := config.LoadMailerConfig()
 
+	// Authenticate using the service account
+	srv, err := drive.NewService(ctx, option.WithCredentialsFile(gcpSaKeyPath))
+	if err != nil {
+		logger.Error("Unable to create Drive client: %v", err)
+	}
+
 	// initialize Google Drive Service
-	driveService := services.NewDriveService(gcpSaKeyPath, logger)
+	driveService := services.NewDriveService(srv, logger)
 
 	// Initialize services
 	mailerService := libs.NewMailerService(
