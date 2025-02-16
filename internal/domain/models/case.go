@@ -27,6 +27,11 @@ type Collaborators struct {
 	Edit bool               `json:"edit" bson:"edit"`
 }
 
+type Reference struct {
+	ID      string   `json:"id" bson:"id"`
+	Content []string `json:"content" bson:"content"`
+}
+
 type Message struct {
 	ID           string     `json:"id" bson:"_id,omitempty"`
 	Sender       string     `json:"sender" bson:"sender"`
@@ -35,9 +40,9 @@ type Message struct {
 	DocumentPath string     `json:"document_path" bson:"document_path"`
 	FunctionCall bool       `json:"function_call" bson:"function_call"`
 	Feedbacks    []Feedback `json:"feedbacks" bson:"feedbacks"`
-
-	Skills []string `json:"skill" bson:"skills"`
-	Agent  string   `json:"agent" bson:"agent_id"`
+	References   []Reference `json:"references" bson:"references"`
+	Skills       []string    `json:"skill" bson:"skills"`
+	Agent        string      `json:"agent" bson:"agent_id"`
 }
 
 type MessageSkill struct {

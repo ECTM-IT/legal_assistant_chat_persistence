@@ -8,6 +8,11 @@ import (
 )
 
 // Start of Selection
+type Reference struct {
+	ID      helpers.Nullable[string]   `json:"id" bson:"id"`
+	Content helpers.Nullable[[]string] `json:"content" bson:"content"`
+}
+
 type MessageResponse struct {
 	ID           helpers.Nullable[string]     `json:"id" bson:"_id,omitempty"`
 	Content      helpers.Nullable[string]     `json:"content,omitempty" bson:"content"`
@@ -16,9 +21,9 @@ type MessageResponse struct {
 	FunctionCall helpers.Nullable[bool]       `json:"function_call,omitempty" bson:"function_call"`
 	DocumentPath helpers.Nullable[string]     `json:"document_path,omitempty" bson:"document_path"`
 	Feedbacks    helpers.Nullable[[]Feedback] `json:"feedbacks,omitempty" bson:"feedbacks"`
-
-	Skills helpers.Nullable[[]string] `json:"skills" bson:"skills"`
-	Agent  helpers.Nullable[string]   `json:"agent" bson:"agent_id"`
+	References   helpers.Nullable[[]Reference] `json:"references,omitempty" bson:"references"`
+	Skills       helpers.Nullable[[]string]    `json:"skills" bson:"skills"`
+	Agent        helpers.Nullable[string]      `json:"agent" bson:"agent_id"`
 }
 
 type MessageSkillResponse struct {

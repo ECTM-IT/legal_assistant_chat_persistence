@@ -136,15 +136,17 @@ func (s *CaseConversionServiceImpl) CasesToDTO(cases []models.Case) []dtos.CaseR
 
 func (s *CaseConversionServiceImpl) UpdateCaseFieldsToMap(updateRequest dtos.UpdateCaseRequest) (map[string]interface{}, error) {
 	s.logger.Info("Converting UpdateCaseRequest to map")
+	s.logger.Info(fmt.Sprintf("Update request content: %+v", updateRequest))
 	updateFields := make(map[string]interface{})
 
 	if updateRequest.Name.Present {
 		updateFields["name"] = updateRequest.Name.Value
 	}
 	if updateRequest.Messages.Present {
+		s.logger.Info(fmt.Sprintf("Processing messages: %+v", updateRequest.Messages.Value))
 		messages, err := s.DTOToMessages(updateRequest.Messages.Value)
 		if err != nil {
-			s.logger.Error("Failed to convert messages for update", err)
+			s.logger.Error(fmt.Sprintf("Failed to convert messages for update. Error: %v, Messages: %+v", err, updateRequest.Messages.Value), err)
 			return nil, fmt.Errorf("error converting messages: %w", err)
 		}
 		updateFields["messages"] = messages
@@ -180,6 +182,7 @@ func (s *CaseConversionServiceImpl) UpdateCaseFieldsToMap(updateRequest dtos.Upd
 	if updateRequest.IsArchived.Present {
 		updateFields["is_archived"] = updateRequest.IsArchived.Value
 	}
+
 
 	updateFields["last_edit"] = time.Now()
 
@@ -249,6 +252,14 @@ func (s *CaseConversionServiceImpl) MessageToDTO(message models.Message) dtos.Me
 		}
 	}
 
+	references := make([]dtos.Reference, len(message.References))
+	for i, r := range message.References {
+		references[i] = dtos.Reference{
+			ID:      helpers.NewNullable(r.ID),
+			Content: helpers.NewNullable(r.Content),
+		}
+	}
+
 	dto := dtos.MessageResponse{
 		ID:           helpers.NewNullable(message.ID),
 		Content:      helpers.NewNullable(message.Content),
@@ -257,9 +268,9 @@ func (s *CaseConversionServiceImpl) MessageToDTO(message models.Message) dtos.Me
 		FunctionCall: helpers.NewNullable(message.FunctionCall),
 		DocumentPath: helpers.NewNullable(message.DocumentPath),
 		Feedbacks:    helpers.NewNullable(feedbacks),
-
-		Skills: helpers.NewNullable(message.Skills),
-		Agent:  helpers.NewNullable(message.Agent),
+		References:   helpers.NewNullable(references),
+		Skills:       helpers.NewNullable(message.Skills),
+		Agent:        helpers.NewNullable(message.Agent),
 	}
 
 	s.logger.Info("Successfully converted Message to DTO")
@@ -291,6 +302,16 @@ func (s *CaseConversionServiceImpl) DTOToMessage(messageDTO dtos.MessageResponse
 		})
 	}
 
+	references := make([]models.Reference, len(messageDTO.References.Value))
+	for _, r := range messageDTO.References.Value {
+		s.logger.Info(fmt.Sprintf("- ID: %v", r.ID.Value))
+		s.logger.Info(fmt.Sprintf("- Content: %v", r.Content.Value))
+		references = append(references, models.Reference{
+			ID:      r.ID.Value,
+			Content: r.Content.Value,
+		})
+	}
+
 	message := models.Message{
 		ID:           messageDTO.ID.Value,
 		Content:      messageDTO.Content.Value,
@@ -299,9 +320,9 @@ func (s *CaseConversionServiceImpl) DTOToMessage(messageDTO dtos.MessageResponse
 		FunctionCall: messageDTO.FunctionCall.OrElse(false),
 		DocumentPath: messageDTO.DocumentPath.OrElse(""),
 		Feedbacks:    feedbacks,
-
-		Skills: messageDTO.Skills.OrElse([]string{}),
-		Agent:  messageDTO.Agent.OrElse(""),
+		References:   references,
+		Skills:       messageDTO.Skills.OrElse([]string{}),
+		Agent:        messageDTO.Agent.OrElse(""),
 	}
 
 	s.logger.Info("Successfully converted DTO to Message")
