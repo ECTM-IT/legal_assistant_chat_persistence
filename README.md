@@ -17,3 +17,5 @@ This project implements a chat persistence system designed to store and manage A
 1. Clone the repository:
    ```bash
    git clone https://github.com/yourusername/chat-persistence-system.git
+
+2.  go run cmd/server.go
