@@ -256,6 +256,7 @@ func (s *CaseConversionServiceImpl) MessageToDTO(message models.Message) dtos.Me
 	for i, r := range message.References {
 		references[i] = dtos.Reference{
 			ID:      helpers.NewNullable(r.ID),
+			Title:  helpers.NewNullable(r.Title),
 			Content: helpers.NewNullable(r.Content),
 		}
 	}
@@ -308,6 +309,7 @@ func (s *CaseConversionServiceImpl) DTOToMessage(messageDTO dtos.MessageResponse
 		s.logger.Info(fmt.Sprintf("- Content: %v", r.Content.Value))
 		references = append(references, models.Reference{
 			ID:      r.ID.Value,
+			Title:   r.Title.Value,
 			Content: r.Content.Value,
 		})
 	}
