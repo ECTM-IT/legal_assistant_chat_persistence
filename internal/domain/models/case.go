@@ -29,7 +29,8 @@ type Collaborators struct {
 
 type Reference struct {
 	ID      string   `json:"id" bson:"id"`
-	Content []string `json:"content" bson:"content"`
+	Title   string `json:"title" bson:"title"`
+	Content string `json:"content" bson:"content"`
 }
 
 type Message struct {

@@ -8,7 +8,9 @@ LEGAL_ASSISTANT (WORKSPACE)
 |   |   |   |-- errors.go
 |   |   |   `-- router.go
 |   |   `-- http
-|   |       `-- server.go
+|   |       |-- app.go
+|   |       |-- http_server.go
+|   |       |-- main.go
 |   |-- domain
 |   |   |-- daos
 |   |   |-- dtos

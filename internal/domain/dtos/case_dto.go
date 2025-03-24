@@ -10,7 +10,8 @@ import (
 // Start of Selection
 type Reference struct {
 	ID      helpers.Nullable[string]   `json:"id" bson:"id"`
-	Content helpers.Nullable[[]string] `json:"content" bson:"content"`
+	Title   helpers.Nullable[string] `json:"title" bson:"title"`
+	Content helpers.Nullable[string] `json:"content" bson:"content"`
 }
 
 type MessageResponse struct {
