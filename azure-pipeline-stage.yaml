@@ -1,9 +1,9 @@
 trigger:
   branches:
     include:
-      - stage
+      - dev
     exclude:
-      - stage/*
+      - dev/*
 
 variables:
   - group: ContainerRegisteryConnectionNameStage
@@ -50,12 +50,24 @@ stages:
               command: 'push'
               tags: $(Build.BuildId)
 
-          - task: AzureContainerApps@1
-            condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
-            inputs:
-              azureSubscription: 'Legal Assist - SC'
-              containerAppName: 'legal-assist-chat-stage'
-              resourceGroup: 'legal-assist-italy'
-              imageToDeploy: 'legalassistcrstage.azurecr.io/legal_assist_chat_persistence_stage:$(Build.BuildId)'      
-            env:
-              AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)
+  - stage: DeployToStage
+    displayName: 'Deploy to Stage'
+    dependsOn: RunCICD
+    condition: succeeded()
+    jobs:
+      - deployment: DeployToStage
+        displayName: 'Deploy to Azure Container Apps'
+        environment: Stage  # Use the created environment
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureContainerApps@1
+                  condition: and(succeeded(), eq(variables['Build.Reason'], 'IndividualCI'))
+                  inputs:
+                    azureSubscription: 'Legal Assist - SC'
+                    containerAppName: 'legal-assist-chat-stage'
+                    resourceGroup: 'legal-assist-italy'
+                    imageToDeploy: 'legalassistcrstage.azurecr.io/legal_assist_chat_persistence_stage:$(Build.BuildId)'      
+                  env:
+                    AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)              
