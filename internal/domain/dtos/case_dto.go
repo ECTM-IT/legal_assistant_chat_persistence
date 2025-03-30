@@ -21,6 +21,7 @@ type MessageResponse struct {
 	Recipient    helpers.Nullable[string]     `json:"recipient,omitempty" bson:"recipient"`
 	FunctionCall helpers.Nullable[bool]       `json:"function_call,omitempty" bson:"function_call"`
 	DocumentPath helpers.Nullable[string]     `json:"document_path,omitempty" bson:"document_path"`
+	DocumentPaths helpers.Nullable[[]string]   `json:"document_paths,omitempty" bson:"document_paths"`
 	Feedbacks    helpers.Nullable[[]Feedback] `json:"feedbacks,omitempty" bson:"feedbacks"`
 	References   helpers.Nullable[[]Reference] `json:"references,omitempty" bson:"references"`
 	Skills       helpers.Nullable[[]string]    `json:"skills" bson:"skills"`
