@@ -37,16 +37,15 @@ func (s *UserConversionServiceImpl) UserToDTO(user *models.User) *dtos.UserRespo
 	}
 
 	dto := &dtos.UserResponse{
-		ID:             helpers.NewNullable(user.ID),
-		Image:          helpers.NewNullable(user.Image),
-		Email:          helpers.NewNullable(user.Email),
-		FirstName:      helpers.NewNullable(user.FirstName),
-		LastName:       helpers.NewNullable(user.LastName),
-		Phone:          helpers.NewNullable(user.Phone),
-		CaseIDs:        helpers.NewNullable(user.CaseIDs),
-		TeamID:         helpers.NewNullable(user.TeamID),
-		AgentIDs:       helpers.NewNullable(user.AgentIDs),
-		SubscriptionID: helpers.NewNullable(user.SubscriptionID),
+		ID:        helpers.NewNullable(user.ID),
+		Image:     helpers.NewNullable(user.Image),
+		Email:     helpers.NewNullable(user.Email),
+		FirstName: helpers.NewNullable(user.FirstName),
+		LastName:  helpers.NewNullable(user.LastName),
+		Phone:     helpers.NewNullable(user.Phone),
+		CaseIDs:   helpers.NewNullable(user.CaseIDs),
+		TeamID:    helpers.NewNullable(user.TeamID),
+		AgentIDs:  helpers.NewNullable(user.AgentIDs),
 	}
 	s.logger.Info("Successfully converted User to DTO")
 	return dto
@@ -75,16 +74,15 @@ func (s *UserConversionServiceImpl) DTOToUser(userDTO *dtos.CreateUserRequest) (
 	}
 
 	user := &models.User{
-		ID:             primitive.NewObjectID(),
-		Image:          userDTO.Image.OrElse(""),
-		Email:          userDTO.Email.Value,
-		FirstName:      userDTO.FirstName.OrElse(""),
-		LastName:       userDTO.LastName.OrElse(""),
-		Phone:          userDTO.Phone.OrElse(""),
-		CaseIDs:        userDTO.CaseIDs.OrElse([]primitive.ObjectID{}),
-		TeamID:         userDTO.TeamID.OrElse(primitive.NilObjectID),
-		AgentIDs:       userDTO.AgentIDs.OrElse([]primitive.ObjectID{}),
-		SubscriptionID: userDTO.SubscriptionID.OrElse(primitive.NilObjectID),
+		ID:        primitive.NewObjectID(),
+		Image:     userDTO.Image.OrElse(""),
+		Email:     userDTO.Email.Value,
+		FirstName: userDTO.FirstName.OrElse(""),
+		LastName:  userDTO.LastName.OrElse(""),
+		Phone:     userDTO.Phone.OrElse(""),
+		CaseIDs:   userDTO.CaseIDs.OrElse([]primitive.ObjectID{}),
+		TeamID:    userDTO.TeamID.OrElse(primitive.NilObjectID),
+		AgentIDs:  userDTO.AgentIDs.OrElse([]primitive.ObjectID{}),
 	}
 	s.logger.Info("Successfully converted DTO to User")
 	return user, nil
@@ -117,9 +115,6 @@ func (s *UserConversionServiceImpl) UpdateUserFieldsToMap(updateRequest dtos.Upd
 	}
 	if updateRequest.AgentIDs.Present {
 		updateFields["agent_ids"] = updateRequest.AgentIDs.Value
-	}
-	if updateRequest.SubscriptionID.Present {
-		updateFields["subscription_id"] = updateRequest.SubscriptionID.Value
 	}
 
 	s.logger.Info("Successfully converted UpdateUserRequest to map")

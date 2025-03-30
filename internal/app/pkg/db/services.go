@@ -1,7 +1,6 @@
 package db
 
 import (
-	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/config"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/pkg/libs"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/daos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/repositories"
@@ -19,7 +18,8 @@ type Services struct {
 	SubscriptionService *services.SubscriptionServiceImpl
 	PlanService         *services.PlanServiceImpl
 	HelpService         *services.HelpServiceImpl
-	MailerService       libs.MailerService
+	// TODO: uncomment after mailing is up
+	// MailerService       libs.MailerService
 }
 
 func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
@@ -46,25 +46,15 @@ func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 	subscriptionMapper := mappers.NewSubscriptionConversionService(logger)
 	planMapper := mappers.NewPlanConversionService(logger)
 
-	// Load mailer configuration
-	mailerConfig := config.LoadMailerConfig()
-
 	// Initialize services
-	mailerService := libs.NewMailerService(
-		mailerConfig.Host,
-		mailerConfig.Port,
-		mailerConfig.Username,
-		mailerConfig.Password,
-		mailerConfig.From,
-		logger,
-	)
+	stripeService := libs.NewStripeService(logger)
 	agentService := services.NewAgentService(agentRepo, agentMapper, userMapper, logger)
 	caseService := services.NewCaseService(caseRepo, caseMapper, userMapper, userRepo, logger)
 	userService := services.NewUserService(userRepo, userMapper, logger)
 	teamService := services.NewTeamService(teamRepo, teamMapper, userRepo, logger)
 	planService := services.NewPlanService(subscriptionRepo, planMapper, subscriptionMapper, logger)
-	subscriptionService := services.NewSubscriptionService(subscriptionRepo, userRepo, subscriptionMapper, planService, mailerService, logger)
-	helpService := services.NewHelpService(mailerService, logger)
+	subscriptionService := services.NewSubscriptionService(subscriptionRepo, userRepo, subscriptionMapper, planService, stripeService, logger)
+	helpService := services.NewHelpService(nil, logger)
 
 	return &Services{
 		AgentService:        agentService,
@@ -74,6 +64,7 @@ func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 		SubscriptionService: subscriptionService,
 		PlanService:         planService,
 		HelpService:         helpService,
-		MailerService:       mailerService,
+		// TODO: uncomment after mailing is up
+		// MailerService:       mailerService,
 	}
 }

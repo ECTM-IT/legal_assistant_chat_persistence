@@ -2,59 +2,135 @@ package libs
 
 import (
 	"context"
-	"time"
+	"fmt"
+	"os"
 
-	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/pkg/helpers"
-	"github.com/stripe/stripe-go/v72"
-	"github.com/stripe/stripe-go/v72/customer"
-	"github.com/stripe/stripe-go/v72/sub"
-	"go.uber.org/zap"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/logs"
+	"github.com/stripe/stripe-go/v74"
+	"github.com/stripe/stripe-go/v74/customer"
+	"github.com/stripe/stripe-go/v74/paymentmethod"
+	"github.com/stripe/stripe-go/v74/price"
+	"github.com/stripe/stripe-go/v74/product"
+	"github.com/stripe/stripe-go/v74/subscription"
 )
 
-// StripeService defines the interface for Stripe operations.
+// StripeService defines the interface for Stripe operations
 type StripeService interface {
-	CreateCustomer(ctx context.Context, email string) (*stripe.Customer, error)
-	CreateSubscription(ctx context.Context, customerID, priceID string) (*stripe.Subscription, error)
-	GetCustomer(ctx context.Context, customerID string) (*stripe.Customer, error)
-	GetSubscription(ctx context.Context, subscriptionID string) (*stripe.Subscription, error)
+	CreateCustomer(ctx context.Context, email string) (string, error)
+	CreateSubscription(ctx context.Context, customerID string, priceID string, paymentMethodID string) (string, error)
+	GetProductsAndPrices(ctx context.Context) (map[string]map[string]string, error)
 }
 
-// stripeService is the concrete implementation of StripeService.
-type stripeService struct {
-	logger *zap.Logger
+// StripeServiceImpl implements the StripeService interface
+type StripeServiceImpl struct {
+	logger logs.Logger
 }
 
-// NewStripeService creates a new instance of StripeService.
-func NewStripeService(logger *zap.Logger) StripeService {
-	stripe.Key = helpers.GetStripeAPIKey() // Ensure you have a helper to retrieve the API key securely.
-	return &stripeService{
+// NewStripeService creates a new instance of the Stripe service
+func NewStripeService(logger logs.Logger) StripeService {
+	stripe.Key = os.Getenv("STRIPE_API_KEY")
+	return &StripeServiceImpl{
 		logger: logger,
 	}
 }
 
-// CreateCustomer creates a new Stripe customer.
-func (s *stripeService) CreateCustomer(ctx context.Context, email string) (*stripe.Customer, error) {
-	s.logger.Info("Creating new Stripe customer", zap.String("email", email))
+// GetProductsAndPrices fetches all products and their prices from Stripe
+func (s *StripeServiceImpl) GetProductsAndPrices(ctx context.Context) (map[string]map[string]string, error) {
+	s.logger.Debug("Fetching products and prices from Stripe")
 
+	// Initialize the result map
+	// First key is plan type (monthly/annual), second key is plan name (pro/team/enterprise)
+	result := make(map[string]map[string]string)
+
+	// Fetch all products
+	params := &stripe.ProductListParams{}
+	params.Filters.AddFilter("active", "", "true")
+	params.Filters.AddFilter("expand[]", "", "data.default_price")
+
+	products := product.List(params)
+	for products.Next() {
+		p := products.Product()
+
+		// Get the default price for this product
+		if p.DefaultPrice == nil {
+			s.logger.Warn("Product has no default price")
+			continue
+		}
+
+		// Determine plan type from price
+		price, err := price.Get(p.DefaultPrice.ID, nil)
+		if err != nil {
+			s.logger.Error("Failed to get price details", err)
+			continue
+		}
+
+		// Determine plan type based on interval
+		planType := "monthly"
+		if price.Recurring != nil && price.Recurring.Interval == "year" {
+			planType = "annual"
+		}
+
+		// Initialize the inner map if it doesn't exist
+		if _, exists := result[planType]; !exists {
+			result[planType] = make(map[string]string)
+		}
+
+		// Map the product name to its price ID
+		// Assuming product names in Stripe match our plan names (pro, team, enterprise)
+		result[planType][p.Name] = price.ID
+		s.logger.Debug("Mapped product to price")
+	}
+
+	if err := products.Err(); err != nil {
+		s.logger.Error("Failed to fetch products", err)
+		return nil, fmt.Errorf("failed to fetch products: %w", err)
+	}
+
+	return result, nil
+}
+
+// CreateCustomer creates a new customer in Stripe
+func (s *StripeServiceImpl) CreateCustomer(ctx context.Context, email string) (string, error) {
 	params := &stripe.CustomerParams{
 		Email: stripe.String(email),
 	}
 
-	// Avoid naming conflict with the 'customer' package
-	cust, err := customer.New(params)
+	customer, err := customer.New(params)
 	if err != nil {
-		s.logger.Error("Failed to create Stripe customer", zap.Error(err))
-		return nil, err
+		s.logger.Error("Failed to create Stripe customer", err)
+		return "", fmt.Errorf("failed to create Stripe customer: %w", err)
 	}
 
-	s.logger.Info("Stripe customer created successfully", zap.String("customer_id", cust.ID))
-	return cust, nil
+	return customer.ID, nil
 }
 
-// CreateSubscription creates a new subscription for a customer.
-func (s *stripeService) CreateSubscription(ctx context.Context, customerID, priceID string) (*stripe.Subscription, error) {
-	s.logger.Info("Creating new Stripe subscription", zap.String("customer_id", customerID), zap.String("price_id", priceID))
+// CreateSubscription creates a new subscription in Stripe
+func (s *StripeServiceImpl) CreateSubscription(ctx context.Context, customerID string, priceID string, paymentMethodID string) (string, error) {
+	// First, attach the payment method to the customer
+	attachParams := &stripe.PaymentMethodAttachParams{
+		Customer: stripe.String(customerID),
+	}
 
+	_, err := paymentmethod.Attach(paymentMethodID, attachParams)
+	if err != nil {
+		s.logger.Error("Failed to attach payment method", err)
+		return "", fmt.Errorf("failed to attach payment method: %w", err)
+	}
+
+	// Set the payment method as the default for the customer
+	customerParams := &stripe.CustomerParams{
+		InvoiceSettings: &stripe.CustomerInvoiceSettingsParams{
+			DefaultPaymentMethod: stripe.String(paymentMethodID),
+		},
+	}
+
+	_, err = customer.Update(customerID, customerParams)
+	if err != nil {
+		s.logger.Error("Failed to set default payment method", err)
+		return "", fmt.Errorf("failed to set default payment method: %w", err)
+	}
+
+	// Create the subscription
 	params := &stripe.SubscriptionParams{
 		Customer: stripe.String(customerID),
 		Items: []*stripe.SubscriptionItemsParams{
@@ -62,55 +138,18 @@ func (s *stripeService) CreateSubscription(ctx context.Context, customerID, pric
 				Price: stripe.String(priceID),
 			},
 		},
+		PaymentSettings: &stripe.SubscriptionPaymentSettingsParams{
+			PaymentMethodTypes: []*string{
+				stripe.String("card"),
+			},
+		},
 	}
 
-	// Retry logic for transient errors (up to 3 retries)
-	var subscriptionResult *stripe.Subscription
-	var err error
-	for attempt := 0; attempt < 3; attempt++ {
-		subscriptionResult, err = sub.New(params)
-		if err == nil {
-			break
-		}
-		s.logger.Warn("Retrying subscription creation due to error", zap.Int("attempt", attempt+1), zap.Error(err))
-		if attempt < 2 {
-			time.Sleep(2 * time.Second)
-		}
-	}
-
+	subscription, err := subscription.New(params)
 	if err != nil {
-		s.logger.Error("Failed to create Stripe subscription", zap.Error(err))
-		return nil, err
+		s.logger.Error("Failed to create Stripe subscription", err)
+		return "", fmt.Errorf("failed to create Stripe subscription: %w", err)
 	}
 
-	s.logger.Info("Stripe subscription created successfully", zap.String("subscription_id", subscriptionResult.ID))
-	return subscriptionResult, nil
-}
-
-// GetCustomer retrieves a Stripe customer by ID.
-func (s *stripeService) GetCustomer(ctx context.Context, customerID string) (*stripe.Customer, error) {
-	s.logger.Info("Retrieving Stripe customer", zap.String("customer_id", customerID))
-
-	cust, err := customer.Get(customerID, nil)
-	if err != nil {
-		s.logger.Error("Failed to retrieve Stripe customer", zap.Error(err))
-		return nil, err
-	}
-
-	s.logger.Info("Stripe customer retrieved successfully", zap.String("customer_id", cust.ID))
-	return cust, nil
-}
-
-// GetSubscription retrieves a Stripe subscription by ID.
-func (s *stripeService) GetSubscription(ctx context.Context, subscriptionID string) (*stripe.Subscription, error) {
-	s.logger.Info("Retrieving Stripe subscription", zap.String("subscription_id", subscriptionID))
-
-	subscriptionResult, err := sub.Get(subscriptionID, nil)
-	if err != nil {
-		s.logger.Error("Failed to retrieve Stripe subscription", zap.Error(err))
-		return nil, err
-	}
-
-	s.logger.Info("Stripe subscription retrieved successfully", zap.String("subscription_id", subscriptionResult.ID))
-	return subscriptionResult, nil
+	return subscription.ID, nil
 }
