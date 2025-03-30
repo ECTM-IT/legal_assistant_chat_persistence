@@ -39,6 +39,7 @@ type Message struct {
 	Recipient    string     `json:"recipient" bson:"recipient"`
 	Content      string     `json:"content" bson:"content"`
 	DocumentPath string     `json:"document_path" bson:"document_path"`
+	DocumentPaths []string   `json:"document_paths" bson:"document_paths"`
 	FunctionCall bool       `json:"function_call" bson:"function_call"`
 	Feedbacks    []Feedback `json:"feedbacks" bson:"feedbacks"`
 	References   []Reference `json:"references" bson:"references"`
