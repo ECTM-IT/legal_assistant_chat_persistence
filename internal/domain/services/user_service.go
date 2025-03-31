@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"time"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
@@ -54,19 +55,35 @@ func (s *UserServiceImpl) GetUserByID(ctx context.Context, userID primitive.Obje
 		return nil, errors.NewDatabaseError("Service Level: Failed to get user", "get_user_failed")
 	}
 
-	// Get user's active subscription if any
+	// Get user's subscriptions if any
 	subscriptions, err := s.subscriptionRepo.FindByUserID(ctx, userID)
 	if err != nil {
 		s.logger.Error("Service Level: Failed to get user subscriptions", err)
 		return nil, errors.NewDatabaseError("Service Level: Failed to get user subscriptions", "get_user_subscriptions_failed")
 	}
 
-	// Find active subscription
+	// Find active subscription or the most recent canceled subscription that is still valid
 	var activeSubscription *models.Subscriptions
+	currentTime := time.Now()
+
+	// First try to find an active subscription
 	for _, sub := range subscriptions {
 		if sub.Status == "active" {
 			activeSubscription = &sub
 			break
+		}
+	}
+
+	// If no active subscription is found, look for a canceled subscription that is still within period
+	if activeSubscription == nil {
+		for _, sub := range subscriptions {
+			if sub.Status == "canceled" && sub.CurrentPeriodEnd.After(currentTime) {
+				// The subscription is canceled but the period hasn't ended yet
+				if activeSubscription == nil || sub.CurrentPeriodEnd.After(activeSubscription.CurrentPeriodEnd) {
+					// Use this one if it's the first found or ends later than previously found one
+					activeSubscription = &sub
+				}
+			}
 		}
 	}
 

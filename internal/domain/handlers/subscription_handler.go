@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -17,7 +18,9 @@ type SubscriptionService interface {
 	GetSubscriptionsByPlan(ctx context.Context, plan string) ([]dtos.SubscriptionResponse, error)
 	CreateSubscription(ctx context.Context, req *dtos.CreateSubscriptionRequest) (*dtos.SubscriptionResponse, error)
 	UpdateSubscription(ctx context.Context, id primitive.ObjectID, req *dtos.UpdateSubscriptionRequest) (*dtos.SubscriptionResponse, error)
-	DeleteSubscription(ctx context.Context, id primitive.ObjectID) (bool, error)
+	DeleteSubscription(ctx context.Context, id primitive.ObjectID) error
+	PurchaseSubscription(ctx context.Context, userID string, planID string, planType string, paymentMethodID string, billingInformations map[string]interface{}) (*models.Subscriptions, error)
+	ReactivateSubscription(ctx context.Context, id primitive.ObjectID) (*dtos.SubscriptionResponse, error)
 }
 
 type SubscriptionHandler struct {
@@ -131,8 +134,23 @@ func (h *SubscriptionHandler) DeleteSubscription(w http.ResponseWriter, r *http.
 
 	err = h.service.DeleteSubscription(r.Context(), id)
 	if err != nil {
-		h.RespondWithError(w, http.StatusInternalServerError, "Failed to delete subscription")
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to cancel subscription")
 		return
 	}
-	h.RespondWithJSON(w, http.StatusOK, "deleted")
+	h.RespondWithJSON(w, http.StatusOK, "subscription_canceled")
+}
+
+func (h *SubscriptionHandler) ReactivateSubscription(w http.ResponseWriter, r *http.Request) {
+	id, err := h.ParseObjectID(r, "id", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid subscription ID")
+		return
+	}
+
+	subscription, err := h.service.ReactivateSubscription(r.Context(), id)
+	if err != nil {
+		h.RespondWithError(w, http.StatusInternalServerError, "Failed to reactivate subscription")
+		return
+	}
+	h.RespondWithJSON(w, http.StatusOK, subscription)
 }

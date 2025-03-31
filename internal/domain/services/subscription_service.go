@@ -25,6 +25,7 @@ type SubscriptionService interface {
 	GetSubscriptionsByPlan(ctx context.Context, plan string) ([]dtos.SubscriptionResponse, error)
 	DeleteSubscription(ctx context.Context, id primitive.ObjectID) error
 	PurchaseSubscription(ctx context.Context, userID string, planID string, planType string, paymentMethodID string, billingInformations map[string]interface{}) (*models.Subscriptions, error)
+	ReactivateSubscription(ctx context.Context, id primitive.ObjectID) (*dtos.SubscriptionResponse, error)
 }
 
 // SubscriptionServiceImpl implements the SubscriptionService interface.
@@ -139,21 +140,30 @@ func (s *SubscriptionServiceImpl) PurchaseSubscription(ctx context.Context, user
 		return nil, errors.New("plan not found in Stripe")
 	}
 
-	// Create Stripe customer
-	stripeCustomerID, err := s.stripeService.CreateCustomer(ctx, user.Email)
-	if err != nil {
-		s.logger.Error("Failed to create Stripe customer", err)
-		return nil, errors.New("failed to create Stripe customer")
-	}
+	// Check if user already has a Stripe customer ID
+	var stripeCustomerID string
+	if user.StripeCustomerID != "" {
+		// Use existing Stripe customer ID
+		s.logger.Info("Using existing Stripe customer ID", zap.String("stripeCustomerID", user.StripeCustomerID))
+		stripeCustomerID = user.StripeCustomerID
+	} else {
+		// Create new Stripe customer
+		s.logger.Info("Creating new Stripe customer", zap.String("email", user.Email))
+		stripeCustomerID, err = s.stripeService.CreateCustomer(ctx, user.Email)
+		if err != nil {
+			s.logger.Error("Failed to create Stripe customer", err)
+			return nil, errors.New("failed to create Stripe customer")
+		}
 
-	// Update user with Stripe customer ID
-	updates := bson.M{
-		"stripe_customer_id": stripeCustomerID,
-	}
-	_, err = s.userRepo.UpdateUser(ctx, userObjectID, updates)
-	if err != nil {
-		s.logger.Error("Failed to update user with Stripe customer ID", err)
-		return nil, errors.New("failed to update user with Stripe customer ID")
+		// Update user with Stripe customer ID
+		updates := bson.M{
+			"stripe_customer_id": stripeCustomerID,
+		}
+		_, err = s.userRepo.UpdateUser(ctx, userObjectID, updates)
+		if err != nil {
+			s.logger.Error("Failed to update user with Stripe customer ID", err)
+			return nil, errors.New("failed to update user with Stripe customer ID")
+		}
 	}
 
 	// Create Stripe subscription using the fetched price ID and payment method
@@ -249,20 +259,90 @@ func (s *SubscriptionServiceImpl) GetSubscriptionsByPlan(ctx context.Context, pl
 	return response, nil
 }
 
-// DeleteSubscription deletes a subscription by its ID.
+// DeleteSubscription cancels a subscription in Stripe and marks it as canceled in the database.
 func (s *SubscriptionServiceImpl) DeleteSubscription(ctx context.Context, id primitive.ObjectID) error {
-	s.logger.Info("Service Level: Attempting to delete subscription")
-	_, err := s.userRepo.UpdateUser(ctx, id, map[string]interface{}{"subscription_id": primitive.NilObjectID})
+	s.logger.Info("Service Level: Attempting to cancel subscription")
+
+	// Retrieve the subscription to get the Stripe subscription ID
+	subscription, err := s.repo.FindByID(ctx, id)
 	if err != nil {
-		s.logger.Error("Service Level: Failed to delete user", err)
-		return errors.New("failed to delete user")
-	}
-	_, err = s.repo.Delete(ctx, id)
-	if err != nil {
-		s.logger.Error("Service Level: Failed to delete subscription", err)
-		return errors.New("failed to delete subscription")
+		s.logger.Error("Service Level: Failed to retrieve subscription for cancellation", err)
+		return errors.New("failed to retrieve subscription for cancellation")
 	}
 
-	s.logger.Info("Service Level: Successfully deleted subscription")
+	// Only attempt to cancel in Stripe if we have a Stripe subscription ID
+	if subscription.StripeSubscriptionID != "" {
+		// Cancel the subscription in Stripe
+		err = s.stripeService.CancelSubscription(ctx, subscription.StripeSubscriptionID)
+		if err != nil {
+			s.logger.Error("Service Level: Failed to cancel subscription in Stripe", err)
+			return errors.New("failed to cancel subscription in Stripe")
+		}
+	}
+
+	// Update the subscription status in the database
+	updates := bson.M{
+		"status":               "canceled",
+		"cancel_at_period_end": true,
+		"canceled_at":          time.Now(),
+	}
+
+	_, err = s.repo.Update(ctx, id, updates)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to update subscription status", err)
+		return errors.New("failed to update subscription status")
+	}
+
+	s.logger.Info("Service Level: Successfully canceled subscription")
 	return nil
+}
+
+// ReactivateSubscription reactivates a previously canceled subscription.
+func (s *SubscriptionServiceImpl) ReactivateSubscription(ctx context.Context, id primitive.ObjectID) (*dtos.SubscriptionResponse, error) {
+	s.logger.Info("Service Level: Attempting to reactivate subscription")
+
+	// Retrieve the subscription
+	subscription, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to retrieve subscription for reactivation", err)
+		return nil, errors.New("failed to retrieve subscription for reactivation")
+	}
+
+	// Check if the subscription is canceled
+	if subscription.Status != "canceled" || !subscription.CancelAtPeriodEnd {
+		s.logger.Error("Service Level: Cannot reactivate a subscription that is not canceled", err)
+		return nil, errors.New("subscription is not canceled")
+	}
+
+	// Check if the subscription has already expired
+	if time.Now().After(subscription.CurrentPeriodEnd) {
+		s.logger.Error("Service Level: Cannot reactivate an expired subscription", err)
+		return nil, errors.New("subscription has expired and cannot be reactivated")
+	}
+
+	// Only attempt to reactivate in Stripe if we have a Stripe subscription ID
+	if subscription.StripeSubscriptionID != "" {
+		// Reactivate the subscription in Stripe
+		err = s.stripeService.ReactivateSubscription(ctx, subscription.StripeSubscriptionID)
+		if err != nil {
+			s.logger.Error("Service Level: Failed to reactivate subscription in Stripe", err)
+			return nil, errors.New("failed to reactivate subscription in Stripe")
+		}
+	}
+
+	// Update the subscription status in the database
+	updates := bson.M{
+		"status":               "active",
+		"cancel_at_period_end": false,
+	}
+
+	updatedSubscription, err := s.repo.Update(ctx, id, updates)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to update subscription status", err)
+		return nil, errors.New("failed to update subscription status")
+	}
+
+	response := s.mapper.SubscriptionToDTO(updatedSubscription)
+	s.logger.Info("Service Level: Successfully reactivated subscription")
+	return response, nil
 }

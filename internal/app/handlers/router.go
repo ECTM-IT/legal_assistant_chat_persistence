@@ -134,6 +134,7 @@ func registerSubscriptionRoutes(router *mux.Router, handler *handlers.Subscripti
 	router.HandleFunc("/subscriptions/{id}/", handler.UpdateSubscription).Methods(http.MethodPatch)
 	router.HandleFunc("/subscriptions/{id}/", handler.DeleteSubscription).Methods(http.MethodDelete)
 	router.HandleFunc("/subscriptions/purchase/", handler.PurchaseSubscription).Methods(http.MethodPost)
+	router.HandleFunc("/subscriptions/{id}/reactivate/", handler.ReactivateSubscription).Methods(http.MethodPost)
 }
 
 func registerPlanRoutes(router *mux.Router, handler *handlers.PlanHandler) {
