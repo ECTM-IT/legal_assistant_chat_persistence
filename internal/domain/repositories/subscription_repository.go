@@ -55,11 +55,18 @@ func (r *SubscriptionRepositoryImpl) FindByUserID(ctx context.Context, userID pr
 
 // Create creates a new subscription.
 func (r *SubscriptionRepositoryImpl) Create(ctx context.Context, req *models.Subscriptions) (*models.Subscriptions, error) {
-	_, err := r.subscriptionDAO.CreateSubscription(ctx, req)
+	result, err := r.subscriptionDAO.CreateSubscription(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	return req, nil
+
+	// Get the created subscription with its MongoDB ID
+	createdSubscription, err := r.subscriptionDAO.GetSubscriptionByID(ctx, result.InsertedID.(primitive.ObjectID))
+	if err != nil {
+		return nil, err
+	}
+
+	return createdSubscription, nil
 }
 
 // Update updates an existing subscription.

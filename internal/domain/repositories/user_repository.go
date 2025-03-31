@@ -13,11 +13,13 @@ type UserRepository interface {
 	FindUserByID(ctx context.Context, userID primitive.ObjectID) (*models.User, error)
 	FindUserByEmail(ctx context.Context, email string) (*models.User, error)
 	FindUserByCaseID(ctx context.Context, caseID primitive.ObjectID) (*models.User, error)
+	FindByStripeCustomerID(ctx context.Context, stripeCustomerID string) (*models.User, error)
 	TotalUsers(ctx context.Context) ([]*models.User, error)
 	DeleteUser(ctx context.Context, userID primitive.ObjectID) error
 	CreateUser(ctx context.Context, user *models.User) (*models.User, error)
 	UpdateUser(ctx context.Context, userID primitive.ObjectID, updates map[string]interface{}) (*models.User, error)
 	FindByID(ctx context.Context, id primitive.ObjectID) (*models.User, error)
+	FindAll(ctx context.Context) ([]models.User, error)
 }
 
 // UserRepositoryImpl implements the UserRepository interface.
@@ -47,6 +49,11 @@ func (r *UserRepositoryImpl) FindUserByCaseID(ctx context.Context, caseID primit
 	return r.userDAO.GetUserByCaseID(ctx, caseID)
 }
 
+// FindByStripeCustomerID retrieves a user by their Stripe customer ID.
+func (r *UserRepositoryImpl) FindByStripeCustomerID(ctx context.Context, stripeCustomerID string) (*models.User, error) {
+	return r.userDAO.GetUserByStripeCustomerID(ctx, stripeCustomerID)
+}
+
 // TotalUsers retrieves all users.
 func (r *UserRepositoryImpl) TotalUsers(ctx context.Context) ([]*models.User, error) {
 	return r.userDAO.GetAllUsers(ctx)
@@ -73,4 +80,20 @@ func (r *UserRepositoryImpl) UpdateUser(ctx context.Context, userID primitive.Ob
 
 func (r *UserRepositoryImpl) FindByID(ctx context.Context, id primitive.ObjectID) (*models.User, error) {
 	return r.userDAO.GetUserByID(ctx, id)
+}
+
+// FindAll retrieves all users.
+func (r *UserRepositoryImpl) FindAll(ctx context.Context) ([]models.User, error) {
+	users, err := r.userDAO.GetAllUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert []*models.User to []models.User
+	result := make([]models.User, len(users))
+	for i, user := range users {
+		result[i] = *user
+	}
+
+	return result, nil
 }

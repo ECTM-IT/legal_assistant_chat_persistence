@@ -17,6 +17,7 @@ type UserConversionService interface {
 	UpdateUserFieldsToMap(updateRequest dtos.UpdateUserRequest) map[string]interface{}
 	ObjectIDsToDTO(ids []primitive.ObjectID) []string
 	DTOToObjectIDs(idStrings []string) ([]primitive.ObjectID, error)
+	SubscriptionToDTO(subscription *models.Subscriptions) *dtos.SubscriptionResponse
 }
 
 type UserConversionServiceImpl struct {
@@ -37,16 +38,16 @@ func (s *UserConversionServiceImpl) UserToDTO(user *models.User) *dtos.UserRespo
 	}
 
 	dto := &dtos.UserResponse{
-		ID:             helpers.NewNullable(user.ID),
-		Image:          helpers.NewNullable(user.Image),
-		Email:          helpers.NewNullable(user.Email),
-		FirstName:      helpers.NewNullable(user.FirstName),
-		LastName:       helpers.NewNullable(user.LastName),
-		Phone:          helpers.NewNullable(user.Phone),
-		CaseIDs:        helpers.NewNullable(user.CaseIDs),
-		TeamID:         helpers.NewNullable(user.TeamID),
-		AgentIDs:       helpers.NewNullable(user.AgentIDs),
-		SubscriptionID: helpers.NewNullable(user.SubscriptionID),
+		ID:               helpers.NewNullable(user.ID),
+		Image:            helpers.NewNullable(user.Image),
+		Email:            helpers.NewNullable(user.Email),
+		FirstName:        helpers.NewNullable(user.FirstName),
+		LastName:         helpers.NewNullable(user.LastName),
+		Phone:            helpers.NewNullable(user.Phone),
+		CaseIDs:          helpers.NewNullable(user.CaseIDs),
+		TeamID:           helpers.NewNullable(user.TeamID),
+		AgentIDs:         helpers.NewNullable(user.AgentIDs),
+		StripeCustomerID: helpers.NewNullable(user.StripeCustomerID),
 	}
 	s.logger.Info("Successfully converted User to DTO")
 	return dto
@@ -75,16 +76,16 @@ func (s *UserConversionServiceImpl) DTOToUser(userDTO *dtos.CreateUserRequest) (
 	}
 
 	user := &models.User{
-		ID:             primitive.NewObjectID(),
-		Image:          userDTO.Image.OrElse(""),
-		Email:          userDTO.Email.Value,
-		FirstName:      userDTO.FirstName.OrElse(""),
-		LastName:       userDTO.LastName.OrElse(""),
-		Phone:          userDTO.Phone.OrElse(""),
-		CaseIDs:        userDTO.CaseIDs.OrElse([]primitive.ObjectID{}),
-		TeamID:         userDTO.TeamID.OrElse(primitive.NilObjectID),
-		AgentIDs:       userDTO.AgentIDs.OrElse([]primitive.ObjectID{}),
-		SubscriptionID: userDTO.SubscriptionID.OrElse(primitive.NilObjectID),
+		ID:               primitive.NewObjectID(),
+		Image:            userDTO.Image.OrElse(""),
+		Email:            userDTO.Email.Value,
+		FirstName:        userDTO.FirstName.OrElse(""),
+		LastName:         userDTO.LastName.OrElse(""),
+		Phone:            userDTO.Phone.OrElse(""),
+		CaseIDs:          userDTO.CaseIDs.OrElse([]primitive.ObjectID{}),
+		TeamID:           userDTO.TeamID.OrElse(primitive.NilObjectID),
+		AgentIDs:         userDTO.AgentIDs.OrElse([]primitive.ObjectID{}),
+		StripeCustomerID: userDTO.StripeCustomerID.OrElse(""),
 	}
 	s.logger.Info("Successfully converted DTO to User")
 	return user, nil
@@ -118,8 +119,8 @@ func (s *UserConversionServiceImpl) UpdateUserFieldsToMap(updateRequest dtos.Upd
 	if updateRequest.AgentIDs.Present {
 		updateFields["agent_ids"] = updateRequest.AgentIDs.Value
 	}
-	if updateRequest.SubscriptionID.Present {
-		updateFields["subscription_id"] = updateRequest.SubscriptionID.Value
+	if updateRequest.StripeCustomerID.Present {
+		updateFields["stripe_customer_id"] = updateRequest.StripeCustomerID.Value
 	}
 
 	s.logger.Info("Successfully converted UpdateUserRequest to map")
@@ -149,4 +150,39 @@ func (s *UserConversionServiceImpl) DTOToObjectIDs(idStrings []string) ([]primit
 	}
 	s.logger.Info("Successfully converted DTO to ObjectIDs")
 	return ids, nil
+}
+
+func (s *UserConversionServiceImpl) SubscriptionToDTO(subscription *models.Subscriptions) *dtos.SubscriptionResponse {
+	if subscription == nil {
+		return nil
+	}
+
+	// Safely handle billing information
+	var billingInfo dtos.BillingInformation
+	if subscription.BillingInformations != nil {
+		if typeStr, ok := subscription.BillingInformations["type"].(string); ok {
+			billingInfo.Type = dtos.BillingType(typeStr)
+		}
+		billingInfo.Info = subscription.BillingInformations["info"]
+	}
+
+	return &dtos.SubscriptionResponse{
+		ID:     helpers.NewNullable(subscription.ID),
+		UserID: helpers.NewNullable(subscription.UserID),
+		Plan: helpers.NewNullable(dtos.PlanResponse{
+			Name:        helpers.NewNullable(subscription.Plan.Name),
+			Type:        helpers.NewNullable(subscription.Plan.Type),
+			Price:       helpers.NewNullable(subscription.Plan.Price),
+			Description: helpers.NewNullable(subscription.Plan.Description),
+			Features:    helpers.NewNullable(subscription.Plan.Features),
+		}),
+		Renewal:              helpers.NewNullable(dtos.PlanType(subscription.Plan.Type)),
+		Status:               helpers.NewNullable(dtos.SubscriptionStatus(subscription.Status)),
+		CurrentPeriodStart:   helpers.NewNullable(subscription.CurrentPeriodStart),
+		CurrentPeriodEnd:     helpers.NewNullable(subscription.CurrentPeriodEnd),
+		CancelAtPeriodEnd:    helpers.NewNullable(subscription.CancelAtPeriodEnd),
+		StripeCustomerID:     helpers.NewNullable(subscription.StripeCustomerID),
+		StripeSubscriptionID: helpers.NewNullable(subscription.StripeSubscriptionID),
+		BillingInformations:  helpers.NewNullable(billingInfo),
+	}
 }

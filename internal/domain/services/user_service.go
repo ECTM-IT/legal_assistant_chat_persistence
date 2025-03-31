@@ -2,8 +2,10 @@ package services
 
 import (
 	"context"
+	"time"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/repositories"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services/mappers"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/errors"
@@ -20,21 +22,24 @@ type UserService interface {
 	DeleteUserByID(ctx context.Context, userID primitive.ObjectID) error
 	CreateUser(ctx context.Context, user *dtos.CreateUserRequest) (*dtos.UserResponse, error)
 	UpdateUser(ctx context.Context, userID primitive.ObjectID, user *dtos.UpdateUserRequest) (*dtos.UserResponse, error)
+	GetUserSubscriptionHistory(ctx context.Context, userID primitive.ObjectID) ([]dtos.SubscriptionResponse, error)
 }
 
 // UserServiceImpl implements the UserService interface.
 type UserServiceImpl struct {
-	userRepo *repositories.UserRepositoryImpl
-	mapper   *mappers.UserConversionServiceImpl
-	logger   logs.Logger
+	userRepo         *repositories.UserRepositoryImpl
+	subscriptionRepo *repositories.SubscriptionRepositoryImpl
+	mapper           *mappers.UserConversionServiceImpl
+	logger           logs.Logger
 }
 
 // NewUserService creates a new instance of the user service.
-func NewUserService(repo *repositories.UserRepositoryImpl, mapper *mappers.UserConversionServiceImpl, logger logs.Logger) *UserServiceImpl {
+func NewUserService(repo *repositories.UserRepositoryImpl, subscriptionRepo *repositories.SubscriptionRepositoryImpl, mapper *mappers.UserConversionServiceImpl, logger logs.Logger) *UserServiceImpl {
 	return &UserServiceImpl{
-		userRepo: repo,
-		mapper:   mapper,
-		logger:   logger,
+		userRepo:         repo,
+		subscriptionRepo: subscriptionRepo,
+		mapper:           mapper,
+		logger:           logger,
 	}
 }
 
@@ -50,8 +55,50 @@ func (s *UserServiceImpl) GetUserByID(ctx context.Context, userID primitive.Obje
 		s.logger.Error("Service Level: Failed to get user", err)
 		return nil, errors.NewDatabaseError("Service Level: Failed to get user", "get_user_failed")
 	}
+
+	// Get user's subscriptions if any
+	subscriptions, err := s.subscriptionRepo.FindByUserID(ctx, userID)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to get user subscriptions", err)
+		return nil, errors.NewDatabaseError("Service Level: Failed to get user subscriptions", "get_user_subscriptions_failed")
+	}
+
+	// Find active subscription or the most recent canceled subscription that is still valid
+	var activeSubscription *models.Subscriptions
+	currentTime := time.Now()
+
+	// First try to find an active subscription
+	for _, sub := range subscriptions {
+		if sub.Status == "active" {
+			activeSubscription = &sub
+			break
+		}
+	}
+
+	// If no active subscription is found, look for a canceled subscription that is still within period
+	if activeSubscription == nil {
+		for _, sub := range subscriptions {
+			if sub.Status == "canceled" && sub.CurrentPeriodEnd.After(currentTime) {
+				// The subscription is canceled but the period hasn't ended yet
+				if activeSubscription == nil || sub.CurrentPeriodEnd.After(activeSubscription.CurrentPeriodEnd) {
+					// Use this one if it's the first found or ends later than previously found one
+					activeSubscription = &sub
+				}
+			}
+		}
+	}
+
+	// Convert user to DTO
+	userDTO := s.mapper.UserToDTO(user)
+
+	// Add subscription information if available
+	if activeSubscription != nil {
+		subscriptionDTO := s.mapper.SubscriptionToDTO(activeSubscription)
+		userDTO.Subscription = subscriptionDTO
+	}
+
 	s.logger.Info("Service Level: Successfully retrieved user by ID")
-	return s.mapper.UserToDTO(user), nil
+	return userDTO, nil
 }
 
 // GetUserByEmail retrieves a user by their email.
@@ -130,4 +177,37 @@ func (s *UserServiceImpl) DeleteUserByID(ctx context.Context, userID primitive.O
 	}
 	s.logger.Info("Service Level: Successfully deleted user")
 	return nil
+}
+
+// GetUserSubscriptionHistory retrieves the subscription history for a user.
+func (s *UserServiceImpl) GetUserSubscriptionHistory(ctx context.Context, userID primitive.ObjectID) ([]dtos.SubscriptionResponse, error) {
+	s.logger.Info("Service Level: Attempting to retrieve user subscription history")
+
+	// First check if the user exists
+	_, err := s.userRepo.FindUserByID(ctx, userID)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			s.logger.Warn("User not found")
+			return nil, errors.NewNotFoundError("User not found", "user_not_found")
+		}
+		s.logger.Error("Service Level: Failed to get user", err)
+		return nil, errors.NewDatabaseError("Service Level: Failed to get user", "get_user_failed")
+	}
+
+	// Get all subscriptions for the user
+	subscriptions, err := s.subscriptionRepo.FindByUserID(ctx, userID)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to get user subscription history", err)
+		return nil, errors.NewDatabaseError("Service Level: Failed to get user subscription history", "get_subscription_history_failed")
+	}
+
+	// Convert subscriptions to DTOs
+	subscriptionDTOs := make([]dtos.SubscriptionResponse, 0, len(subscriptions))
+	for _, subscription := range subscriptions {
+		subscriptionDTO := s.mapper.SubscriptionToDTO(&subscription)
+		subscriptionDTOs = append(subscriptionDTOs, *subscriptionDTO)
+	}
+
+	s.logger.Info("Service Level: Successfully retrieved user subscription history")
+	return subscriptionDTOs, nil
 }

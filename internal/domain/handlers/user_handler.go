@@ -17,6 +17,7 @@ type UserService interface {
 	CreateUser(ctx context.Context, req *dtos.CreateUserRequest) (*dtos.UserResponse, error)
 	UpdateUser(ctx context.Context, id primitive.ObjectID, updateFields map[string]interface{}) (*dtos.UserResponse, error)
 	DeleteUserByID(ctx context.Context, id primitive.ObjectID) error
+	GetUserSubscriptionHistory(ctx context.Context, userID primitive.ObjectID) ([]dtos.SubscriptionResponse, error)
 }
 
 type UserHandler struct {
@@ -109,4 +110,19 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.RespondWithJSON(w, http.StatusNoContent, nil)
+}
+
+func (h *UserHandler) GetUserSubscriptionHistory(w http.ResponseWriter, r *http.Request) {
+	userID, err := h.ParseObjectID(r, "id", false)
+	if err != nil {
+		h.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
+		return
+	}
+
+	subscriptions, err := h.service.GetUserSubscriptionHistory(r.Context(), userID)
+	if err != nil {
+		h.RespondWithError(w, http.StatusNotFound, "Failed to retrieve subscription history")
+		return
+	}
+	h.RespondWithJSON(w, http.StatusOK, subscriptions)
 }

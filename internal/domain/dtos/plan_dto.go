@@ -6,11 +6,12 @@ import (
 )
 
 type PlanResponse struct {
-	Name        helpers.Nullable[string]   `json:"name"`
-	Type        helpers.Nullable[string]   `json:"type"`
-	Price       helpers.Nullable[float64]  `json:"price"`
-	Description helpers.Nullable[string]   `json:"description"`
-	Features    helpers.Nullable[[]string] `json:"features"`
+	Name          helpers.Nullable[string]   `json:"name" bson:"name"`
+	Type          helpers.Nullable[string]   `json:"type" bson:"type"`
+	Price         helpers.Nullable[float64]  `json:"price" bson:"price"`
+	Description   helpers.Nullable[string]   `json:"description" bson:"description"`
+	Features      helpers.Nullable[[]string] `json:"features" bson:"features"`
+	StripePriceID helpers.Nullable[string]   `json:"stripe_price_id" bson:"stripe_price_id"`
 }
 
 type TogglePlanTypeRequest struct {

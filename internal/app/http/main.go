@@ -6,11 +6,20 @@ import (
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/pkg/utils/env"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/logs"
+	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 )
 
 // Main is the entry point of the application.
 func Main() {
+	// Load .env file
+	if err := godotenv.Load(); err != nil {
+		// Log warning but don't exit - we might be running in production where .env is not needed
+		logger := logs.Init()
+		logger.Warn("No .env file found", zap.Error(err))
+		logger.Sync()
+	}
+
 	logger := logs.Init()
 	defer logger.Sync()
 

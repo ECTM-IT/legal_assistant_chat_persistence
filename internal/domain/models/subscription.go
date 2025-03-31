@@ -17,5 +17,6 @@ type Subscriptions struct {
 	CurrentPeriodStart   time.Time              `json:"current_period_start" bson:"current_period_start"`
 	CurrentPeriodEnd     time.Time              `json:"current_period_end" bson:"current_period_end"`
 	CancelAtPeriodEnd    bool                   `json:"cancel_at_period_end" bson:"cancel_at_period_end"`
+	CanceledAt           time.Time              `json:"canceled_at" bson:"canceled_at"`
 	BillingInformations  map[string]interface{} `json:"billing_informations" bson:"billing_informations"`
 }

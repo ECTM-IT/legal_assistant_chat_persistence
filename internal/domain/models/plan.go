@@ -1,11 +1,12 @@
 package models
 
 type Plan struct {
-	Name        string   `json:"name" bson:"name"`
-	Type        string   `json:"type" bson:"type"` // "monthly" or "annual"
-	Price       float64  `json:"price" bson:"price"`
-	Description string   `json:"description" bson:"description"`
-	Features    []string `json:"features" bson:"features"`
+	Name          string   `json:"name" bson:"name"`
+	Type          string   `json:"type" bson:"type"` // "monthly" or "annual"
+	Price         float64  `json:"price" bson:"price"`
+	Description   string   `json:"description" bson:"description"`
+	Features      []string `json:"features" bson:"features"`
+	StripePriceID string   `json:"stripe_price_id" bson:"stripe_price_id"`
 }
 
 // PredefinedPlans returns the list of available plans
