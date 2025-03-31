@@ -11,6 +11,7 @@ import (
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/repositories"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services/mappers"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/logs"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
 )
@@ -23,7 +24,7 @@ type SubscriptionService interface {
 	GetSubscriptionByID(ctx context.Context, id primitive.ObjectID) (*dtos.SubscriptionResponse, error)
 	GetSubscriptionsByPlan(ctx context.Context, plan string) ([]dtos.SubscriptionResponse, error)
 	DeleteSubscription(ctx context.Context, id primitive.ObjectID) error
-	PurchaseSubscription(ctx context.Context, userID string, planID string, planType string, paymentMethodID string) (*models.Subscriptions, error)
+	PurchaseSubscription(ctx context.Context, userID string, planID string, planType string, paymentMethodID string, billingInformations map[string]interface{}) (*models.Subscriptions, error)
 }
 
 // SubscriptionServiceImpl implements the SubscriptionService interface.
@@ -75,7 +76,7 @@ func (s *SubscriptionServiceImpl) CreateSubscription(ctx context.Context, req *d
 	return response, nil
 }
 
-func (s *SubscriptionServiceImpl) PurchaseSubscription(ctx context.Context, userID string, planID string, planType string, paymentMethodID string) (*models.Subscriptions, error) {
+func (s *SubscriptionServiceImpl) PurchaseSubscription(ctx context.Context, userID string, planID string, planType string, paymentMethodID string, billingInformations map[string]interface{}) (*models.Subscriptions, error) {
 	s.logger.Info("Attempting to purchase subscription",
 		zap.String("userID", userID),
 		zap.String("planID", planID),
@@ -145,6 +146,16 @@ func (s *SubscriptionServiceImpl) PurchaseSubscription(ctx context.Context, user
 		return nil, errors.New("failed to create Stripe customer")
 	}
 
+	// Update user with Stripe customer ID
+	updates := bson.M{
+		"stripe_customer_id": stripeCustomerID,
+	}
+	_, err = s.userRepo.UpdateUser(ctx, userObjectID, updates)
+	if err != nil {
+		s.logger.Error("Failed to update user with Stripe customer ID", err)
+		return nil, errors.New("failed to update user with Stripe customer ID")
+	}
+
 	// Create Stripe subscription using the fetched price ID and payment method
 	stripeSubscriptionID, err := s.stripeService.CreateSubscription(ctx, stripeCustomerID, stripePriceID, paymentMethodID)
 	if err != nil {
@@ -163,7 +174,7 @@ func (s *SubscriptionServiceImpl) PurchaseSubscription(ctx context.Context, user
 		CurrentPeriodStart:   time.Now(),
 		CurrentPeriodEnd:     time.Now().AddDate(0, 1, 0),
 		CancelAtPeriodEnd:    false,
-		BillingInformations:  make(map[string]interface{}),
+		BillingInformations:  billingInformations,
 	}
 
 	createdSubscription, err := s.repo.Create(ctx, subscription)

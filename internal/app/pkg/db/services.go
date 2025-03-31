@@ -50,7 +50,7 @@ func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 	stripeService := libs.NewStripeService(logger)
 	agentService := services.NewAgentService(agentRepo, agentMapper, userMapper, logger)
 	caseService := services.NewCaseService(caseRepo, caseMapper, userMapper, userRepo, logger)
-	userService := services.NewUserService(userRepo, userMapper, logger)
+	userService := services.NewUserService(userRepo, subscriptionRepo, userMapper, logger)
 	teamService := services.NewTeamService(teamRepo, teamMapper, userRepo, logger)
 	planService := services.NewPlanService(subscriptionRepo, planMapper, subscriptionMapper, logger)
 	subscriptionService := services.NewSubscriptionService(subscriptionRepo, userRepo, subscriptionMapper, planService, stripeService, logger)

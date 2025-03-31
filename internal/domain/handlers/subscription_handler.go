@@ -80,10 +80,11 @@ func (h *SubscriptionHandler) CreateSubscription(w http.ResponseWriter, r *http.
 
 func (h *SubscriptionHandler) PurchaseSubscription(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		UserID          string `json:"user_id" binding:"required"`
-		PlanID          string `json:"plan_id" binding:"required"`
-		PlanType        string `json:"plan_type" binding:"required"`
-		PaymentMethodID string `json:"payment_method_id" binding:"required"`
+		UserID              string                 `json:"user_id" binding:"required"`
+		PlanID              string                 `json:"plan_id" binding:"required"`
+		PlanType            string                 `json:"plan_type" binding:"required"`
+		PaymentMethodID     string                 `json:"payment_method_id" binding:"required"`
+		BillingInformations map[string]interface{} `json:"billing_informations"`
 	}
 
 	if err := h.DecodeJSONBody(r, &req); err != nil {
@@ -91,7 +92,7 @@ func (h *SubscriptionHandler) PurchaseSubscription(w http.ResponseWriter, r *htt
 		return
 	}
 
-	subscription, err := h.service.PurchaseSubscription(r.Context(), req.UserID, req.PlanID, req.PlanType, req.PaymentMethodID)
+	subscription, err := h.service.PurchaseSubscription(r.Context(), req.UserID, req.PlanID, req.PlanType, req.PaymentMethodID, req.BillingInformations)
 	if err != nil {
 		h.RespondWithError(w, http.StatusInternalServerError, "Failed to purchase subscription")
 		return

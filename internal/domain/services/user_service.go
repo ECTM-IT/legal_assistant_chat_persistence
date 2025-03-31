@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/dtos"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/models"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/repositories"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services/mappers"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/errors"
@@ -24,17 +25,19 @@ type UserService interface {
 
 // UserServiceImpl implements the UserService interface.
 type UserServiceImpl struct {
-	userRepo *repositories.UserRepositoryImpl
-	mapper   *mappers.UserConversionServiceImpl
-	logger   logs.Logger
+	userRepo         *repositories.UserRepositoryImpl
+	subscriptionRepo *repositories.SubscriptionRepositoryImpl
+	mapper           *mappers.UserConversionServiceImpl
+	logger           logs.Logger
 }
 
 // NewUserService creates a new instance of the user service.
-func NewUserService(repo *repositories.UserRepositoryImpl, mapper *mappers.UserConversionServiceImpl, logger logs.Logger) *UserServiceImpl {
+func NewUserService(repo *repositories.UserRepositoryImpl, subscriptionRepo *repositories.SubscriptionRepositoryImpl, mapper *mappers.UserConversionServiceImpl, logger logs.Logger) *UserServiceImpl {
 	return &UserServiceImpl{
-		userRepo: repo,
-		mapper:   mapper,
-		logger:   logger,
+		userRepo:         repo,
+		subscriptionRepo: subscriptionRepo,
+		mapper:           mapper,
+		logger:           logger,
 	}
 }
 
@@ -50,8 +53,34 @@ func (s *UserServiceImpl) GetUserByID(ctx context.Context, userID primitive.Obje
 		s.logger.Error("Service Level: Failed to get user", err)
 		return nil, errors.NewDatabaseError("Service Level: Failed to get user", "get_user_failed")
 	}
+
+	// Get user's active subscription if any
+	subscriptions, err := s.subscriptionRepo.FindByUserID(ctx, userID)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to get user subscriptions", err)
+		return nil, errors.NewDatabaseError("Service Level: Failed to get user subscriptions", "get_user_subscriptions_failed")
+	}
+
+	// Find active subscription
+	var activeSubscription *models.Subscriptions
+	for _, sub := range subscriptions {
+		if sub.Status == "active" {
+			activeSubscription = &sub
+			break
+		}
+	}
+
+	// Convert user to DTO
+	userDTO := s.mapper.UserToDTO(user)
+
+	// Add subscription information if available
+	if activeSubscription != nil {
+		subscriptionDTO := s.mapper.SubscriptionToDTO(activeSubscription)
+		userDTO.Subscription = subscriptionDTO
+	}
+
 	s.logger.Info("Service Level: Successfully retrieved user by ID")
-	return s.mapper.UserToDTO(user), nil
+	return userDTO, nil
 }
 
 // GetUserByEmail retrieves a user by their email.
