@@ -124,6 +124,7 @@ func registerUserRoutes(router *mux.Router, handler *handlers.UserHandler) {
 	router.HandleFunc("/users/", handler.CreateUser).Methods(http.MethodPost)
 	router.HandleFunc("/users/{id}/", handler.UpdateUser).Methods(http.MethodPatch)
 	router.HandleFunc("/users/{id}/", handler.DeleteUser).Methods(http.MethodDelete)
+	router.HandleFunc("/users/{id}/subscriptions/history", handler.GetUserSubscriptionHistory).Methods(http.MethodGet)
 }
 
 func registerSubscriptionRoutes(router *mux.Router, handler *handlers.SubscriptionHandler) {

@@ -22,6 +22,7 @@ type UserService interface {
 	DeleteUserByID(ctx context.Context, userID primitive.ObjectID) error
 	CreateUser(ctx context.Context, user *dtos.CreateUserRequest) (*dtos.UserResponse, error)
 	UpdateUser(ctx context.Context, userID primitive.ObjectID, user *dtos.UpdateUserRequest) (*dtos.UserResponse, error)
+	GetUserSubscriptionHistory(ctx context.Context, userID primitive.ObjectID) ([]dtos.SubscriptionResponse, error)
 }
 
 // UserServiceImpl implements the UserService interface.
@@ -176,4 +177,37 @@ func (s *UserServiceImpl) DeleteUserByID(ctx context.Context, userID primitive.O
 	}
 	s.logger.Info("Service Level: Successfully deleted user")
 	return nil
+}
+
+// GetUserSubscriptionHistory retrieves the subscription history for a user.
+func (s *UserServiceImpl) GetUserSubscriptionHistory(ctx context.Context, userID primitive.ObjectID) ([]dtos.SubscriptionResponse, error) {
+	s.logger.Info("Service Level: Attempting to retrieve user subscription history")
+
+	// First check if the user exists
+	_, err := s.userRepo.FindUserByID(ctx, userID)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			s.logger.Warn("User not found")
+			return nil, errors.NewNotFoundError("User not found", "user_not_found")
+		}
+		s.logger.Error("Service Level: Failed to get user", err)
+		return nil, errors.NewDatabaseError("Service Level: Failed to get user", "get_user_failed")
+	}
+
+	// Get all subscriptions for the user
+	subscriptions, err := s.subscriptionRepo.FindByUserID(ctx, userID)
+	if err != nil {
+		s.logger.Error("Service Level: Failed to get user subscription history", err)
+		return nil, errors.NewDatabaseError("Service Level: Failed to get user subscription history", "get_subscription_history_failed")
+	}
+
+	// Convert subscriptions to DTOs
+	subscriptionDTOs := make([]dtos.SubscriptionResponse, 0, len(subscriptions))
+	for _, subscription := range subscriptions {
+		subscriptionDTO := s.mapper.SubscriptionToDTO(&subscription)
+		subscriptionDTOs = append(subscriptionDTOs, *subscriptionDTO)
+	}
+
+	s.logger.Info("Service Level: Successfully retrieved user subscription history")
+	return subscriptionDTOs, nil
 }

@@ -140,6 +140,34 @@ func (s *SubscriptionServiceImpl) PurchaseSubscription(ctx context.Context, user
 		return nil, errors.New("plan not found in Stripe")
 	}
 
+	// Check if the user already has an active subscription
+	currentTime := time.Now()
+	existingSubscriptions, err := s.repo.FindByUserID(ctx, userObjectID)
+	if err != nil {
+		s.logger.Error("Failed to check for existing subscriptions", err)
+		return nil, errors.New("failed to check for existing subscriptions")
+	}
+
+	var activeSubscription *models.Subscriptions
+	// Find active subscription or the most recent canceled subscription that is still valid
+	for i, sub := range existingSubscriptions {
+		if sub.Status == "active" {
+			activeSubscription = &existingSubscriptions[i]
+			break
+		}
+	}
+
+	// If no active subscription is found, look for a canceled subscription that is still within period
+	if activeSubscription == nil {
+		for i, sub := range existingSubscriptions {
+			if sub.Status == "canceled" && sub.CurrentPeriodEnd.After(currentTime) {
+				// The subscription is canceled but the period hasn't ended yet
+				activeSubscription = &existingSubscriptions[i]
+				break
+			}
+		}
+	}
+
 	// Check if user already has a Stripe customer ID
 	var stripeCustomerID string
 	if user.StripeCustomerID != "" {
@@ -163,6 +191,48 @@ func (s *SubscriptionServiceImpl) PurchaseSubscription(ctx context.Context, user
 		if err != nil {
 			s.logger.Error("Failed to update user with Stripe customer ID", err)
 			return nil, errors.New("failed to update user with Stripe customer ID")
+		}
+	}
+
+	// If the user has an active subscription, check if it's the same as the one they're trying to purchase
+	if activeSubscription != nil {
+		// Prevent purchasing the exact same plan type and ID if it's already active
+		if activeSubscription.Status == "active" &&
+			activeSubscription.Plan.Name == planID &&
+			activeSubscription.Plan.Type == planType {
+			s.logger.Warn("User already has this subscription plan",
+				zap.String("userID", userID),
+				zap.String("planID", planID),
+				zap.String("planType", planType))
+			return nil, errors.New("you already have an active subscription to this plan")
+		}
+
+		// If they're changing plan or billing cycle, handle the transition
+		// Following Stripe best practices:
+		// 1. Cancel the current subscription at period end
+		// 2. Create a new subscription immediately with the new plan
+		if activeSubscription.StripeSubscriptionID != "" {
+			s.logger.Info("Canceling existing subscription before creating new one",
+				zap.String("subscriptionID", activeSubscription.StripeSubscriptionID))
+
+			err = s.stripeService.CancelSubscription(ctx, activeSubscription.StripeSubscriptionID)
+			if err != nil {
+				s.logger.Error("Failed to cancel existing subscription in Stripe", err)
+				return nil, errors.New("failed to cancel existing subscription")
+			}
+
+			// Update the existing subscription in our database
+			updates := bson.M{
+				"status":               "canceled",
+				"cancel_at_period_end": true,
+				"canceled_at":          time.Now(),
+			}
+
+			_, err = s.repo.Update(ctx, activeSubscription.ID, updates)
+			if err != nil {
+				s.logger.Error("Failed to update existing subscription status", err)
+				return nil, errors.New("failed to update existing subscription status")
+			}
 		}
 	}
 
