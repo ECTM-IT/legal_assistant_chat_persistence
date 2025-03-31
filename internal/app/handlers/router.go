@@ -39,6 +39,7 @@ func Routes(
 	planService *services.PlanServiceImpl,
 	helpService *services.HelpServiceImpl,
 	webhookService *services.WebhookServiceImpl,
+	paymentMethodService services.PaymentMethodService,
 	logger logs.Logger,
 ) http.Handler {
 	router := mux.NewRouter()
@@ -50,6 +51,7 @@ func Routes(
 	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionService)
 	planHandler := handlers.NewPlanHandler(planService)
 	helpHandler := handlers.NewHelpHandler(helpService)
+	paymentMethodHandler := handlers.NewPaymentMethodHandler(paymentMethodService, logger)
 
 	// Get webhook secret from environment
 	webhookSecret := os.Getenv("STRIPE_WEBHOOK_SECRET")
@@ -79,6 +81,9 @@ func Routes(
 
 	// Register plan routes
 	registerPlanRoutes(router, planHandler)
+
+	// Register payment method routes
+	registerPaymentMethodRoutes(router, paymentMethodHandler)
 
 	// Register webhook routes
 	registerWebhookRoutes(router, webhookHandler)
@@ -158,6 +163,12 @@ func registerPlanRoutes(router *mux.Router, handler *handlers.PlanHandler) {
 	router.HandleFunc("/plans/", handler.GetPlanOptions).Methods(http.MethodGet)
 	router.HandleFunc("/plans/toggle/", handler.TogglePlanType).Methods(http.MethodPatch)
 	router.HandleFunc("/plans/select/", handler.SelectPlan).Methods(http.MethodPost)
+}
+
+func registerPaymentMethodRoutes(router *mux.Router, handler *handlers.PaymentMethodHandler) {
+	router.HandleFunc("/payment-methods/", handler.AddPaymentMethod).Methods(http.MethodPost)
+	router.HandleFunc("/users/{userId}/payment-methods", handler.GetPaymentMethods).Methods(http.MethodGet)
+	router.HandleFunc("/users/{userId}/payment-methods/{paymentMethodId}/set-default", handler.SetDefaultPaymentMethod).Methods(http.MethodPost)
 }
 
 func registerWebhookRoutes(router *mux.Router, handler *handlers.WebhookHandler) {
