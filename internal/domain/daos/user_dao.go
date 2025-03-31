@@ -16,6 +16,7 @@ type UserDAOInterface interface {
 	GetUserByID(ctx context.Context, id primitive.ObjectID) (*models.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 	GetUserByCaseID(ctx context.Context, caseID primitive.ObjectID) (*models.User, error)
+	GetUserByStripeCustomerID(ctx context.Context, stripeCustomerID string) (*models.User, error)
 	CreateUser(ctx context.Context, user *models.User) (*models.User, error)
 	UpdateUser(ctx context.Context, id primitive.ObjectID, user map[string]interface{}) (*mongo.UpdateResult, error)
 	DeleteUser(ctx context.Context, id primitive.ObjectID) error
@@ -84,6 +85,23 @@ func (dao *UserDAO) GetUserByCaseID(ctx context.Context, caseID primitive.Object
 		return nil, err
 	}
 	dao.logger.Info("DAO Level: Successfully retrieved user")
+	return &user, nil
+}
+
+// GetUserByStripeCustomerID retrieves a user by their Stripe customer ID from the database
+func (dao *UserDAO) GetUserByStripeCustomerID(ctx context.Context, stripeCustomerID string) (*models.User, error) {
+	dao.logger.Info("DAO Level: Attempting to retrieve user by Stripe customer ID")
+	var user models.User
+	err := dao.collection.FindOne(ctx, bson.M{"stripe_customer_id": stripeCustomerID}).Decode(&user)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			dao.logger.Warn("User not found")
+			return nil, errors.New("user not found")
+		}
+		dao.logger.Error("DAO Level: Failed to retrieve user by Stripe customer ID", err)
+		return nil, err
+	}
+	dao.logger.Info("DAO Level: Successfully retrieved user by Stripe customer ID")
 	return &user, nil
 }
 

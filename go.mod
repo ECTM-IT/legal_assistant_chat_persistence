@@ -2,7 +2,11 @@ module github.com/ECTM-IT/legal_assistant_chat_persistence
 
 go 1.22.10
 
-require github.com/fatih/structs v1.1.0
+require (
+	github.com/fatih/structs v1.1.0
+	github.com/joho/godotenv v1.5.1
+	github.com/stripe/stripe-go/v74 v74.30.0
+)
 
 require (
 	cloud.google.com/go v0.112.1 // indirect
@@ -18,7 +22,6 @@ require (
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.3 // indirect
-	github.com/stripe/stripe-go/v72 v72.122.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.49.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0 // indirect
 	go.opentelemetry.io/otel v1.24.0 // indirect
@@ -35,8 +38,6 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
-	github.com/joho/godotenv v1.5.1 // indirect
-	github.com/stripe/stripe-go/v74 v74.30.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/net v0.22.0 // indirect

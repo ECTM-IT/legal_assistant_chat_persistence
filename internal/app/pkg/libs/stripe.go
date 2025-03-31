@@ -12,6 +12,7 @@ import (
 	"github.com/stripe/stripe-go/v74/price"
 	"github.com/stripe/stripe-go/v74/product"
 	"github.com/stripe/stripe-go/v74/subscription"
+	"github.com/stripe/stripe-go/v74/webhook"
 	"go.uber.org/zap"
 )
 
@@ -22,6 +23,8 @@ type StripeService interface {
 	GetProductsAndPrices(ctx context.Context) (map[string]map[string]string, error)
 	CancelSubscription(ctx context.Context, subscriptionID string) error
 	ReactivateSubscription(ctx context.Context, subscriptionID string) error
+	VerifyWebhookSignature(payload []byte, signature string) (*stripe.Event, error)
+	GetSubscriptionStatus(ctx context.Context, subscriptionID string) (string, error)
 }
 
 // StripeServiceImpl implements the StripeService interface
@@ -37,6 +40,30 @@ func NewStripeService(logger logs.Logger) StripeService {
 	}
 }
 
+// VerifyWebhookSignature verifies the signature of a Stripe webhook event
+func (s *StripeServiceImpl) VerifyWebhookSignature(payload []byte, signature string) (*stripe.Event, error) {
+	webhookSecret := os.Getenv("STRIPE_WEBHOOK_SECRET")
+	if webhookSecret == "" {
+		s.logger.Error("Stripe webhook secret not found in environment variables", fmt.Errorf("missing STRIPE_WEBHOOK_SECRET"))
+		return nil, fmt.Errorf("stripe webhook secret not configured")
+	}
+
+	event, err := webhook.ConstructEventWithOptions(
+		payload,
+		signature,
+		webhookSecret,
+		webhook.ConstructEventOptions{
+			IgnoreAPIVersionMismatch: true,
+		},
+	)
+	if err != nil {
+		s.logger.Error("Failed to verify webhook signature", err)
+		return nil, fmt.Errorf("failed to verify webhook signature: %w", err)
+	}
+
+	return &event, nil
+}
+
 // GetProductsAndPrices fetches all products and their prices from Stripe
 func (s *StripeServiceImpl) GetProductsAndPrices(ctx context.Context) (map[string]map[string]string, error) {
 	s.logger.Debug("Fetching products and prices from Stripe")
@@ -44,49 +71,68 @@ func (s *StripeServiceImpl) GetProductsAndPrices(ctx context.Context) (map[strin
 	// Initialize the result map
 	// First key is plan type (monthly/annual), second key is plan name (pro/team/enterprise)
 	result := make(map[string]map[string]string)
+	result["monthly"] = make(map[string]string)
+	result["annual"] = make(map[string]string)
 
 	// Fetch all products
-	params := &stripe.ProductListParams{}
-	params.Filters.AddFilter("active", "", "true")
-	params.Filters.AddFilter("expand[]", "", "data.default_price")
+	productParams := &stripe.ProductListParams{}
+	productParams.Filters.AddFilter("active", "", "true")
 
-	products := product.List(params)
+	products := product.List(productParams)
 	for products.Next() {
 		p := products.Product()
 
-		// Get the default price for this product
-		if p.DefaultPrice == nil {
-			s.logger.Warn("Product has no default price")
+		// Fetch all prices for this product
+		priceParams := &stripe.PriceListParams{
+			Product: stripe.String(p.ID),
+			Active:  stripe.Bool(true),
+		}
+
+		prices := price.List(priceParams)
+		for prices.Next() {
+			pr := prices.Price()
+
+			// Skip if not a recurring price
+			if pr.Recurring == nil {
+				continue
+			}
+
+			// Determine plan type based on interval
+			planType := "monthly"
+			if pr.Recurring.Interval == "year" {
+				planType = "annual"
+			}
+
+			// Map the product name to its price ID
+			// Assuming product names in Stripe match our plan names (pro, team, enterprise)
+			result[planType][p.Name] = pr.ID
+			s.logger.Debug("Mapped product to price",
+				zap.String("product", p.Name),
+				zap.String("planType", planType),
+				zap.String("priceID", pr.ID))
+		}
+
+		if err := prices.Err(); err != nil {
+			s.logger.Error("Failed to fetch prices for product", err,
+				zap.String("productID", p.ID),
+				zap.String("productName", p.Name))
 			continue
 		}
-
-		// Determine plan type from price
-		price, err := price.Get(p.DefaultPrice.ID, nil)
-		if err != nil {
-			s.logger.Error("Failed to get price details", err)
-			continue
-		}
-
-		// Determine plan type based on interval
-		planType := "monthly"
-		if price.Recurring != nil && price.Recurring.Interval == "year" {
-			planType = "annual"
-		}
-
-		// Initialize the inner map if it doesn't exist
-		if _, exists := result[planType]; !exists {
-			result[planType] = make(map[string]string)
-		}
-
-		// Map the product name to its price ID
-		// Assuming product names in Stripe match our plan names (pro, team, enterprise)
-		result[planType][p.Name] = price.ID
-		s.logger.Debug("Mapped product to price")
 	}
 
 	if err := products.Err(); err != nil {
 		s.logger.Error("Failed to fetch products", err)
 		return nil, fmt.Errorf("failed to fetch products: %w", err)
+	}
+
+	// Log the result for debugging
+	for planType, plans := range result {
+		for planName, priceID := range plans {
+			s.logger.Debug("Product mapping",
+				zap.String("planType", planType),
+				zap.String("planName", planName),
+				zap.String("priceID", priceID))
+		}
 	}
 
 	return result, nil
@@ -225,4 +271,15 @@ func (s *StripeServiceImpl) ReactivateSubscription(ctx context.Context, subscrip
 	}
 
 	return nil
+}
+
+// GetSubscriptionStatus gets the current status of a subscription from Stripe
+func (s *StripeServiceImpl) GetSubscriptionStatus(ctx context.Context, subscriptionID string) (string, error) {
+	sub, err := subscription.Get(subscriptionID, nil)
+	if err != nil {
+		s.logger.Error("Failed to retrieve Stripe subscription", err)
+		return "", fmt.Errorf("failed to retrieve Stripe subscription: %w", err)
+	}
+
+	return string(sub.Status), nil
 }

@@ -1,10 +1,13 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/handlers"
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/domain/services"
+	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/shared/logs"
 	"github.com/gorilla/mux"
 )
 
@@ -35,6 +38,8 @@ func Routes(
 	subscriptionService *services.SubscriptionServiceImpl,
 	planService *services.PlanServiceImpl,
 	helpService *services.HelpServiceImpl,
+	webhookService *services.WebhookServiceImpl,
+	logger logs.Logger,
 ) http.Handler {
 	router := mux.NewRouter()
 
@@ -45,6 +50,14 @@ func Routes(
 	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionService)
 	planHandler := handlers.NewPlanHandler(planService)
 	helpHandler := handlers.NewHelpHandler(helpService)
+
+	// Get webhook secret from environment
+	webhookSecret := os.Getenv("STRIPE_WEBHOOK_SECRET")
+	if webhookSecret == "" {
+		logger.Error("Stripe webhook secret not found in environment variables", fmt.Errorf("missing STRIPE_WEBHOOK_SECRET"))
+	}
+
+	webhookHandler := handlers.NewWebhookHandler(webhookService, logger, webhookSecret)
 
 	// Register help routes
 	registerHelpRoutes(router, helpHandler)
@@ -66,6 +79,9 @@ func Routes(
 
 	// Register plan routes
 	registerPlanRoutes(router, planHandler)
+
+	// Register webhook routes
+	registerWebhookRoutes(router, webhookHandler)
 
 	router.NotFoundHandler = http.HandlerFunc(NotFoundHandler)
 	router.MethodNotAllowedHandler = http.HandlerFunc(MethodNotAllowedHandler)
@@ -142,4 +158,8 @@ func registerPlanRoutes(router *mux.Router, handler *handlers.PlanHandler) {
 	router.HandleFunc("/plans/", handler.GetPlanOptions).Methods(http.MethodGet)
 	router.HandleFunc("/plans/toggle/", handler.TogglePlanType).Methods(http.MethodPatch)
 	router.HandleFunc("/plans/select/", handler.SelectPlan).Methods(http.MethodPost)
+}
+
+func registerWebhookRoutes(router *mux.Router, handler *handlers.WebhookHandler) {
+	router.HandleFunc("/webhooks/stripe", handler.HandleStripeWebhook).Methods(http.MethodPost)
 }

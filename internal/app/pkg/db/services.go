@@ -18,6 +18,7 @@ type Services struct {
 	SubscriptionService *services.SubscriptionServiceImpl
 	PlanService         *services.PlanServiceImpl
 	HelpService         *services.HelpServiceImpl
+	WebhookService      *services.WebhookServiceImpl
 	// TODO: uncomment after mailing is up
 	// MailerService       libs.MailerService
 }
@@ -30,6 +31,7 @@ func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 	userDAO := daos.NewUserDAO(db, logger)
 	subscriptionDAO := daos.NewSubscriptionsDAO(db, logger)
 	invitationDAO := daos.NewInvitationDAO(db, logger)
+	stripeEventDAO := daos.NewStripeEventDAO(db, logger)
 
 	// Initialize repositories
 	agentRepo := repositories.NewAgentRepository(agentDAO, userDAO, logger)
@@ -37,6 +39,7 @@ func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 	teamRepo := repositories.NewTeamRepository(teamDAO, userDAO, invitationDAO, logger)
 	userRepo := repositories.NewUserRepository(userDAO)
 	subscriptionRepo := repositories.NewSubscriptionRepository(subscriptionDAO)
+	stripeEventRepo := repositories.NewStripeEventRepository(stripeEventDAO)
 
 	//Initialize mappers
 	agentMapper := mappers.NewAgentConversionService(logger)
@@ -55,6 +58,7 @@ func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 	planService := services.NewPlanService(subscriptionRepo, planMapper, subscriptionMapper, logger)
 	subscriptionService := services.NewSubscriptionService(subscriptionRepo, userRepo, subscriptionMapper, planService, stripeService, logger)
 	helpService := services.NewHelpService(nil, logger)
+	webhookService := services.NewWebhookService(stripeService, stripeEventRepo, subscriptionRepo, userRepo, logger)
 
 	return &Services{
 		AgentService:        agentService,
@@ -64,6 +68,7 @@ func InitializeServices(db *mongo.Database, logger logs.Logger) *Services {
 		SubscriptionService: subscriptionService,
 		PlanService:         planService,
 		HelpService:         helpService,
+		WebhookService:      webhookService,
 		// TODO: uncomment after mailing is up
 		// MailerService:       mailerService,
 	}

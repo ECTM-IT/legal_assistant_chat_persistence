@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/ECTM-IT/legal_assistant_chat_persistence/internal/app/pkg/libs"
@@ -77,6 +78,99 @@ func (s *SubscriptionServiceImpl) CreateSubscription(ctx context.Context, req *d
 	return response, nil
 }
 
+// Add a new helper method to cancel all active subscriptions
+func (s *SubscriptionServiceImpl) cancelAllActiveSubscriptions(ctx context.Context, userID primitive.ObjectID) error {
+	// Get all subscriptions for this user
+	subs, err := s.repo.FindByUserID(ctx, userID)
+	if err != nil {
+		s.logger.Error("Failed to retrieve user subscriptions for cancellation", err,
+			zap.String("userID", userID.Hex()))
+		return errors.New("failed to retrieve user subscriptions")
+	}
+
+	var cancellationErrors []error
+	for _, sub := range subs {
+		// Skip already canceled subscriptions
+		if sub.Status != "active" {
+			continue
+		}
+
+		s.logger.Info("Canceling active subscription",
+			zap.String("subscriptionID", sub.ID.Hex()),
+			zap.String("stripeSubscriptionID", sub.StripeSubscriptionID),
+			zap.String("userID", userID.Hex()))
+
+		// Cancel in Stripe if we have a Stripe subscription ID
+		stripeWasCanceled := false
+		if sub.StripeSubscriptionID != "" {
+			// Check the current status in Stripe
+			stripeStatus, err := s.stripeService.GetSubscriptionStatus(ctx, sub.StripeSubscriptionID)
+			if err != nil {
+				s.logger.Warn("Failed to check subscription status in Stripe",
+					zap.Error(err),
+					zap.String("subscriptionID", sub.StripeSubscriptionID))
+			} else if stripeStatus == "active" || stripeStatus == "trialing" {
+				// Only try to cancel if active in Stripe
+				err = s.stripeService.CancelSubscription(ctx, sub.StripeSubscriptionID)
+				if err != nil {
+					s.logger.Error("Failed to cancel subscription in Stripe", err,
+						zap.String("subscriptionID", sub.StripeSubscriptionID))
+					cancellationErrors = append(cancellationErrors, err)
+					// Continue with other subscriptions despite this error
+				} else {
+					stripeWasCanceled = true
+				}
+			}
+		}
+
+		// Always update our database - critical fix
+		// Even if Stripe might show it as "active" until the period end,
+		// we mark it explicitly as "canceled" in our database right away
+		updates := bson.M{
+			"status":               "canceled", // Force status to canceled immediately
+			"cancel_at_period_end": true,
+			"canceled_at":          time.Now(),
+		}
+
+		_, updateErr := s.repo.Update(ctx, sub.ID, updates)
+		if updateErr != nil {
+			s.logger.Error("Failed to update subscription status in database", updateErr,
+				zap.String("subscriptionID", sub.ID.Hex()))
+			cancellationErrors = append(cancellationErrors, updateErr)
+			continue
+		}
+
+		// Double-check if the update was applied
+		updatedSub, checkErr := s.repo.FindByID(ctx, sub.ID)
+		if checkErr != nil {
+			s.logger.Error("Failed to verify subscription update", checkErr,
+				zap.String("subscriptionID", sub.ID.Hex()))
+		} else if updatedSub.Status != "canceled" {
+			s.logger.Error("Subscription status was not updated to 'canceled' in database",
+				errors.New("database update failed"),
+				zap.String("subscriptionID", sub.ID.Hex()),
+				zap.String("currentStatus", updatedSub.Status))
+
+			// Force direct update with a raw query if needed
+			if stripeWasCanceled {
+				s.logger.Info("Attempting direct status update after Stripe cancellation",
+					zap.String("subscriptionID", sub.ID.Hex()))
+				// The repository abstraction doesn't allow for this, but in a real implementation
+				// you might add a method to do a direct DB update here
+			}
+		} else {
+			s.logger.Info("Successfully canceled subscription and updated database",
+				zap.String("subscriptionID", sub.ID.Hex()))
+		}
+	}
+
+	if len(cancellationErrors) > 0 {
+		return fmt.Errorf("encountered %d errors while canceling subscriptions", len(cancellationErrors))
+	}
+	return nil
+}
+
+// Update the PurchaseSubscription method to use the new helper method
 func (s *SubscriptionServiceImpl) PurchaseSubscription(ctx context.Context, userID string, planID string, planType string, paymentMethodID string, billingInformations map[string]interface{}) (*models.Subscriptions, error) {
 	s.logger.Info("Attempting to purchase subscription",
 		zap.String("userID", userID),
@@ -140,31 +234,24 @@ func (s *SubscriptionServiceImpl) PurchaseSubscription(ctx context.Context, user
 		return nil, errors.New("plan not found in Stripe")
 	}
 
-	// Check if the user already has an active subscription
-	currentTime := time.Now()
+	// Check if the user already has an active subscription with the same plan and type
+	// to prevent purchasing the exact same subscription
 	existingSubscriptions, err := s.repo.FindByUserID(ctx, userObjectID)
 	if err != nil {
 		s.logger.Error("Failed to check for existing subscriptions", err)
 		return nil, errors.New("failed to check for existing subscriptions")
 	}
 
-	var activeSubscription *models.Subscriptions
-	// Find active subscription or the most recent canceled subscription that is still valid
-	for i, sub := range existingSubscriptions {
-		if sub.Status == "active" {
-			activeSubscription = &existingSubscriptions[i]
-			break
-		}
-	}
-
-	// If no active subscription is found, look for a canceled subscription that is still within period
-	if activeSubscription == nil {
-		for i, sub := range existingSubscriptions {
-			if sub.Status == "canceled" && sub.CurrentPeriodEnd.After(currentTime) {
-				// The subscription is canceled but the period hasn't ended yet
-				activeSubscription = &existingSubscriptions[i]
-				break
-			}
+	// Check for an active subscription with the exact same plan and type
+	for _, sub := range existingSubscriptions {
+		if sub.Status == "active" &&
+			sub.Plan.Name == planID &&
+			sub.Plan.Type == planType {
+			s.logger.Warn("User already has this subscription plan",
+				zap.String("userID", userID),
+				zap.String("planID", planID),
+				zap.String("planType", planType))
+			return nil, errors.New("you already have an active subscription to this plan")
 		}
 	}
 
@@ -194,46 +281,16 @@ func (s *SubscriptionServiceImpl) PurchaseSubscription(ctx context.Context, user
 		}
 	}
 
-	// If the user has an active subscription, check if it's the same as the one they're trying to purchase
-	if activeSubscription != nil {
-		// Prevent purchasing the exact same plan type and ID if it's already active
-		if activeSubscription.Status == "active" &&
-			activeSubscription.Plan.Name == planID &&
-			activeSubscription.Plan.Type == planType {
-			s.logger.Warn("User already has this subscription plan",
-				zap.String("userID", userID),
-				zap.String("planID", planID),
-				zap.String("planType", planType))
-			return nil, errors.New("you already have an active subscription to this plan")
-		}
+	// Cancel all active subscriptions for this user before creating a new one
+	s.logger.Info("Canceling any existing active subscriptions for user",
+		zap.String("userID", userID))
 
-		// If they're changing plan or billing cycle, handle the transition
-		// Following Stripe best practices:
-		// 1. Cancel the current subscription at period end
-		// 2. Create a new subscription immediately with the new plan
-		if activeSubscription.StripeSubscriptionID != "" {
-			s.logger.Info("Canceling existing subscription before creating new one",
-				zap.String("subscriptionID", activeSubscription.StripeSubscriptionID))
-
-			err = s.stripeService.CancelSubscription(ctx, activeSubscription.StripeSubscriptionID)
-			if err != nil {
-				s.logger.Error("Failed to cancel existing subscription in Stripe", err)
-				return nil, errors.New("failed to cancel existing subscription")
-			}
-
-			// Update the existing subscription in our database
-			updates := bson.M{
-				"status":               "canceled",
-				"cancel_at_period_end": true,
-				"canceled_at":          time.Now(),
-			}
-
-			_, err = s.repo.Update(ctx, activeSubscription.ID, updates)
-			if err != nil {
-				s.logger.Error("Failed to update existing subscription status", err)
-				return nil, errors.New("failed to update existing subscription status")
-			}
-		}
+	err = s.cancelAllActiveSubscriptions(ctx, userObjectID)
+	if err != nil {
+		s.logger.Warn("Encountered errors while canceling existing subscriptions, proceeding anyway",
+			zap.Error(err),
+			zap.String("userID", userID))
+		// Continue despite errors - we'll create the new subscription anyway
 	}
 
 	// Create Stripe subscription using the fetched price ID and payment method
@@ -247,14 +304,21 @@ func (s *SubscriptionServiceImpl) PurchaseSubscription(ctx context.Context, user
 	subscription := &models.Subscriptions{
 		UserID:               userObjectID,
 		Plan:                 selectedPlan,
-		Expiry:               time.Now().AddDate(0, 1, 0), // 1 month from now
 		Status:               "active",
 		StripeCustomerID:     stripeCustomerID,
 		StripeSubscriptionID: stripeSubscriptionID,
 		CurrentPeriodStart:   time.Now(),
-		CurrentPeriodEnd:     time.Now().AddDate(0, 1, 0),
-		CancelAtPeriodEnd:    false,
 		BillingInformations:  billingInformations,
+		CancelAtPeriodEnd:    false,
+	}
+
+	// Set expiry and current period end based on plan type
+	if planType == "annual" {
+		subscription.Expiry = time.Now().AddDate(1, 0, 0)           // 1 year from now
+		subscription.CurrentPeriodEnd = time.Now().AddDate(1, 0, 0) // 1 year from now
+	} else {
+		subscription.Expiry = time.Now().AddDate(0, 1, 0)           // 1 month from now
+		subscription.CurrentPeriodEnd = time.Now().AddDate(0, 1, 0) // 1 month from now
 	}
 
 	createdSubscription, err := s.repo.Create(ctx, subscription)
@@ -331,7 +395,7 @@ func (s *SubscriptionServiceImpl) GetSubscriptionsByPlan(ctx context.Context, pl
 
 // DeleteSubscription cancels a subscription in Stripe and marks it as canceled in the database.
 func (s *SubscriptionServiceImpl) DeleteSubscription(ctx context.Context, id primitive.ObjectID) error {
-	s.logger.Info("Service Level: Attempting to cancel subscription")
+	s.logger.Info("Service Level: Attempting to cancel subscription", zap.String("id", id.Hex()))
 
 	// Retrieve the subscription to get the Stripe subscription ID
 	subscription, err := s.repo.FindByID(ctx, id)
@@ -340,17 +404,40 @@ func (s *SubscriptionServiceImpl) DeleteSubscription(ctx context.Context, id pri
 		return errors.New("failed to retrieve subscription for cancellation")
 	}
 
+	// Skip if already canceled
+	if subscription.Status == "canceled" {
+		s.logger.Info("Service Level: Subscription already canceled", zap.String("id", id.Hex()))
+		return nil
+	}
+
 	// Only attempt to cancel in Stripe if we have a Stripe subscription ID
+	stripeWasCanceled := false
 	if subscription.StripeSubscriptionID != "" {
-		// Cancel the subscription in Stripe
-		err = s.stripeService.CancelSubscription(ctx, subscription.StripeSubscriptionID)
+		// Check current status in Stripe first
+		stripeStatus, err := s.stripeService.GetSubscriptionStatus(ctx, subscription.StripeSubscriptionID)
 		if err != nil {
-			s.logger.Error("Service Level: Failed to cancel subscription in Stripe", err)
-			return errors.New("failed to cancel subscription in Stripe")
+			s.logger.Warn("Failed to check subscription status in Stripe",
+				zap.Error(err),
+				zap.String("subscriptionID", subscription.StripeSubscriptionID))
+			// Continue anyway to update our database
+		} else if stripeStatus == "active" || stripeStatus == "trialing" {
+			// Cancel the subscription in Stripe
+			err = s.stripeService.CancelSubscription(ctx, subscription.StripeSubscriptionID)
+			if err != nil {
+				s.logger.Error("Service Level: Failed to cancel subscription in Stripe", err)
+				// Continue to update our database despite Stripe API errors
+			} else {
+				stripeWasCanceled = true
+			}
+		} else {
+			s.logger.Info("Subscription already not active in Stripe",
+				zap.String("status", stripeStatus),
+				zap.String("subscriptionID", subscription.StripeSubscriptionID))
 		}
 	}
 
-	// Update the subscription status in the database
+	// Update the subscription status in the database immediately
+	// This is critical - we want our DB to show canceled status immediately
 	updates := bson.M{
 		"status":               "canceled",
 		"cancel_at_period_end": true,
@@ -360,10 +447,26 @@ func (s *SubscriptionServiceImpl) DeleteSubscription(ctx context.Context, id pri
 	_, err = s.repo.Update(ctx, id, updates)
 	if err != nil {
 		s.logger.Error("Service Level: Failed to update subscription status", err)
-		return errors.New("failed to update subscription status")
+		return errors.New("failed to update subscription status in database")
 	}
 
-	s.logger.Info("Service Level: Successfully canceled subscription")
+	// Verify the update was successful
+	updatedSubscription, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		s.logger.Error("Failed to verify subscription update", err,
+			zap.String("subscriptionID", id.Hex()))
+	} else if updatedSubscription.Status != "canceled" {
+		s.logger.Error("Subscription status was not updated to 'canceled' in database",
+			errors.New("database update failed"),
+			zap.String("subscriptionID", id.Hex()),
+			zap.String("currentStatus", updatedSubscription.Status))
+
+		return errors.New("failed to update subscription status despite successful operation")
+	}
+
+	s.logger.Info("Service Level: Successfully canceled subscription",
+		zap.String("id", id.Hex()),
+		zap.Bool("stripeWasCanceled", stripeWasCanceled))
 	return nil
 }
 

@@ -213,7 +213,13 @@ func (s *PlanServiceImpl) getOrCreateSubscription(ctx context.Context, userID pr
 			Plan:               *selectedPlan,
 			Status:             "active",
 			CurrentPeriodStart: time.Now(),
-			CurrentPeriodEnd:   time.Now().AddDate(0, 1, 0), // default trial of 1 month
+		}
+
+		// Set current period end based on plan type
+		if selectedPlan.Type == "annual" {
+			subscription.CurrentPeriodEnd = time.Now().AddDate(1, 0, 0) // 1 year for annual plans
+		} else {
+			subscription.CurrentPeriodEnd = time.Now().AddDate(0, 1, 0) // 1 month for monthly plans
 		}
 
 		return s.subscriptionRepo.Create(ctx, subscription)
