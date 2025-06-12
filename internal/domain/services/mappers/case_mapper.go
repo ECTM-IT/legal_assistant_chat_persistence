@@ -75,7 +75,7 @@ func (s *CaseConversionServiceImpl) DTOToCase(caseRequest dtos.CreateCaseRequest
 		Documents:     documents,
 		Skills:        caseRequest.Skills.OrElse([]string{}),
 		Action:        caseRequest.Action.OrElse("summarize"),
-		AgentID:       caseRequest.AgentID.OrElse(primitive.NilObjectID),
+		AgentID:       s.convertNullableToAgentIDPointer(caseRequest.AgentID),
 		LastEdit:      caseRequest.LastEdit.OrElse(now),
 		CreationDate:  now,
 		Share:         caseRequest.Share.OrElse(false),
@@ -103,7 +103,7 @@ func (s *CaseConversionServiceImpl) CaseToDTO(caseModel *models.Case) *dtos.Case
 		Documents:     helpers.NewNullable(s.DocumentsToDTO(caseModel.Documents)),
 		Skills:        helpers.NewNullable(caseModel.Skills),
 		Action:        helpers.NewNullable(caseModel.Action),
-		AgentID:       helpers.NewNullable(caseModel.AgentID),
+		AgentID:       s.convertAgentIDPointerToNullable(caseModel.AgentID),
 		LastEdit:      helpers.NewNullable(caseModel.LastEdit),
 		CreationDate:  helpers.NewNullable(caseModel.CreationDate),
 		Share:         helpers.NewNullable(caseModel.Share),
@@ -112,6 +112,22 @@ func (s *CaseConversionServiceImpl) CaseToDTO(caseModel *models.Case) *dtos.Case
 
 	s.logger.Info("Successfully converted Case to DTO")
 	return dto
+}
+
+// convertNullableToAgentIDPointer safely converts nullable AgentID to pointer, handling empty values
+func (s *CaseConversionServiceImpl) convertNullableToAgentIDPointer(agentID helpers.Nullable[primitive.ObjectID]) *primitive.ObjectID {
+	if !agentID.Present || agentID.Value == primitive.NilObjectID || agentID.Value.IsZero() {
+		return nil
+	}
+	return &agentID.Value
+}
+
+// convertAgentIDPointerToNullable safely converts AgentID pointer to nullable, handling nil pointers
+func (s *CaseConversionServiceImpl) convertAgentIDPointerToNullable(agentID *primitive.ObjectID) helpers.Nullable[primitive.ObjectID] {
+	if agentID == nil || *agentID == primitive.NilObjectID || agentID.IsZero() {
+		return helpers.Nullable[primitive.ObjectID]{Present: false}
+	}
+	return helpers.NewNullable(*agentID)
 }
 
 func (s *CaseConversionServiceImpl) CasesToDTO(cases []models.Case) []dtos.CaseResponse {
@@ -174,7 +190,12 @@ func (s *CaseConversionServiceImpl) UpdateCaseFieldsToMap(updateRequest dtos.Upd
 		updateFields["action"] = updateRequest.Action.Value
 	}
 	if updateRequest.AgentID.Present {
-		updateFields["agent_id"] = updateRequest.AgentID.Value
+		agentIDPtr := s.convertNullableToAgentIDPointer(updateRequest.AgentID)
+		if agentIDPtr != nil {
+			updateFields["agent_id"] = *agentIDPtr
+		} else {
+			updateFields["agent_id"] = nil
+		}
 	}
 	if updateRequest.Share.Present {
 		updateFields["share"] = updateRequest.Share.Value
